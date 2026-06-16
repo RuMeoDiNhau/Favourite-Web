@@ -1,0 +1,76 @@
+1. Phân rã các Trang (Pages/Views)
+A. Trang Quét Khuôn Mặt (Check-in / Dashboard)
+Đây là màn hình chính mà người dùng sẽ tương tác nhiều nhất.
+ -Khu vực Stream Camera: Một khung hiển thị video trực tiếp từ webcam của thiết bị.
+ -Nút Hành động: Nút "Chụp ảnh" (Capture) hoặc một công tắc bật/tắt chế độ "Tự động quét mỗi 3 giây".
+ -Khu vực Hiển thị Kết quả: Một khung nhỏ xuất hiện (dạng Toast message hoặc Card) ngay sau khi chụp ảnh, hiển thị: "Đang xử lý...", sau đó đổi thành "Xin chào, Nguyễn Văn A" (kèm ảnh thumbnail vừa chụp) hoặc "Không nhận diện được".
+
+
+B. Trang Quản lý Người dùng (User Management)
+Nơi Admin thêm người mới vào hệ thống (tương tác với Database).
+  -Danh sách Người dùng: Bảng (Table) hiển thị ID, Tên, Số lượng ảnh đang có trong hệ thống, và Ngày tạo
+  -Form Thêm Mới: Các trường nhập liệu cơ bản (Tên, Mã nhân viên/Sinh viên).
+  -Khu vực Đăng ký Khuôn mặt: Chức năng cho phép Admin mở webcam chụp liên tục 10-20 tấm ảnh của người mới, hoặc tải lên (Upload) một thư mục ảnh có sẵn từ máy tính.
+C. Trang Lịch sử (Logs/History)
+  -Bảng ghi lại các sự kiện: Thời gian, Hình ảnh thu được từ camera lúc đó, Kết quả (Nhận diện thành công ai, hoặc Thất bại/Người lạ).
+
+
+2. Các Component Kỹ thuật (UI Components)
+Video Player (HTML5 <video>): Sử dụng API navigator.mediaDevices.getUserMedia của trình duyệt để xin quyền và mở luồng video từ webcam.
+
+Canvas Element (Ẩn): Khi người dùng nhấn "Chụp", Frontend sẽ dùng thẻ <canvas> để "đóng băng" một khung hình từ luồng video, chuyển đổi nó thành định dạng Base64 hoặc Blob (File) để chuẩn bị gửi qua API.
+
+State Management (Quản lý trạng thái): Giao diện cần xử lý tốt các trạng thái tải dữ liệu:
+ -Idle: Camera đang mở, chờ chụp.
+ -Loading: Đã gửi ảnh đi, hiển thị vòng xoay (Spinner) chờ Backend phản hồi.
+ -Success/Error: Hiển thị màu xanh (nhận diện đúng) hoặc màu đỏ (lỗi/không biết là ai).
+
+ FAV_WEB/
+│
+├── .venv/                      # (Đã có) Môi trường ảo Python
+├── .env                        # (Đã có) Lưu các biến bảo mật (PORT, DB_URL, SECRET_KEY)
+│
+├── docs/                       # (Đã có) Tài liệu dự án
+│   ├── frontend description    # Mô tả giao diện
+│   └── idea.txt                # Ghi chú ý tưởng
+│
+├── database/                   # Chứa script và dữ liệu tĩnh
+│   ├── init.sql                # Các câu lệnh tạo bảng (Users, Logs...) nếu dùng MySQL/PostgreSQL
+│   └── app.db                  # (Tùy chọn) File database SQLite nếu bạn muốn làm nhẹ nhàng lúc đầu
+│
+├── backend/                    # Tầng Controller & AI Model (Python)
+│   ├── ai_core/                # Tách riêng phần AI thành một module độc lập
+│   │   ├── data/               # Thư mục lưu ảnh khuôn mặt thô (raw) và đã xử lý (processed)
+│   │   ├── src/                # Chứa model.py, dataset.py, loss.py (Code AI đã bàn)
+│   │   └── weights/            # Thư mục chứa file trọng số model đã train (vd: model.pth)
+│   │
+│   ├── api/                    # Định nghĩa các Endpoints (Router)
+│   │   └── routes.py           # Ví dụ: POST /recognize, GET /users
+│   │
+│   ├── services/               # Logic xử lý chính của Backend
+│   │   ├── face_service.py     # Nơi gọi file AI ở `ai_core` để xử lý ảnh từ Frontend gửi lên
+│   │   └── db_service.py       # Logic query vào database
+│   │
+│   ├── requirements.txt        # Khai báo thư viện backend (fastapi, torch, opencv-python, uvicorn...)
+│   └── main.py                 # File gốc khởi chạy server Backend
+│
+└── frontend/                   # Tầng View (Giao diện)
+    ├── public/
+    │   └── index.html          # File HTML gốc
+    │
+    ├── src/
+    │   ├── components/         # Các mảnh UI dùng chung
+    │   │   ├── CameraBox/      # Component xử lý luồng Video từ webcam
+    │   │   └── ResultCard/     # Component hiển thị thẻ kết quả sau khi nhận diện
+    │   │
+    │   ├── pages/              # Các màn hình chính
+    │   │   ├── Dashboard/      # Trang quét khuôn mặt (Check-in)
+    │   │   └── Users/          # Trang quản lý/thêm người dùng mới
+    │   │
+    │   ├── services/           # Xử lý giao tiếp với Backend
+    │   │   └── api.js          # Chứa các hàm fetch/axios gọi tới localhost của Backend
+    │   │
+    │   ├── App.css             # File style tổng
+    │   └── App.js              # File Component gốc của giao diện
+    │
+    └── package.json            # Khai báo thư viện frontend (nếu dùng React/Vue/Vite)

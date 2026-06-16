@@ -1,0 +1,791 @@
+# API Specification
+
+## 1. API Quét và Nhận diện Khuôn mặt (Core API)
+
+- Endpoint: `POST /api/v1/recognize`
+- Mô tả: Nhận một ảnh Base64 từ webcam, gọi AI Model để trích xuất đặc trưng và so sánh với dữ liệu người dùng.
+
+### Request Body (JSON)
+```json
+{
+  "image_base64": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ..."
+}
+```
+
+### Response Thành công (200 OK)
+```json
+{
+  "status": "success",
+  "message": "Nhận diện thành công",
+  "data": {
+    "user_id": "BK01",
+    "name": "NGUYEN HOANG NHAT THIEN",
+    "confidence_score": 0.98,
+    "timestamp": "2026-06-17T08:30:00Z"
+  }
+}
+```
+
+### Response Thất bại (404 Not Found)
+```json
+{
+  "status": "error",
+  "message": "Không nhận diện được khuôn mặt hoặc người lạ",
+  "data": null
+}
+```
+
+---
+
+## 2. API Đăng ký Người dùng Mới (Enrollment)
+
+- Endpoint: `POST /api/v1/users`
+- Mô tả: Lưu thông tin người dùng vào database và lưu các ảnh khuôn mặt để sau này tính embedding.
+
+### Request Body (JSON)
+```json
+{
+  "user_id": "BK02",
+  "name": "Tran Van B",
+  "department": "Computer Science",
+  "images_base64": [
+    "data:image/jpeg;base64,...",
+    "data:image/jpeg;base64,...",
+    "data:image/jpeg;base64,..."
+  ]
+}
+```
+
+### Response Thành công (201 Created)
+```json
+{
+  "status": "success",
+  "message": "Đã đăng ký khuôn mặt thành công",
+  "data": {
+    "user_id": "BK02",
+    "total_embeddings_saved": 3
+  }
+}
+```
+
+---
+
+## 3. API Lấy Danh sách Người dùng (Fetch Users)
+
+- Endpoint: `GET /api/v1/users`
+- Mô tả: Lấy bảng danh sách người dùng hiện có cùng số ảnh đã đăng ký.
+- Query Parameters (tuỳ chọn): `?page=1&limit=10`
+
+### Response Thành công (200 OK)
+```json
+{
+  "status": "success",
+  "data": [
+    {
+      "user_id": "BK01",
+      "name": "NGUYEN HOANG NHAT THIEN",
+      "registered_images": 15,
+      "created_at": "2026-05-10T10:00:00Z"
+    },
+    {
+      "user_id": "BK02",
+      "name": "Tran Van B",
+      "registered_images": 3,
+      "created_at": "2026-06-17T09:00:00Z"
+    }
+  ],
+  "pagination": {
+    "current_page": 1,
+    "total_pages": 1
+  }
+}
+```
+
+---
+
+## 4. API Lấy Lịch sử Quét (Fetch Logs)
+
+- Endpoint: `GET /api/v1/logs`
+- Mô tả: Lấy danh sách sự kiện check-in gần nhất, bao gồm cả nhận diện thành công và thất bại.
+
+### Response Thành công (200 OK)
+```json
+{
+  "status": "success",
+  "data": [
+    {
+      "log_id": 105,
+      "user_id": "BK01",
+      "name": "NGUYEN HOANG NHAT THIEN",
+      "status": "success",
+      "timestamp": "2026-06-17T08:30:00Z",
+      "captured_image_url": "/static/logs/img_105.jpg"
+    },
+    {
+      "log_id": 106,
+      "user_id": "UNKNOWN",
+      "name": "Người lạ",
+      "status": "failed",
+      "timestamp": "2026-06-17T08:35:12Z",
+      "captured_image_url": "/static/logs/img_106.jpg"
+    }
+  ]
+}
+```
+
+---
+
+## 5. API Trò chơi (Games API)
+
+### 5.1. Lấy danh sách trò chơi (Fetch All Games)
+- Endpoint: `GET /api/v1/games`
+- Mô tả: Lấy danh sách toàn bộ các trò chơi hiện có trong hệ thống.
+
+#### Response Thành công (200 OK)
+```json
+[
+  {
+    "id": 1,
+    "name": "Puzzle Master",
+    "category": "Puzzle",
+    "description": "Giải những câu đố hấp dẫn",
+    "image_url": "🎯",
+    "plays": 150,
+    "likes": 45,
+    "created_at": "2026-06-17T08:30:00Z"
+  },
+  {
+    "id": 2,
+    "name": "Speed Rush",
+    "category": "Action",
+    "description": "Đua với thời gian",
+    "image_url": "⚡",
+    "plays": 280,
+    "likes": 62,
+    "created_at": "2026-06-17T08:31:00Z"
+  }
+]
+```
+
+---
+
+### 5.2. Lấy trò chơi phổ biến/nổi bật (Fetch Popular Games)
+- Endpoint: `GET /api/v1/games/popular/trending`
+- Mô tả: Lấy danh sách tối đa 4 trò chơi có nhiều lượt thích nhất, sắp xếp theo số lượt thích giảm dần.
+
+#### Response Thành công (200 OK)
+```json
+[
+  {
+    "id": 5,
+    "name": "Flappy Bird",
+    "category": "Arcade",
+    "description": "Điều khiển chim vượt qua chướng ngại vật",
+    "image_url": "🌟",
+    "plays": 450,
+    "likes": 120,
+    "created_at": "2026-06-17T08:34:00Z"
+  }
+]
+```
+
+---
+
+### 5.3. Lấy trò chơi mới nhất (Fetch Newest Games)
+- Endpoint: `GET /api/v1/games/new/latest`
+- Mô tả: Lấy danh sách tối đa 4 trò chơi mới được thêm gần đây nhất, sắp xếp theo thời gian tạo giảm dần.
+
+#### Response Thành công (200 OK)
+```json
+[
+  {
+    "id": 6,
+    "name": "Candy Crush",
+    "category": "Puzzle",
+    "description": "Sắp xếp kẹo thành hàng",
+    "image_url": "🎪",
+    "plays": 520,
+    "likes": 150,
+    "created_at": "2026-06-17T08:35:00Z"
+  }
+]
+```
+
+---
+
+### 5.4. Lấy trò chơi theo thể loại (Fetch Games by Category)
+- Endpoint: `GET /api/v1/games/category/{category}`
+- Mô tả: Lọc danh sách trò chơi theo tên thể loại.
+- Path Parameters:
+  - `category`: Tên thể loại trò chơi (ví dụ: `Puzzle`, `Action`, `Quiz`, `Casual`, `Arcade`)
+
+#### Response Thành công (200 OK)
+```json
+[
+  {
+    "id": 1,
+    "name": "Puzzle Master",
+    "category": "Puzzle",
+    "description": "Giải những câu đố hấp dẫn",
+    "image_url": "🎯",
+    "plays": 150,
+    "likes": 45,
+    "created_at": "2026-06-17T08:30:00Z"
+  }
+]
+```
+
+---
+
+### 5.5. Lấy chi tiết trò chơi theo ID (Fetch Game by ID)
+- Endpoint: `GET /api/v1/games/{game_id}`
+- Mô tả: Lấy thông tin chi tiết một trò chơi dựa trên ID.
+- Path Parameters:
+  - `game_id`: ID của trò chơi (số nguyên)
+
+#### Response Thành công (200 OK)
+```json
+{
+  "id": 1,
+  "name": "Puzzle Master",
+  "category": "Puzzle",
+  "description": "Giải những câu đố hấp dẫn",
+  "image_url": "🎯",
+  "plays": 150,
+  "likes": 45,
+  "created_at": "2026-06-17T08:30:00Z"
+}
+```
+
+#### Response Thất bại (404 Not Found)
+```json
+{
+  "detail": "Game not found"
+}
+```
+
+---
+
+### 5.6. Tạo trò chơi mới (Create Game)
+- Endpoint: `POST /api/v1/games`
+- Mô tả: Thêm mới một trò chơi vào hệ thống.
+
+#### Request Body (JSON)
+```json
+{
+  "name": "Super Mario",
+  "category": "Arcade",
+  "description": "Trò chơi phiêu lưu kinh điển",
+  "image_url": "🍄"
+}
+```
+
+#### Response Thành công (201 Created)
+```json
+{
+  "id": 7,
+  "name": "Super Mario",
+  "category": "Arcade",
+  "description": "Trò chơi phiêu lưu kinh điển",
+  "image_url": "🍄",
+  "plays": 0,
+  "likes": 0,
+  "created_at": "2026-06-17T09:30:00Z"
+}
+```
+
+---
+
+### 5.7. Tăng lượt chơi trò chơi (Play Game)
+- Endpoint: `POST /api/v1/games/{game_id}/play`
+- Mô tả: Tăng số lượt chơi (`plays`) của một trò chơi lên thêm 1.
+- Path Parameters:
+  - `game_id`: ID của trò chơi (số nguyên)
+
+#### Response Thành công (200 OK)
+```json
+{
+  "message": "Play count updated",
+  "plays": 151
+}
+```
+
+#### Response Thất bại (404 Not Found)
+```json
+{
+  "detail": "Game not found"
+}
+```
+
+---
+
+### 5.8. Tăng lượt thích trò chơi (Like Game)
+- Endpoint: `POST /api/v1/games/{game_id}/like`
+- Mô tả: Tăng số lượt thích (`likes`) của một trò chơi lên thêm 1.
+- Path Parameters:
+  - `game_id`: ID của trò chơi (số nguyên)
+
+#### Response Thành công (200 OK)
+```json
+{
+  "message": "Like count updated",
+  "likes": 46
+}
+```
+
+#### Response Thất bại (404 Not Found)
+```json
+{
+  "detail": "Game not found"
+}
+```
+
+---
+
+## 6. API Âm nhạc (Music API)
+
+### 6.1. Lấy danh sách playlist (Fetch Playlists)
+- Endpoint: `GET /api/v1/playlists`
+- Mô tả: Lấy toàn bộ danh sách các playlist (danh sách phát) hiện có.
+
+#### Response Thành công (200 OK)
+```json
+[
+  {
+    "id": 1,
+    "name": "Nhạc Yêu Thích",
+    "description": "Những bài hát yêu thích nhất",
+    "song_count": 25,
+    "image_url": "🎵",
+    "created_at": "2026-06-17T08:30:00Z"
+  }
+]
+```
+
+---
+
+### 6.2. Lấy danh sách tất cả bài hát (Fetch All Music)
+- Endpoint: `GET /api/v1/music`
+- Mô tả: Lấy toàn bộ danh sách bài hát trong hệ thống.
+
+#### Response Thành công (200 OK)
+```json
+[
+  {
+    "id": 1,
+    "title": "Moonlight Sonata",
+    "artist": "Classical Symphony",
+    "duration": "3:45",
+    "genre": "Classical",
+    "playlist_id": null,
+    "plays": 450,
+    "likes": 120,
+    "created_at": "2026-06-17T08:30:00Z"
+  }
+]
+```
+
+---
+
+### 6.3. Lấy các bài hát phổ biến/nổi bật (Fetch Popular Songs)
+- Endpoint: `GET /api/v1/music/popular/trending`
+- Mô tả: Lấy tối đa 10 bài hát có nhiều lượt thích nhất.
+
+#### Response Thành công (200 OK)
+```json
+[
+  {
+    "id": 5,
+    "title": "Summer Dreams",
+    "artist": "Pop Stars",
+    "duration": "3:20",
+    "genre": "Pop",
+    "playlist_id": null,
+    "plays": 520,
+    "likes": 145,
+    "created_at": "2026-06-17T08:30:00Z"
+  }
+]
+```
+
+---
+
+### 6.4. Lấy bài hát mới nhất (Fetch Newest Songs)
+- Endpoint: `GET /api/v1/music/new/latest`
+- Mô tả: Lấy tối đa 10 bài hát mới được cập nhật gần đây nhất.
+
+#### Response Thành công (200 OK)
+```json
+[
+  {
+    "id": 2,
+    "title": "Urban Vibes",
+    "artist": "Modern Beats",
+    "duration": "4:12",
+    "genre": "Electronic",
+    "playlist_id": null,
+    "plays": 320,
+    "likes": 85,
+    "created_at": "2026-06-17T08:31:00Z"
+  }
+]
+```
+
+---
+
+### 6.5. Lấy bài hát theo thể loại (Fetch Music by Genre)
+- Endpoint: `GET /api/v1/music/genre/{genre}`
+- Mô tả: Lấy danh sách các bài hát theo thể loại được chỉ định.
+- Path Parameters:
+  - `genre`: Thể loại nhạc cần lọc (ví dụ: `Classical`, `Electronic`, `Pop`, `Jazz`, `Rock`)
+
+#### Response Thành công (200 OK)
+```json
+[
+  {
+    "id": 1,
+    "title": "Moonlight Sonata",
+    "artist": "Classical Symphony",
+    "duration": "3:45",
+    "genre": "Classical",
+    "playlist_id": null,
+    "plays": 450,
+    "likes": 120,
+    "created_at": "2026-06-17T08:30:00Z"
+  }
+]
+```
+
+---
+
+### 6.6. Lấy thông tin bài hát theo ID (Fetch Song by ID)
+- Endpoint: `GET /api/v1/music/{song_id}`
+- Mô tả: Lấy thông tin chi tiết của một bài hát dựa trên ID bài hát.
+- Path Parameters:
+  - `song_id`: ID của bài hát (số nguyên)
+
+#### Response Thành công (200 OK)
+```json
+{
+  "id": 1,
+  "title": "Moonlight Sonata",
+  "artist": "Classical Symphony",
+  "duration": "3:45",
+  "genre": "Classical",
+  "playlist_id": null,
+  "plays": 450,
+  "likes": 120,
+  "created_at": "2026-06-17T08:30:00Z"
+}
+```
+
+#### Response Thất bại (404 Not Found)
+```json
+{
+  "detail": "Song not found"
+}
+```
+
+---
+
+### 6.7. Tạo bài hát mới (Create Song)
+- Endpoint: `POST /api/v1/music`
+- Mô tả: Thêm một bài hát mới vào cơ sở dữ liệu.
+
+#### Request Body (JSON)
+```json
+{
+  "title": "A New Day",
+  "artist": "Acoustic Band",
+  "duration": "3:50",
+  "genre": "Acoustic",
+  "playlist_id": 1
+}
+```
+
+#### Response Thành công (201 Created)
+```json
+{
+  "id": 10,
+  "title": "A New Day",
+  "artist": "Acoustic Band",
+  "duration": "3:50",
+  "genre": "Acoustic",
+  "playlist_id": 1,
+  "plays": 0,
+  "likes": 0,
+  "created_at": "2026-06-17T09:40:00Z"
+}
+```
+
+---
+
+### 6.8. Tăng lượt nghe bài hát (Play Song)
+- Endpoint: `POST /api/v1/music/{song_id}/play`
+- Mô tả: Tăng số lượt nghe (`plays`) của một bài hát lên thêm 1.
+- Path Parameters:
+  - `song_id`: ID của bài hát (số nguyên)
+
+#### Response Thành công (200 OK)
+```json
+{
+  "message": "Play count updated",
+  "plays": 451
+}
+```
+
+#### Response Thất bại (404 Not Found)
+```json
+{
+  "detail": "Song not found"
+}
+```
+
+---
+
+### 6.9. Tăng lượt thích bài hát (Like Song)
+- Endpoint: `POST /api/v1/music/{song_id}/like`
+- Mô tả: Tăng số lượt thích (`likes`) của một bài hát lên thêm 1.
+- Path Parameters:
+  - `song_id`: ID của bài hát (số nguyên)
+
+#### Response Thành công (200 OK)
+```json
+{
+  "message": "Like count updated",
+  "likes": 121
+}
+```
+
+#### Response Thất bại (404 Not Found)
+```json
+{
+  "detail": "Song not found"
+}
+```
+
+---
+
+## 7. API Kiến thức (Knowledge API)
+
+### 7.1. Lấy tất cả bài viết kiến thức (Fetch All Knowledge)
+- Endpoint: `GET /api/v1/knowledge`
+- Mô tả: Lấy danh sách tất cả các bài viết kiến thức hiện có, sắp xếp theo thời gian tạo mới nhất.
+
+#### Response Thành công (200 OK)
+```json
+[
+  {
+    "id": 1,
+    "title": "Học Lập Trình Web",
+    "category": "Lập Trình",
+    "description": "Hướng dẫn chi tiết về HTML, CSS, JavaScript",
+    "content": "Bắt đầu từ HTML, CSS, sau đó JavaScript. Học về DOM, Events, Async/Await...",
+    "author": "Nguyễn Văn A",
+    "views": 1250,
+    "likes": 45,
+    "created_at": "2026-06-17T08:30:00Z"
+  }
+]
+```
+
+---
+
+### 7.2. Lấy danh sách các danh mục bài viết (Fetch Categories)
+- Endpoint: `GET /api/v1/knowledge/categories`
+- Mô tả: Lấy danh sách tất cả các danh mục bài viết khác nhau hiện đang tồn tại trong hệ thống.
+
+#### Response Thành công (200 OK)
+```json
+{
+  "categories": [
+    "Lập Trình",
+    "Kỹ Năng",
+    "Thiết Kế",
+    "Kinh Doanh",
+    "Phát Triển",
+    "Tài Chỉch"
+  ]
+}
+```
+
+---
+
+### 7.3. Lấy danh sách bài viết phổ biến (Fetch Popular Articles)
+- Endpoint: `GET /api/v1/knowledge/popular/trending`
+- Mô tả: Lấy tối đa 10 bài viết có số lượt xem (`views`) nhiều nhất.
+
+#### Response Thành công (200 OK)
+```json
+[
+  {
+    "id": 5,
+    "title": "Phát Triển Cá Nhân",
+    "category": "Phát Triển",
+    "description": "Hành trình phát triển bản thân và sự nghiệp",
+    "content": "Đặt mục tiêu, Tự học, Networking, Building portfolio...",
+    "author": "Hoàng Thị E",
+    "views": 3200,
+    "likes": 89,
+    "created_at": "2026-06-17T08:30:00Z"
+  }
+]
+```
+
+---
+
+### 7.4. Lấy danh sách bài viết đang hot (Fetch Trending Articles)
+- Endpoint: `GET /api/v1/knowledge/trending/hot`
+- Mô tả: Lấy tối đa 5 bài viết có số lượt thích (`likes`) nhiều nhất.
+
+#### Response Thành công (200 OK)
+```json
+[
+  {
+    "id": 8,
+    "title": "Machine Learning Cơ Bản",
+    "category": "Lập Trình",
+    "description": "Giới thiệu về Machine Learning và ứng dụng",
+    "content": "Supervised learning, Unsupervised learning, Deep learning...",
+    "author": "Bùi Văn H",
+    "views": 2450,
+    "likes": 105,
+    "created_at": "2026-06-17T08:30:00Z"
+  }
+]
+```
+
+---
+
+### 7.5. Lấy bài viết theo danh mục (Fetch Articles by Category)
+- Endpoint: `GET /api/v1/knowledge/category/{category}`
+- Mô tả: Lọc danh sách bài viết theo tên danh mục chỉ định.
+- Path Parameters:
+  - `category`: Tên danh mục (ví dụ: `Lập Trình`, `Kỹ Năng`, `Thiết Kế`)
+
+#### Response Thành công (200 OK)
+```json
+[
+  {
+    "id": 1,
+    "title": "Học Lập Trình Web",
+    "category": "Lập Trình",
+    "description": "Hướng dẫn chi tiết về HTML, CSS, JavaScript",
+    "content": "Bắt đầu từ HTML, CSS, sau đó JavaScript...",
+    "author": "Nguyễn Văn A",
+    "views": 1250,
+    "likes": 45,
+    "created_at": "2026-06-17T08:30:00Z"
+  }
+]
+```
+
+---
+
+### 7.6. Tìm kiếm bài viết (Search Articles)
+- Endpoint: `GET /api/v1/knowledge/search/{query}`
+- Mô tả: Tìm kiếm các bài viết có tiêu đề hoặc mô tả chứa từ khóa tìm kiếm (không phân biệt hoa thường).
+- Path Parameters:
+  - `query`: Từ khóa tìm kiếm
+
+#### Response Thành công (200 OK)
+```json
+[
+  {
+    "id": 1,
+    "title": "Học Lập Trình Web",
+    "category": "Lập Trình",
+    "description": "Hướng dẫn chi tiết về HTML, CSS, JavaScript",
+    "content": "Bắt đầu từ HTML, CSS, sau đó JavaScript...",
+    "author": "Nguyễn Văn A",
+    "views": 1250,
+    "likes": 45,
+    "created_at": "2026-06-17T08:30:00Z"
+  }
+]
+```
+
+---
+
+### 7.7. Lấy chi tiết bài viết theo ID (Fetch Article by ID)
+- Endpoint: `GET /api/v1/knowledge/{article_id}`
+- Mô tả: Lấy thông tin chi tiết một bài viết dựa theo ID. Mỗi khi gọi API này thành công, số lượt xem (`views`) của bài viết sẽ được tự động tăng thêm 1.
+- Path Parameters:
+  - `article_id`: ID của bài viết (số nguyên)
+
+#### Response Thành công (200 OK)
+```json
+{
+  "id": 1,
+  "title": "Học Lập Trình Web",
+  "category": "Lập Trình",
+  "description": "Hướng dẫn chi tiết về HTML, CSS, JavaScript",
+  "content": "Bắt đầu từ HTML, CSS, sau đó JavaScript. Học về DOM, Events, Async/Await...",
+  "author": "Nguyễn Văn A",
+  "views": 1251,
+  "likes": 45,
+  "created_at": "2026-06-17T08:30:00Z"
+}
+```
+
+#### Response Thất bại (404 Not Found)
+```json
+{
+  "detail": "Article not found"
+}
+```
+
+---
+
+### 7.8. Tạo bài viết mới (Create Article)
+- Endpoint: `POST /api/v1/knowledge`
+- Mô tả: Đăng một bài viết mới lên trang kiến thức.
+
+#### Request Body (JSON)
+```json
+{
+  "title": "Lập Kế Hoạch Tài Chính Cá Nhân",
+  "category": "Tài Chính",
+  "description": "Quản lý tiền bạc hiệu quả",
+  "content": "Budget planning, saving, investment...",
+  "author": "Đỗ Văn F"
+}
+```
+
+#### Response Thành công (201 Created)
+```json
+{
+  "id": 9,
+  "title": "Lập Kế Hoạch Tài Chính Cá Nhân",
+  "category": "Tài Chính",
+  "description": "Quản lý tiền bạc hiệu quả",
+  "content": "Budget planning, saving, investment...",
+  "author": "Đỗ Văn F",
+  "views": 0,
+  "likes": 0,
+  "created_at": "2026-06-17T09:50:00Z"
+}
+```
+
+---
+
+### 7.9. Tăng lượt thích bài viết (Like Article)
+- Endpoint: `POST /api/v1/knowledge/{article_id}/like`
+- Mô tả: Tăng lượt thích (`likes`) của một bài viết lên thêm 1.
+- Path Parameters:
+  - `article_id`: ID của bài viết (số nguyên)
+
+#### Response Thành công (200 OK)
+```json
+{
+  "message": "Like count updated",
+  "likes": 46
+}
+```
+
+#### Response Thất bại (404 Not Found)
+```json
+{
+  "detail": "Article not found"
+}
+```

@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+torch
+torchvision
+opencv-python
+facenet-pytorch
+insightface
+numpy
+pillow
+python-multipart
+pydantic
+sqlalchemy
+python-dotenv

@@ -1,0 +1,71 @@
+# Hướng dẫn chạy dự án Fav Web
+
+## 1. Cài đặt phụ thuộc
+### Backend
+Mở terminal trong `d:\file_hoc_tap\Fav_Web` và cài đặt thư viện Python:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r backend\requirements.txt
+```
+
+### Frontend
+Mở terminal trong `d:\file_hoc_tap\Fav_Web\frontend` và cài đặt Node.js package:
+
+```powershell
+cd d:\file_hoc_tap\Fav_Web\frontend
+npm install
+```
+
+## 2. Chạy backend
+Trong terminal backend:
+
+```powershell
+cd d:\file_hoc_tap\Fav_Web
+.\.venv\Scripts\Activate.ps1
+uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Hoặc nếu muốn dùng npm, đã thêm script ở gốc project:
+
+```powershell
+cd d:\file_hoc_tap\Fav_Web
+npm run dev
+```
+
+Backend sẽ chạy tại: `http://localhost:8000`
+
+## 3. Chạy frontend
+Trong terminal frontend:
+
+```powershell
+cd d:\file_hoc_tap\Fav_Web\frontend
+npm run dev
+```
+
+Frontend Vite thường sẽ chạy tại: `http://localhost:5173`
+
+## 4. Cách dùng giao diện
+- Vào trang `Dashboard` để mở camera, chụp ảnh hoặc bật auto scan mỗi 3 giây.
+- Vào trang `Users` để đăng ký người dùng mới bằng tên, mã và ảnh.
+- Vào trang `Logs` để xem lịch sử quét/check-in.
+
+## 5. Chạy với InsightFace
+Nếu muốn dùng InsightFace thay vì Facenet, cần cài thư viện và đặt biến môi trường:
+
+```powershell
+cd d:\file_hoc_tap\Fav_Web
+.\.venv\Scripts\Activate.ps1
+pip install insightface
+$env:FACE_RECOGNIZER='insightface'
+uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Nếu không dùng InsightFace thì backend sẽ mặc định chạy với `facenet-pytorch`.
+
+## 6. Lưu ý
+- Đảm bảo browser cho phép truy cập camera.
+- Nếu backend và frontend chạy ở các cổng khác nhau, hãy kiểm tra CORS nếu cần.
+- Dữ liệu người dùng và ảnh được lưu trong `backend/ai_core/data` và `static/logs`.

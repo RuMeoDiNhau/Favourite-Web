@@ -1,0 +1,158 @@
+.App {
+  font-family: Arial, sans-serif;
+  background: #f3f6fb;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0 16px 32px;
+  color: #1b263b;
+}
+
+.App-header {
+  padding: 24px 0 16px;
+  border-bottom: 1px solid #e1e8f2;
+}
+
+.App-header h1 {
+  margin: 0;
+  font-size: 2rem;
+}
+
+.App-header p {
+  margin: 8px 0 0;
+  color: #4f5d75;
+}
+
+.app-nav {
+  margin-top: 16px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.app-nav button {
+  border: 1px solid #d7e2f0;
+  background: #ffffff;
+  color: #1b263b;
+  padding: 10px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.app-nav button.active,
+.app-nav button:hover {
+  background: #1e90ff;
+  color: #fff;
+  border-color: #1e90ff;
+}
+
+.nav-divider {
+  width: 1px;
+  height: 30px;
+  background: #e1e8f2;
+  margin: 0 8px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+main {
+  display: grid;
+  gap: 20px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.page {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(24, 39, 75, 0.08);
+  padding: 24px;
+}
+
+.page h2 {
+  margin-top: 0;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 10px;
+  background: #1e90ff;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.status {
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: 12px;
+  background: #f5f8ff;
+}
+
+.status.success {
+  border-left: 4px solid #1db954;
+}
+
+.status.error {
+  border-left: 4px solid #ff4d4f;
+}
+
+.user-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 16px;
+}
+
+.user-table th,
+.user-table td {
+  padding: 12px 10px;
+  border-bottom: 1px solid #e8edf4;
+  text-align: left;
+}
+
+.user-table th {
+  font-weight: 700;
+  background: #f7fafd;
+}
+
+.video-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.video-box,
+.capture-preview {
+  border: 1px solid #d8e1ee;
+  border-radius: 14px;
+  padding: 16px;
+  background: #fafbff;
+}
+
+video {
+  width: 100%;
+  max-height: 360px;
+  border-radius: 12px;
+}
+
+img.preview {
+  width: 100%;
+  border-radius: 12px;
+}

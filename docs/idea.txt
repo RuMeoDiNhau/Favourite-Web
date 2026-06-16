@@ -1,0 +1,10 @@
+Web tích hợp:
+upload nhạc yêu thích
+chia sẻ kiến thức
+game
+có bán hàng(cafe, dịch vụ may mặc)
+model AI nhận diện khuôn mặt(ảnh) 
+chatbot huấn luyện theo cá nhân
+
+
+
