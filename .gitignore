@@ -34,6 +34,7 @@ database/*.db
 
 # IDEs & Editors
 .vscode/
+.vscode
 .idea/
 *.suo
 *.ntvs*
@@ -41,6 +42,14 @@ database/*.db
 *.sln
 *.swp
 
+# Credentials
+*.csv
+*_accessKeys.csv
+
+# Documents
+*.pdf
+
 # OS Files
 Thumbs.db
 .DS_Store
+

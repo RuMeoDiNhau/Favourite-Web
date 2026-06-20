@@ -1,0 +1,64 @@
+================================================================================
+KẾ HOẠCH TRIỂN KHAI ĐỀ TÀI 3: APPLICATION DEVELOPMENT ON AWS (WEB ON CLOUD)
+Dự án: Fav Web (Face Recognition Portal - Games, Music, Knowledge)
+================================================================================
+
+KIẾN TRÚC MỤC TIÊU TRÊN AWS (TARGET ARCHITECTURE)
+--------------------------------------------------------------------------------
+1. Frontend (React/Vite): Deploy lên AWS S3 (Static Website Hosting) kết hợp với AWS CloudFront (CDN & HTTPS).
+2. Backend (FastAPI): Deploy lên AWS EC2 (chạy Docker hoặc Nginx + Uvicorn) hoặc Serverless AWS Lambda + API Gateway.
+3. Database: Di chuyển từ SQLite (database/app.db) sang AWS RDS (PostgreSQL hoặc MySQL).
+4. File Storage: Di chuyển dữ liệu ảnh logs webcam và ảnh raw người dùng đăng ký lên AWS S3 Bucket.
+5. Logging & Monitoring: Đẩy các log ứng dụng và lịch sử nhận diện về AWS CloudWatch.
+
+--------------------------------------------------------------------------------
+DANH SÁCH CÔNG VIỆC CẦN LÀM (TODO LIST BY WEEKS)
+--------------------------------------------------------------------------------
+
+[x] TUẦN 1 & 2: THIẾT KẾ KIẾN TRÚC CLOUD & CHUẨN HÓA ỨNG DỤNG LOCAL
+    - [x] Đã xây dựng khung ứng dụng cơ bản (FastAPI Backend & React Frontend).
+    - [x] Đã cấu hình các chức năng cơ bản chạy local (Games, Music, Knowledge, Face Recognition).
+    - [x] Vẽ sơ đồ kiến trúc hệ thống mô tả luồng giao tiếp giữa các dịch vụ AWS.
+    - [x] Tạo file Dockerfile trong thư mục `backend/` để chuẩn bị container hóa FastAPI.
+
+[ ] TUẦN 3: TRIỂN KHAI LÊN AWS (EC2/LAMBDA/API GATEWAY) & TÍCH HỢP LƯU TRỮ AWS S3
+    * Cấu hình Lưu trữ với S3 Bucket:
+      - [x] Tạo một AWS S3 Bucket để thay thế lưu trữ local.
+      - [x] Cài đặt thư viện AWS SDK cho Python (`boto3`) vào [backend/requirements.txt](file:///d:/file_hoc_tap/Fav_Web/backend/requirements.txt).
+      - [x] Cập nhật hàm `_save_user_images` trong [backend/services/db_service.py](file:///d:/file_hoc_tap/Fav_Web/backend/services/db_service.py) để tải ảnh đăng ký khuôn mặt của user lên S3 thay vì ghi vào thư mục `backend/ai_core/data/raw`.
+      - [x] Cập nhật hàm `save_log_image` trong [backend/services/db_service.py](file:///d:/file_hoc_tap/Fav_Web/backend/services/db_service.py) để lưu ảnh webcam chụp từ API nhận diện khuôn mặt trực tiếp lên S3 và trả về URL S3 công khai (hoặc signed URL) thay vì path `/static/logs/...`.
+      - [x] (Khuyến nghị) Đồng bộ hoặc sao lưu các file vector khuôn mặt dạng `.npy` (trong thư mục embeddings) lên S3 để đảm bảo tính sẵn sàng cao và không bị mất dữ liệu.
+    * Triển khai Backend:
+      - [ ] Tạo một EC2 instance (Ubuntu, Free Tier) và cấu hình Security Group (mở port 80, 443, 8000).
+      - [ ] Triển khai FastAPI lên EC2 bằng cách dùng Docker (đóng gói ảnh Docker chạy trên EC2) hoặc chạy trực tiếp bằng Systemd Service + Gunicorn/Uvicorn + Nginx reverse proxy.
+    * Triển khai Frontend:
+      - [ ] Build mã nguồn React frontend sang thư mục `dist/` bằng lệnh `npm run build` trong thư mục [frontend/](file:///d:/file_hoc_tap/Fav_Web/frontend).
+      - [ ] Tạo AWS S3 Bucket mới phục vụ Static Website Hosting, phân quyền Public Read và upload toàn bộ nội dung thư mục `dist/` lên bucket này.
+      - [ ] (Khuyến nghị) Cấu hình AWS CloudFront trỏ đến Frontend S3 và Backend EC2/API Gateway để chạy đồng bộ dưới dạng HTTPS nhằm tránh lỗi Mixed Content và tối ưu hóa CDN.
+
+[ ] TUẦN 4: TÍCH HỢP CƠ SỞ DỮ LIỆU CLOUD (AWS RDS)
+    - [ ] Khởi tạo cơ sở dữ liệu AWS RDS (PostgreSQL hoặc MySQL - cấu hình Free Tier) trên AWS Console.
+    - [ ] Thiết lập Security Group của RDS để chỉ cho phép địa chỉ IP của EC2 Backend truy cập vào port của DB (ví dụ: 5432 hoặc 3306).
+    - [ ] Thêm thư viện driver DB thích hợp (ví dụ: `psycopg2-binary` cho PostgreSQL hoặc `pymysql` cho MySQL) vào [backend/requirements.txt](file:///d:/file_hoc_tap/Fav_Web/backend/requirements.txt).
+    - [ ] Cập nhật file kết nối cơ sở dữ liệu [backend/services/db_models.py](file:///d:/file_hoc_tap/Fav_Web/backend/services/db_models.py): thay đổi dòng `DATABASE_URL` để đọc từ biến môi trường của AWS thay vì fix cứng SQLite `app.db`.
+    - [ ] Viết script migration dữ liệu ban đầu hoặc gọi `init_db()` khi khởi động server trên Cloud để tự động tạo cấu trúc bảng (User, Log, Game, Music, Playlist, Knowledge) trên RDS.
+
+[ ] TUẦN 5: TÍCH HỢP LOGGING & MONITORING VỚI AWS CLOUDWATCH
+    - [ ] Thêm thư viện hỗ trợ đẩy log lên CloudWatch (ví dụ: `watchtower`) vào requirements của backend.
+    - [ ] Cấu hình logging của FastAPI trong [backend/main.py](file:///d:/file_hoc_tap/Fav_Web/backend/main.py) để gửi các sự kiện quan trọng (nhận diện thành công, nhận diện thất bại, lỗi DB, lỗi hệ thống) trực tiếp lên AWS CloudWatch Logs.
+    - [ ] Cấu hình Metric Filters và Alarms trên AWS CloudWatch để theo dõi tài nguyên (CPU Utilization của EC2) hoặc cảnh báo lỗi hệ thống.
+
+[ ] TUẦN 6: PHÁT TRIỂN NÂNG CAO, TỐI ƯU HÓA CẤU TRÚC CODE & API
+    - [ ] Chuyển các thông tin cấu hình nhạy cảm (AWS Credentials, RDS Connection String) từ file `.env` sang quản lý tập trung bằng **AWS Systems Manager (SSM) Parameter Store** hoặc **AWS Secrets Manager**.
+    - [ ] Cập nhật cấu hình CORS trong [backend/main.py](file:///d:/file_hoc_tap/Fav_Web/backend/main.py) thay thế `*` bằng domain chính thức của Frontend chạy trên Cloud để đảm bảo bảo mật.
+    - [ ] Tối ưu hóa cấu trúc truy xuất API nhận diện: tải cache danh sách embeddings khuôn mặt vào RAM khi khởi động backend để tránh việc phải đọc đĩa nhiều lần khi có yêu cầu quét khuôn mặt.
+
+[ ] TUẦN 7: KIỂM THỬ HỆ THỐNG, TỐI ƯU HIỆU NĂNG & TRẢI NGHIỆM NGƯỜI DÙNG
+    - [ ] Thực hiện kiểm thử toàn bộ ứng dụng từ frontend sang backend sau khi đã triển khai đầy đủ lên AWS.
+    - [ ] Kiểm thử khả năng chịu lỗi (Failover & Fault Tolerance) bằng cách giả lập tắt dịch vụ hoặc làm gián đoạn kết nối xem hệ thống phản ứng và ghi log thế nào.
+    - [ ] Đo lường tốc độ tải trang, tốc độ phản hồi của API nhận diện khuôn mặt và tối ưu hóa thời gian xử lý ảnh.
+
+[ ] TUẦN 8: HOÀN THIỆN TÀI LIỆU, DEMO SẢN PHẨM & TỔNG KẾT
+    - [ ] Tạo tài liệu hướng dẫn kỹ thuật bao gồm sơ đồ kiến trúc, hướng dẫn triển khai lại hệ thống trên môi trường AWS mới.
+    - [ ] Quay video demo chi tiết hoạt động của các phân hệ trên domain đã deploy.
+    - [ ] Tổng hợp báo cáo, thống kê và đánh giá về đề tài.

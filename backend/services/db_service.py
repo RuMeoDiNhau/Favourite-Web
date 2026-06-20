@@ -5,6 +5,7 @@ from pathlib import Path
 from sqlalchemy.exc import IntegrityError
 from backend.ai_core.src.recognizer import embed_face, save_user_embedding
 from backend.services.db_models import SessionLocal, User, Log, init_db, STATIC_LOG_DIR, DATA_RAW_DIR
+from backend.services.s3_service import upload_file_to_s3, upload_embedding, s3_client
 
 init_db()
 
@@ -15,17 +16,38 @@ def _get_session():
 
 def _save_user_images(user_id: str, images_base64):
     saved_files = []
-    user_dir = DATA_RAW_DIR / user_id
-    user_dir.mkdir(parents=True, exist_ok=True)
 
     for idx, raw_data in enumerate(images_base64, start=1):
         if ',' in raw_data:
             raw_data = raw_data.split(',', 1)[1]
         image_bytes = base64.b64decode(raw_data)
         filename = f'{user_id}_{idx:03d}.png'
+        
+        # Try S3 first
+        if s3_client:
+            try:
+                s3_key = f"raw/{user_id}/{filename}"
+                s3_url = upload_file_to_s3(image_bytes, s3_key, content_type="image/png")
+                saved_files.append({
+                    'path_or_url': s3_url,
+                    'bytes': image_bytes,
+                    'is_s3': True
+                })
+                continue
+            except Exception:
+                # Fallback to local
+                pass
+                
+        # Local fallback
+        user_dir = DATA_RAW_DIR / user_id
+        user_dir.mkdir(parents=True, exist_ok=True)
         filepath = user_dir / filename
         filepath.write_bytes(image_bytes)
-        saved_files.append(str(filepath))
+        saved_files.append({
+            'path_or_url': str(filepath),
+            'bytes': image_bytes,
+            'is_s3': False
+        })
 
     return saved_files
 
@@ -34,9 +56,8 @@ def create_user(user_id: str, name: str, department: str, images_base64):
     saved_images = _save_user_images(user_id, images_base64)
     embeddings = []
 
-    for filepath in saved_images:
-        image_bytes = Path(filepath).read_bytes()
-        embedding = embed_face(image_bytes)
+    for img_data in saved_images:
+        embedding = embed_face(img_data['bytes'])
         if embedding is not None:
             embeddings.append(embedding)
 
@@ -47,7 +68,11 @@ def create_user(user_id: str, name: str, department: str, images_base64):
             'data': None,
         }
 
-    save_user_embedding(user_id, embeddings)
+    saved_path = save_user_embedding(user_id, embeddings)
+    
+    # Upload embedding to S3 for backup/sync
+    if saved_path and s3_client:
+        upload_embedding(user_id, Path(saved_path))
 
     session = _get_session()
     try:
@@ -162,6 +187,18 @@ def create_log(user_id: str, name: str, status: str, captured_image_url: str):
 def save_log_image(image_bytes: bytes) -> str:
     now = datetime.utcnow().strftime('%Y%m%d_%H%M%S_%f')
     filename = f'log_{now}.png'
+    
+    # Try S3 first
+    if s3_client:
+        try:
+            s3_key = f"logs/{filename}"
+            s3_url = upload_file_to_s3(image_bytes, s3_key, content_type="image/png")
+            return s3_url
+        except Exception:
+            # Fallback to local
+            pass
+            
+    # Local fallback
     path = STATIC_LOG_DIR / filename
     path.write_bytes(image_bytes)
     return f'/static/logs/{filename}'
