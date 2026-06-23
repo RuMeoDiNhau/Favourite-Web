@@ -2,16 +2,18 @@ import React from 'react';
 
 export default function Sidebar({ selectedLibrary, onSelectLibrary }) {
   const menuItems = [
-    { id: 'all', label: '📚 Tất Cả Trò Chơi', icon: '📚' },
-    { id: 'favorites', label: '❤️ Yêu Thích', icon: '❤️' },
-    { id: 'playing', label: '▶️ Đang Chơi', icon: '▶️' },
-    { id: 'completed', label: '✅ Đã Hoàn Thành', icon: '✅' },
+    { id: 'all', label: '📚 Tất Cả Bài Viết', icon: '📚' },
+    { id: 'Puzzle', label: '🧩 Giải Đố (Puzzle)', icon: '🧩' },
+    { id: 'Action', label: '⚡ Hành Động (Action)', icon: '⚡' },
+    { id: 'Quiz', label: '🏆 Trắc Nghiệm (Quiz)', icon: '🏆' },
+    { id: 'Casual', label: '🎲 Phổ Thông (Casual)', icon: '🎲' },
+    { id: 'Arcade', label: '🌟 Cổ Điển (Arcade)', icon: '🌟' },
   ];
 
   return (
     <div className="games-sidebar">
       <div className="sidebar-header">
-        <h3>🎮 THƯ VIỆN TRÒ CHƠI</h3>
+        <h3>📰 CHỦ ĐỀ BLOG</h3>
       </div>
       <nav className="sidebar-menu">
         {menuItems.map(item => (
@@ -27,9 +29,8 @@ export default function Sidebar({ selectedLibrary, onSelectLibrary }) {
 
       <div className="sidebar-footer">
         <div className="stats">
-          <p>👤 Trò Chơi Yêu Thích: 2</p>
-          <p>🎮 Đang Chơi: 1</p>
-          <p>✅ Hoàn Thành: 5</p>
+          <p>✍️ Thể loại bài viết: 5</p>
+          <p>📰 Tổng số bài viết: 6</p>
         </div>
       </div>
     </div>

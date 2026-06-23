@@ -1,15 +1,18 @@
-from fastapi import APIRouter, HTTPException, Depends
+import secrets
+from fastapi import APIRouter, HTTPException, Depends, Header, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from backend.services.face_service import recognize_face
-from backend.services.db_service import create_user, get_users, get_logs
+from backend.services.db_service import create_user, get_users, get_logs, verify_user_credentials, get_user_by_user_id
 from backend.services.db_models import SessionLocal
 from backend.services.schemas import (
     RecognizeRequest, EnrollmentRequest,
     GameResponse, GameCreateRequest,
     MusicResponse, PlaylistResponse, MusicCreateRequest,
-    KnowledgeResponse, KnowledgeCreateRequest
+    KnowledgeResponse, KnowledgeCreateRequest,
+    LoginRequest, FaceLoginRequest,
+    PostResponse, PostCreateRequest
 )
-from backend.services import games_service, music_service, knowledge_service
+from backend.services import games_service, music_service, knowledge_service, posts_service
 
 router = APIRouter(prefix='/api/v1')
 
@@ -31,6 +34,8 @@ def enroll_user(request: EnrollmentRequest):
     result = create_user(
         user_id=request.user_id,
         name=request.name,
+        email=request.email,
+        password=request.password,
         department=request.department,
         images_base64=request.images_base64,
     )
@@ -45,6 +50,48 @@ def list_users(page: int = 1, limit: int = 10):
 @router.get('/logs')
 def list_logs():
     return get_logs()
+
+
+# ==================== Authentication Endpoints ====================
+
+@router.post('/auth/login')
+def login(request: LoginRequest):
+    user = verify_user_credentials(request.username_or_email, request.password)
+    if not user:
+        raise HTTPException(status_code=401, detail='Tài khoản hoặc mật khẩu không chính xác')
+    token = secrets.token_hex(16)
+    return {
+        'status': 'success',
+        'token': token,
+        'user': {
+            'user_id': user.user_id,
+            'name': user.name,
+            'email': user.email
+        }
+    }
+
+@router.post('/auth/login-face')
+def login_face(request: FaceLoginRequest):
+    try:
+        result = recognize_face(request.image_base64)
+        if result['status'] == 'success':
+            user_id = result['data']['user_id']
+            user = get_user_by_user_id(user_id)
+            if user:
+                token = secrets.token_hex(16)
+                return {
+                    'status': 'success',
+                    'token': token,
+                    'user': {
+                        'user_id': user.user_id,
+                        'name': user.name,
+                        'email': user.email
+                    }
+                }
+    except Exception as e:
+        # If face recognition fails or throws HTTPException
+        pass
+    raise HTTPException(status_code=401, detail='Không nhận diện được khuôn mặt hoặc người lạ')
 
 
 # ==================== Games Endpoints ====================
@@ -85,29 +132,30 @@ def get_game(game_id: int, db: Session = Depends(get_db)):
 
 @router.post('/games', response_model=GameResponse, status_code=201)
 def create_game(request: GameCreateRequest, db: Session = Depends(get_db)):
-    """Create a new game"""
+    """Create a new game post"""
     return games_service.create_game(
         db, 
-        name=request.name,
+        title=request.title,
         category=request.category,
         description=request.description,
+        content=request.content,
         image_url=request.image_url
     )
 
-@router.post('/games/{game_id}/play')
-def play_game(game_id: int, db: Session = Depends(get_db)):
-    """Increment game plays"""
-    game = games_service.update_game_plays(db, game_id)
+@router.post('/games/{game_id}/view')
+def view_game(game_id: int, db: Session = Depends(get_db)):
+    """Increment game post views"""
+    game = games_service.update_game_views(db, game_id)
     if not game:
-        raise HTTPException(status_code=404, detail='Game not found')
-    return {'message': 'Play count updated', 'plays': game.plays}
+        raise HTTPException(status_code=404, detail='Game post not found')
+    return {'message': 'View count updated', 'views': game.views}
 
 @router.post('/games/{game_id}/like')
 def like_game(game_id: int, db: Session = Depends(get_db)):
-    """Increment game likes"""
+    """Increment game post likes"""
     game = games_service.update_game_likes(db, game_id)
     if not game:
-        raise HTTPException(status_code=404, detail='Game not found')
+        raise HTTPException(status_code=404, detail='Game post not found')
     return {'message': 'Like count updated', 'likes': game.likes}
 
 
@@ -161,6 +209,7 @@ def create_song(request: MusicCreateRequest, db: Session = Depends(get_db)):
         artist=request.artist,
         duration=request.duration,
         genre=request.genre,
+        file_url=request.file_url,
         playlist_id=request.playlist_id
     )
 
@@ -249,3 +298,48 @@ def like_article(article_id: int, db: Session = Depends(get_db)):
     if not article:
         raise HTTPException(status_code=404, detail='Article not found')
     return {'message': 'Like count updated', 'likes': article.likes}
+
+
+# ==================== Unified Post Endpoints ====================
+
+@router.post('/posts/upload')
+async def upload_post_file(
+    file: UploadFile = File(...),
+    post_type: str = Form(...),
+    x_user_id: str = Header(None)
+):
+    if not x_user_id:
+        raise HTTPException(status_code=401, detail="Vui lòng đăng nhập để thực hiện tải file")
+    try:
+        file_bytes = await file.read()
+        media_url = posts_service.upload_media_file(file_bytes, file.filename, post_type)
+        return {"media_url": media_url}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi tải file: {str(e)}")
+
+
+@router.post('/posts', response_model=PostResponse, status_code=201)
+def create_post(
+    request: PostCreateRequest,
+    x_user_id: str = Header(None),
+    db: Session = Depends(get_db)
+):
+    if not x_user_id:
+        raise HTTPException(status_code=401, detail="Vui lòng đăng nhập để đăng bài")
+    try:
+        return posts_service.create_post(db, request, x_user_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi tạo bài đăng: {str(e)}")
+
+
+@router.get('/posts', response_model=list[PostResponse])
+def get_posts(
+    x_user_id: str = Header(None),
+    db: Session = Depends(get_db)
+):
+    if not x_user_id:
+        raise HTTPException(status_code=401, detail="Vui lòng đăng nhập để xem bảng tin")
+    try:
+        return posts_service.get_posts(db)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi lấy danh sách bài đăng: {str(e)}")

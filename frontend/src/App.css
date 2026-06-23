@@ -156,3 +156,23 @@ img.preview {
   width: 100%;
   border-radius: 12px;
 }
+
+.app-nav button.logout-btn {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+}
+
+.app-nav button.logout-btn:hover {
+  background: #ef4444;
+  color: white;
+  border-color: #ef4444;
+}
+
+.user-welcome-banner {
+  font-size: 14px;
+  font-weight: 600;
+  color: #4f5d75;
+  margin-left: auto;
+}
+

@@ -1,76 +1,164 @@
-1. Phân rã các Trang (Pages/Views)
-A. Trang Quét Khuôn Mặt (Check-in / Dashboard)
-Đây là màn hình chính mà người dùng sẽ tương tác nhiều nhất.
- -Khu vực Stream Camera: Một khung hiển thị video trực tiếp từ webcam của thiết bị.
- -Nút Hành động: Nút "Chụp ảnh" (Capture) hoặc một công tắc bật/tắt chế độ "Tự động quét mỗi 3 giây".
- -Khu vực Hiển thị Kết quả: Một khung nhỏ xuất hiện (dạng Toast message hoặc Card) ngay sau khi chụp ảnh, hiển thị: "Đang xử lý...", sau đó đổi thành "Xin chào, Nguyễn Văn A" (kèm ảnh thumbnail vừa chụp) hoặc "Không nhận diện được".
+# Mô tả Dự án — Fav Web Portal
 
+## Tổng quan
+**Fav Web** là một nền tảng web xã hội đa chức năng được phát triển như đề tài môn học **Application Development on AWS (Web on Cloud)**.  
+Hệ thống tích hợp nhận diện khuôn mặt (Face Recognition), thư viện âm nhạc, bảng tin đa phương tiện, tin tức game, và chia sẻ kiến thức vào một giao diện thống nhất.
 
-B. Trang Quản lý Người dùng (User Management)
-Nơi Admin thêm người mới vào hệ thống (tương tác với Database).
-  -Danh sách Người dùng: Bảng (Table) hiển thị ID, Tên, Số lượng ảnh đang có trong hệ thống, và Ngày tạo
-  -Form Thêm Mới: Các trường nhập liệu cơ bản (Tên, Mã nhân viên/Sinh viên).
-  -Khu vực Đăng ký Khuôn mặt: Chức năng cho phép Admin mở webcam chụp liên tục 10-20 tấm ảnh của người mới, hoặc tải lên (Upload) một thư mục ảnh có sẵn từ máy tính.
-C. Trang Lịch sử (Logs/History)
-  -Bảng ghi lại các sự kiện: Thời gian, Hình ảnh thu được từ camera lúc đó, Kết quả (Nhận diện thành công ai, hoặc Thất bại/Người lạ).
+---
 
+## Kiến trúc Hệ thống
 
-2. Các Component Kỹ thuật (UI Components)
-Video Player (HTML5 <video>): Sử dụng API navigator.mediaDevices.getUserMedia của trình duyệt để xin quyền và mở luồng video từ webcam.
-
-Canvas Element (Ẩn): Khi người dùng nhấn "Chụp", Frontend sẽ dùng thẻ <canvas> để "đóng băng" một khung hình từ luồng video, chuyển đổi nó thành định dạng Base64 hoặc Blob (File) để chuẩn bị gửi qua API.
-
-State Management (Quản lý trạng thái): Giao diện cần xử lý tốt các trạng thái tải dữ liệu:
- -Idle: Camera đang mở, chờ chụp.
- -Loading: Đã gửi ảnh đi, hiển thị vòng xoay (Spinner) chờ Backend phản hồi.
- -Success/Error: Hiển thị màu xanh (nhận diện đúng) hoặc màu đỏ (lỗi/không biết là ai).
-
- FAV_WEB/
+```
+FAV_WEB/
 │
-├── .venv/                      # (Đã có) Môi trường ảo Python
-├── .env                        # (Đã có) Lưu các biến bảo mật (PORT, DB_URL, SECRET_KEY)
+├── .env                         # Biến bảo mật (AWS keys, DB URL...)
+├── .gitignore
+├── package.json                 # Script gốc chạy backend (npm run dev)
 │
-├── docs/                       # (Đã có) Tài liệu dự án
-│   ├── frontend description    # Mô tả giao diện
-│   └── idea.txt                # Ghi chú ý tưởng
+├── docs/                        # Tài liệu dự án
+│   ├── api-specification        # Đặc tả API đầy đủ
+│   ├── description              # Mô tả tổng quan dự án (file này)
+│   ├── guide                    # Hướng dẫn cài đặt và triển khai
+│   ├── walkthrough.md           # Nhật ký tiến độ tuần theo tuần
+│   ├── feature.md               # Ghi chú ý tưởng & tính năng
+│   ├── todo.txt                 # Danh sách công việc
+│   └── idea.txt                 # Ghi chú ý tưởng ban đầu
 │
-├── database/                   # Chứa script và dữ liệu tĩnh
-│   ├── init.sql                # Các câu lệnh tạo bảng (Users, Logs...) nếu dùng MySQL/PostgreSQL
-│   └── app.db                  # (Tùy chọn) File database SQLite nếu bạn muốn làm nhẹ nhàng lúc đầu
+├── database/
+│   └── app.db                   # SQLite local (bị ignore khỏi Git)
 │
-├── backend/                    # Tầng Controller & AI Model (Python)
-│   ├── ai_core/                # Tách riêng phần AI thành một module độc lập
-│   │   ├── data/               # Thư mục lưu ảnh khuôn mặt thô (raw) và đã xử lý (processed)
-│   │   ├── src/                # Chứa model.py, dataset.py, loss.py (Code AI đã bàn)
-│   │   └── weights/            # Thư mục chứa file trọng số model đã train (vd: model.pth)
+├── static/                      # Thư mục file tĩnh (bị ignore khỏi Git)
+│   ├── uploads/                 # File media người dùng upload (ảnh, nhạc, video, zip)
+│   │   ├── image/
+│   │   ├── audio/
+│   │   ├── video/
+│   │   └── game/
+│   ├── games/{post_id}/         # Game HTML5 đã giải nén từ zip
+│   ├── music/                   # File nhạc đặt thủ công cho thư viện Music
+│   └── logs/                    # Ảnh webcam chụp khi check-in (fallback local)
+│
+├── backend/                     # FastAPI — Python Backend
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   ├── main.py                  # Điểm khởi động server, mount StaticFiles
 │   │
-│   ├── api/                    # Định nghĩa các Endpoints (Router)
-│   │   └── routes.py           # Ví dụ: POST /recognize, GET /users
+│   ├── api/
+│   │   └── routes.py            # Toàn bộ API Router (/api/v1/...)
 │   │
-│   ├── services/               # Logic xử lý chính của Backend
-│   │   ├── face_service.py     # Nơi gọi file AI ở `ai_core` để xử lý ảnh từ Frontend gửi lên
-│   │   └── db_service.py       # Logic query vào database
+│   ├── services/
+│   │   ├── db_models.py         # SQLAlchemy models: User, Log, Game, Music, Post, ...
+│   │   ├── schemas.py           # Pydantic schemas: Request/Response types
+│   │   ├── db_service.py        # Logic User, Log: hash password, face embedding, S3 sync
+│   │   ├── face_service.py      # Giao tiếp với AI core để nhận diện khuôn mặt
+│   │   ├── games_service.py     # CRUD game blog posts
+│   │   ├── music_service.py     # CRUD bài hát và playlist
+│   │   ├── knowledge_service.py # CRUD bài viết kiến thức
+│   │   ├── posts_service.py     # Upload media, giải nén game zip, CRUD Feed posts
+│   │   └── s3_service.py        # Boto3: upload/download S3, sync embeddings khi start
 │   │
-│   ├── requirements.txt        # Khai báo thư viện backend (fastapi, torch, opencv-python, uvicorn...)
-│   └── main.py                 # File gốc khởi chạy server Backend
+│   └── ai_core/
+│       ├── src/
+│       │   └── recognizer.py    # Trích xuất và so sánh embedding khuôn mặt
+│       └── weights/             # File trọng số model (.pth)
 │
-└── frontend/                   # Tầng View (Giao diện)
-    ├── public/
-    │   └── index.html          # File HTML gốc
+├── data/                        # File embedding .npy local (bị ignore)
+│   └── embeddings/
+│
+└── frontend/                    # React (Vite) — Frontend
+    ├── .env.production          # VITE_API_URL trỏ về EC2
+    ├── package.json
     │
-    ├── src/
-    │   ├── components/         # Các mảnh UI dùng chung
-    │   │   ├── CameraBox/      # Component xử lý luồng Video từ webcam
-    │   │   └── ResultCard/     # Component hiển thị thẻ kết quả sau khi nhận diện
-    │   │
-    │   ├── pages/              # Các màn hình chính
-    │   │   ├── Dashboard/      # Trang quét khuôn mặt (Check-in)
-    │   │   └── Users/          # Trang quản lý/thêm người dùng mới
-    │   │
-    │   ├── services/           # Xử lý giao tiếp với Backend
-    │   │   └── api.js          # Chứa các hàm fetch/axios gọi tới localhost của Backend
-    │   │
-    │   ├── App.css             # File style tổng
-    │   └── App.js              # File Component gốc của giao diện
-    │
-    └── package.json            # Khai báo thư viện frontend (nếu dùng React/Vue/Vite)
+    └── src/
+        ├── App.jsx              # Layout chính, routing view, Login gate
+        ├── App.css
+        │
+        ├── components/
+        │   └── CameraBox/       # Component luồng video webcam
+        │
+        ├── pages/
+        │   ├── Login/           # Màn hình đăng nhập (mật khẩu + nhận diện khuôn mặt + đăng ký)
+        │   ├── Feed/            # Bảng tin đa phương tiện + Modal đăng bài
+        │   ├── Dashboard/       # Trang check-in nhận diện khuôn mặt
+        │   ├── Users/           # Trang quản lý người dùng
+        │   ├── Logs/            # Lịch sử quét khuôn mặt
+        │   ├── Games/           # Trang blog & tin tức game
+        │   ├── Music/           # Thư viện âm nhạc, danh sách phát, trình phát nhạc
+        │   └── Knowledge/       # Thư viện bài viết kiến thức
+        │
+        └── services/
+            └── api.js           # Axios instance + interceptors + tất cả API calls
+```
+
+---
+
+## Các Tính năng Chính
+
+| Tính năng | Mô tả |
+|-----------|-------|
+| **Đăng nhập bảo mật** | Đăng nhập bằng username/email + mật khẩu, hoặc nhận diện khuôn mặt qua AI (facenet-pytorch). Đăng ký tài khoản mới kèm ảnh khuôn mặt. |
+| **Check-in Khuôn mặt** | Webcam stream real-time, chụp ảnh và gửi lên backend để nhận diện trong < 1s |
+| **Bảng tin Đa phương tiện** | Đăng & xem bài viết dạng 📝 Văn bản, 📸 Ảnh, 🎥 Video, 🎵 Nhạc, 🎮 Game HTML5 |
+| **Phát nhạc Inline** | Phát nhạc trực tiếp từ thẻ bài viết, không rời trang |
+| **Chơi Game HTML5 Inline** | Upload file `.zip` game HTML5 → backend giải nén → phát trực tiếp trong `<iframe>` |
+| **Thư viện Âm nhạc** | Xem danh sách, phát nhạc, danh sách phát (playlists), đếm lượt nghe |
+| **Blog & Tin tức Game** | Bài viết mô tả, đánh giá, hướng dẫn game |
+| **Chia sẻ Kiến thức** | Tạo & đọc bài viết kiến thức, tìm kiếm, lọc theo thể loại |
+
+---
+
+## Công nghệ Sử dụng
+
+| Layer | Công nghệ |
+|-------|-----------|
+| Frontend | React 18, Vite 5, Vanilla CSS |
+| Backend | FastAPI (Python), Uvicorn, SQLAlchemy |
+| Database | SQLite (Local) → AWS RDS (Production) |
+| AI Model | `facenet-pytorch` (InsightFace tùy chọn) |
+| File Storage | AWS S3 (Production) / `static/` local (fallback) |
+| Deployment | AWS EC2 (Docker container), AWS S3 (Static Frontend) |
+| SDK | boto3 (AWS Python SDK), Axios (Frontend HTTP) |
+
+---
+
+## Luồng Hoạt động — Upload Nhạc và Phát nhạc
+
+```
+1. [POST /api/v1/posts/upload]  →  Upload file .mp3/.wav
+        ↓
+   Backend lưu file vào:
+     - S3: uploads/audio/{uuid}.mp3  (nếu có AWS cấu hình)
+     - Local: static/uploads/audio/{uuid}.mp3  (fallback)
+        ↓
+   Trả về { "media_url": "/static/uploads/audio/{uuid}.mp3" }
+
+2. [POST /api/v1/posts]  →  Tạo bài đăng với media_url trên
+        ↓
+   Bài đăng lưu vào bảng `posts` trong database
+
+3. [GET /api/v1/posts]  →  Frontend tải Bảng tin
+        ↓
+   Frontend tự ghép: http://localhost:8000 + /static/uploads/audio/...
+   Phát trực tiếp bằng thẻ <audio>
+```
+
+---
+
+## Luồng Hoạt động — Upload và Chơi Game HTML5
+
+```
+1. [POST /api/v1/posts/upload]  →  Upload file .zip game HTML5
+        ↓
+   Backend lưu tạm vào: static/uploads/game/{uuid}.zip  (luôn local)
+   Trả về { "media_url": "/static/uploads/game/{uuid}.zip" }
+
+2. [POST /api/v1/posts]  →  Tạo bài đăng game
+        ↓
+   Backend phát hiện media_url là .zip
+   Giải nén vào: static/games/{post_id}/
+   Tìm file index.html → cập nhật media_url = "/static/games/{id}/index.html"
+   Xoá file .zip tạm
+
+3. Người dùng click "Chơi trực tuyến"
+        ↓
+   Frontend mở Game Modal với <iframe src="http://localhost:8000/static/games/{id}/index.html">
+```

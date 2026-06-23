@@ -54,3 +54,16 @@ database/*.db
 Thumbs.db
 .DS_Store
 
+# User-Uploaded Media (lưu local khi không có S3)
+static/uploads/
+static/games/
+static/logs/
+static/music/
+
+# AI Embeddings & Data (lưu local, backup trên S3)
+data/
+backend/data/
+
+# Scratch / Temp Files
+scratch/
+

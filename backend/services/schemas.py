@@ -8,6 +8,8 @@ class RecognizeRequest(BaseModel):
 class EnrollmentRequest(BaseModel):
     user_id: str
     name: str
+    email: Optional[str] = None
+    password: Optional[str] = None
     department: Optional[str] = None
     images_base64: List[str]
 
@@ -15,11 +17,12 @@ class EnrollmentRequest(BaseModel):
 # Game Schemas
 class GameResponse(BaseModel):
     id: int
-    name: str
+    title: str
     category: str
     description: Optional[str]
+    content: Optional[str]
     image_url: Optional[str]
-    plays: int
+    views: int
     likes: int
     created_at: datetime
 
@@ -28,9 +31,10 @@ class GameResponse(BaseModel):
 
 
 class GameCreateRequest(BaseModel):
-    name: str
+    title: str
     category: str
     description: Optional[str] = None
+    content: Optional[str] = None
     image_url: Optional[str] = None
 
 
@@ -53,6 +57,7 @@ class MusicResponse(BaseModel):
     artist: str
     duration: str
     genre: str
+    file_url: Optional[str]
     playlist_id: Optional[int]
     plays: int
     likes: int
@@ -67,6 +72,7 @@ class MusicCreateRequest(BaseModel):
     artist: str
     duration: str
     genre: str
+    file_url: Optional[str] = None
     playlist_id: Optional[int] = None
 
 
@@ -92,3 +98,39 @@ class KnowledgeCreateRequest(BaseModel):
     description: str
     content: Optional[str] = None
     author: str
+
+
+# Authentication Schemas
+class LoginRequest(BaseModel):
+    username_or_email: str
+    password: str
+
+
+class FaceLoginRequest(BaseModel):
+    image_base64: str
+
+
+# Post Schemas
+class PostResponse(BaseModel):
+    id: int
+    user_id: str
+    post_type: str
+    title: str
+    description: Optional[str]
+    media_url: Optional[str]
+    thumbnail: Optional[str]
+    status: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class PostCreateRequest(BaseModel):
+    post_type: str
+    title: str
+    description: Optional[str] = None
+    media_url: Optional[str] = None
+    thumbnail: Optional[str] = None
+    status: Optional[str] = 'public'
+

@@ -1,5 +1,7 @@
 import base64
 import math
+import hashlib
+import secrets
 from datetime import datetime
 from pathlib import Path
 from sqlalchemy.exc import IntegrityError
@@ -8,6 +10,33 @@ from backend.services.db_models import SessionLocal, User, Log, init_db, STATIC_
 from backend.services.s3_service import upload_file_to_s3, upload_embedding, s3_client
 
 init_db()
+
+
+def hash_password(password: str) -> str:
+    salt = secrets.token_hex(8)
+    pbkdf2_hash = hashlib.pbkdf2_hmac(
+        'sha256',
+        password.encode('utf-8'),
+        salt.encode('utf-8'),
+        100000
+    )
+    return f"{salt}:{pbkdf2_hash.hex()}"
+
+
+def verify_password(password: str, hashed_password: str) -> bool:
+    if not hashed_password or ":" not in hashed_password:
+        return False
+    try:
+        salt, stored_hash = hashed_password.split(":")
+        calc_hash = hashlib.pbkdf2_hmac(
+            'sha256',
+            password.encode('utf-8'),
+            salt.encode('utf-8'),
+            100000
+        )
+        return calc_hash.hex() == stored_hash
+    except Exception:
+        return False
 
 
 def _get_session():
@@ -52,7 +81,7 @@ def _save_user_images(user_id: str, images_base64):
     return saved_files
 
 
-def create_user(user_id: str, name: str, department: str, images_base64):
+def create_user(user_id: str, name: str, department: str, images_base64, email: str = None, password: str = None):
     saved_images = _save_user_images(user_id, images_base64)
     embeddings = []
 
@@ -79,6 +108,8 @@ def create_user(user_id: str, name: str, department: str, images_base64):
         user = User(
             user_id=user_id,
             name=name,
+            email=email,
+            password_hash=hash_password(password) if password else None,
             department=department,
             registered_images=len(embeddings),
         )
@@ -202,3 +233,18 @@ def save_log_image(image_bytes: bytes) -> str:
     path = STATIC_LOG_DIR / filename
     path.write_bytes(image_bytes)
     return f'/static/logs/{filename}'
+
+
+def verify_user_credentials(username_or_email: str, password: str):
+    session = _get_session()
+    try:
+        # Check by user_id (username) first, then by email
+        user = session.query(User).filter(
+            (User.user_id == username_or_email) | (User.email == username_or_email)
+        ).first()
+        if user and user.password_hash:
+            if verify_password(password, user.password_hash):
+                return user
+        return None
+    finally:
+        session.close()

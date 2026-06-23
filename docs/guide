@@ -1,76 +1,207 @@
-# Hướng dẫn chạy dự án Fav Web
+# Hướng dẫn Cài đặt & Vận hành — Fav Web Portal
 
-## 1. Cài đặt phụ thuộc
-### Backend
-Mở terminal trong `d:\file_hoc_tap\Fav_Web` và cài đặt thư viện Python:
+---
+
+## 1. Yêu cầu hệ thống
+
+- **Python** 3.10+
+- **Node.js** 18+ và npm
+- **Git**
+- (Tùy chọn) Tài khoản AWS với S3 Bucket và EC2
+
+---
+
+## 2. Cài đặt Backend (Python / FastAPI)
 
 ```powershell
+# Mở terminal tại thư mục gốc dự án
+cd d:\file_hoc_tap\Fav_Web
+
+# Tạo và kích hoạt môi trường ảo Python
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
+
+# Nâng cấp pip và cài thư viện
 python -m pip install --upgrade pip
 python -m pip install -r backend\requirements.txt
 ```
 
-### Frontend
-Mở terminal trong `d:\file_hoc_tap\Fav_Web\frontend` và cài đặt Node.js package:
+---
+
+## 3. Cài đặt Frontend (React / Vite)
 
 ```powershell
 cd d:\file_hoc_tap\Fav_Web\frontend
 npm install
 ```
 
-## 2. Chạy backend
-Trong terminal backend:
+---
 
-```powershell
-cd d:\file_hoc_tap\Fav_Web
-.\.venv\Scripts\Activate.ps1
-uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+## 4. Cấu hình Biến Môi trường
+
+Tạo file `.env` tại thư mục gốc `d:\file_hoc_tap\Fav_Web\` (nếu chưa có):
+
+```env
+# AWS S3 — bỏ trống nếu chỉ dùng local
+AWS_ACCESS_KEY_ID=<YOUR_KEY>
+AWS_SECRET_ACCESS_KEY=<YOUR_SECRET>
+AWS_STORAGE_BUCKET_NAME=<YOUR_BUCKET>
+AWS_S3_REGION_NAME=ap-southeast-2
 ```
 
-Hoặc nếu muốn dùng npm, đã thêm script ở gốc project:
+> Nếu không khai báo AWS keys, hệ thống sẽ tự động fallback lưu file vào thư mục `static/` local.
 
+---
+
+## 5. Chạy dự án Local
+
+### Backend
 ```powershell
 cd d:\file_hoc_tap\Fav_Web
 npm run dev
+# hoặc chạy thủ công:
+.\.venv\Scripts\Activate.ps1
+uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 ```
+> Backend chạy tại: **http://localhost:8000**  
+> Tài liệu API tự động: **http://localhost:8000/docs**
 
-Backend sẽ chạy tại: `http://localhost:8000`
-
-## 3. Chạy frontend
-Trong terminal frontend:
-
+### Frontend
 ```powershell
 cd d:\file_hoc_tap\Fav_Web\frontend
 npm run dev
 ```
+> Frontend chạy tại: **http://localhost:5173**
 
-Frontend Vite thường sẽ chạy tại: `http://localhost:5173`
+---
 
-## 4. Cách dùng giao diện
-- Vào trang `Dashboard` để mở camera, chụp ảnh hoặc bật auto scan mỗi 3 giây.
-- Vào trang `Users` để đăng ký người dùng mới bằng tên, mã và ảnh.
-- Vào trang `Logs` để xem lịch sử quét/check-in.
+## 6. Cách sử dụng giao diện
 
-## 5. Chạy với InsightFace
-Nếu muốn dùng InsightFace thay vì Facenet, cần cài thư viện và đặt biến môi trường:
+### Đăng nhập
+Tất cả tính năng được bảo vệ bởi màn hình đăng nhập với 2 phương thức:
+- **Mật khẩu:** Điền username hoặc email + mật khẩu.
+- **Khuôn mặt:** Chụp ảnh từ camera → AI nhận diện tự động.
+- **Đăng ký tài khoản mới:** Điền thông tin + upload ảnh khuôn mặt ở tab "Đăng ký".
+
+### Các trang chính
+| Tab | Chức năng |
+|-----|-----------|
+| 📰 Bảng tin | Xem bài đăng đa phương tiện (ảnh, video, nhạc, game, văn bản) |
+| 🎯 Check-in | Quét khuôn mặt để điểm danh |
+| 👥 Users | Quản lý & đăng ký thành viên mới |
+| 📋 Logs | Lịch sử check-in kèm ảnh webcam |
+| 🎮 Games | Blog & tin tức game |
+| 🎵 Music | Thư viện nhạc & trình phát |
+| 📚 Knowledge | Bài viết chia sẻ kiến thức |
+
+### Đăng bài mới (Bảng tin)
+1. Nhấn nút **➕ Đăng bài** trên thanh header.
+2. Chọn thể loại bài đăng.
+3. Điền tiêu đề, mô tả, và chọn file tương ứng.
+4. Nhấn **Đăng bài** — thanh tiến trình sẽ hiển thị % upload.
+
+### Thêm nhạc vào Thư viện Music
+Quy trình 2 bước qua API (hoặc dùng giao diện Feed thay thế):
+
+**Bước 1:** Upload file nhạc vật lý
+```
+POST /api/v1/posts/upload
+Headers: X-User-Id: <your_user_id>
+Body (form-data): file=<file.mp3>, post_type=audio
+→ Nhận về: { "media_url": "/static/uploads/audio/..." }
+```
+
+**Bước 2:** Tạo bản ghi bài hát
+```
+POST /api/v1/music
+Body (JSON):
+{
+  "title": "Tên bài hát",
+  "artist": "Nghệ sĩ",
+  "duration": "3:45",
+  "genre": "Pop",
+  "file_url": "/static/uploads/audio/...",
+  "playlist_id": null
+}
+```
+
+> ⚠️ `file_url` **phải bắt đầu bằng `/`** (dấu gạch chéo). Thiếu dấu `/` sẽ gây lỗi phát nhạc.
+
+Hoặc đặt file nhạc vào thư mục `static/music/` và dùng đường dẫn `/static/music/<tên_file>.mp3`.
+
+---
+
+## 7. Dùng AI Model InsightFace (Tùy chọn)
+
+Mặc định hệ thống dùng `facenet-pytorch`. Để chuyển sang InsightFace:
 
 ```powershell
-cd d:\file_hoc_tap\Fav_Web
-.\.venv\Scripts\Activate.ps1
 pip install insightface
 $env:FACE_RECOGNIZER='insightface'
 uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Nếu không dùng InsightFace thì backend sẽ mặc định chạy với `facenet-pytorch`.
+---
 
-## 6. Lưu ý
-- Đảm bảo browser cho phép truy cập camera.
-- Nếu backend và frontend chạy ở các cổng khác nhau, hãy kiểm tra CORS nếu cần.
-- Dữ liệu người dùng và ảnh được lưu trong `backend/ai_core/data` và `static/logs`.
+## 8. Truy cập AWS EC2 qua SSH
 
+```bash
+# Thay [IP_ADDRESS] bằng Public IP của EC2 instance
+ssh -i ec2_key.pem ubuntu@[IP_ADDRESS]
 
-#lưu ý cách vào terminal của aws
+# Ví dụ: ssh -i ec2_key.pem ubuntu@52.63.251.110
+```
 
-ssh -i ec2_key.pem ubuntu@52.63.251.110
+---
+
+## 9. Cập nhật Backend lên AWS EC2
+
+**Bước 1 — Máy local:** Push code mới lên GitHub
+```bash
+git add backend/
+git commit -m "Cập nhật tính năng backend"
+git push
+```
+
+**Bước 2 — SSH vào EC2:** Pull code và build lại container
+```bash
+cd ~/Favourite-Web
+git pull
+
+# Build Docker image mới
+cd backend
+docker build -t fav-web-backend .
+
+# Khởi động lại container
+cd ..
+docker stop backend-service || true
+docker rm backend-service || true
+docker run -d --name backend-service -p 8000:8000 \
+  --env-file ../.env \
+  fav-web-backend
+```
+
+---
+
+## 10. Cập nhật Frontend lên AWS S3
+
+**Bước 1 — Máy local:** Build production bundle
+```powershell
+cd d:\file_hoc_tap\Fav_Web\frontend
+npm run build
+```
+
+**Bước 2 — AWS S3 Console:**
+1. Truy cập bucket `fav-web-frontend-bucket` trên [AWS S3 Console](https://s3.console.aws.amazon.com).
+2. Upload toàn bộ nội dung thư mục `frontend/dist/` đè lên files cũ.
+3. Bật "Invalidation" trên CloudFront (nếu có) để refresh cache CDN.
+
+---
+
+## 11. Lưu ý Quan trọng
+
+- **Camera:** Đảm bảo trình duyệt cho phép truy cập webcam (HTTPS hoặc localhost).
+- **CORS:** Backend đã cấu hình `allow_origins=["*"]` — an toàn cho local dev, cần thu hẹp khi production.
+- **Static files:** Thư mục `static/uploads/`, `static/games/`, `static/music/` bị ignore bởi Git — cần backup thủ công hoặc dùng S3.
+- **File nhạc thủ công:** Đặt file `.mp3`/`.wav` vào `static/music/` và dùng đường dẫn `/static/music/<filename>`.
+- **Game HTML5:** Chỉ hỗ trợ game dạng file `.zip` chứa `index.html` ở thư mục gốc hoặc thư mục con.

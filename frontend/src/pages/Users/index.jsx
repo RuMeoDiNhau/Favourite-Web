@@ -4,7 +4,7 @@ import { fetchUsers, enrollUser } from '../../services/api';
 function Users() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState({ user_id: '', name: '', department: '' });
+  const [form, setForm] = useState({ user_id: '', name: '', email: '', password: '', department: '' });
   const [files, setFiles] = useState([]);
   const [message, setMessage] = useState('');
 
@@ -53,11 +53,13 @@ function Users() {
       const response = await enrollUser({
         user_id: form.user_id,
         name: form.name,
+        email: form.email || null,
+        password: form.password || null,
         department: form.department,
         images_base64: imagesBase64,
       });
       setMessage(response.data.message || 'Đăng ký thành công');
-      setForm({ user_id: '', name: '', department: '' });
+      setForm({ user_id: '', name: '', email: '', password: '', department: '' });
       setFiles([]);
       loadUsers();
     } catch (error) {
@@ -75,7 +77,7 @@ function Users() {
             name="user_id"
             value={form.user_id}
             onChange={handleChange}
-            placeholder="Mã nhân viên / sinh viên"
+            placeholder="Username (Mã nhân viên / sinh viên)"
             required
           />
           <input
@@ -87,6 +89,20 @@ function Users() {
             required
           />
           <input
+            type="email"
+            name="email"
+            value={form.email}
+            onChange={handleChange}
+            placeholder="Địa chỉ Email"
+          />
+          <input
+            type="password"
+            name="password"
+            value={form.password}
+            onChange={handleChange}
+            placeholder="Mật khẩu đăng nhập"
+          />
+          <input
             type="text"
             name="department"
             value={form.department}
@@ -95,7 +111,7 @@ function Users() {
           />
           <input type="file" accept="image/*" multiple onChange={handleFileChange} />
           <button className="button" type="submit" disabled={files.length === 0}>
-            Đăng ký mặt mới
+            Đăng ký tài khoản & khuôn mặt mới
           </button>
         </div>
         {message && <p>{message}</p>}

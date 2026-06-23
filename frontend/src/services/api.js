@@ -5,6 +5,24 @@ const api = axios.create({
   timeout: 15000,
 });
 
+// Auto attach X-User-Id header if logged in
+api.interceptors.request.use((config) => {
+  const userStr = localStorage.getItem('user');
+  if (userStr) {
+    try {
+      const user = JSON.parse(userStr);
+      if (user && user.user_id) {
+        config.headers['X-User-Id'] = user.user_id;
+      }
+    } catch (e) {
+      console.error('Error parsing user from localStorage', e);
+    }
+  }
+  return config;
+}, (error) => {
+  return Promise.reject(error);
+});
+
 // ==================== Face Recognition ====================
 export const fetchUsers = (page = 1, limit = 10) => api.get('/users', { params: { page, limit } });
 
@@ -13,6 +31,14 @@ export const fetchLogs = () => api.get('/logs');
 export const recognizeFace = (imageBase64) => api.post('/recognize', { image_base64: imageBase64 });
 
 export const enrollUser = (payload) => api.post('/users', payload);
+
+
+// ==================== Authentication ====================
+export const loginWithPassword = (usernameOrEmail, password) => 
+  api.post('/auth/login', { username_or_email: usernameOrEmail, password });
+
+export const loginWithFace = (imageBase64) => 
+  api.post('/auth/login-face', { image_base64: imageBase64 });
 
 
 // ==================== Games ====================
@@ -24,7 +50,7 @@ export const fetchGame = (gameId) => api.get(`/games/${gameId}`);
 
 export const createGame = (gameData) => api.post('/games', gameData);
 
-export const playGame = (gameId) => api.post(`/games/${gameId}/play`);
+export const viewGame = (gameId) => api.post(`/games/${gameId}/view`);
 
 export const likeGame = (gameId) => api.post(`/games/${gameId}/like`);
 
@@ -71,5 +97,29 @@ export const fetchTrendingArticles = () => api.get('/knowledge/trending/hot');
 export const searchKnowledge = (query) => api.get(`/knowledge/search/${query}`);
 
 export const fetchKnowledgeCategories = () => api.get('/knowledge/categories');
+
+
+// ==================== Unified Posts ====================
+export const fetchPosts = () => api.get('/posts');
+
+export const createPost = (postData) => api.post('/posts', postData);
+
+export const uploadPostFile = (file, postType, onProgress) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('post_type', postType);
+
+  return api.post('/posts/upload', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+    onUploadProgress: (progressEvent) => {
+      if (onProgress && progressEvent.total) {
+        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        onProgress(percentCompleted);
+      }
+    },
+  });
+};
 
 export default api;

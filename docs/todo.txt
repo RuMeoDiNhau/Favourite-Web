@@ -21,7 +21,7 @@ DANH SÁCH CÔNG VIỆC CẦN LÀM (TODO LIST BY WEEKS)
     - [x] Vẽ sơ đồ kiến trúc hệ thống mô tả luồng giao tiếp giữa các dịch vụ AWS.
     - [x] Tạo file Dockerfile trong thư mục `backend/` để chuẩn bị container hóa FastAPI.
 
-[/] TUẦN 3: TRIỂN KHAI LÊN AWS (EC2/LAMBDA/API GATEWAY) & TÍCH HỢP LƯU TRỮ AWS S3
+[x] TUẦN 3: TRIỂN KHAI LÊN AWS (EC2/LAMBDA/API GATEWAY) & TÍCH HỢP LƯU TRỮ AWS S3
     * Cấu hình Lưu trữ với S3 Bucket:
       - [x] Tạo một AWS S3 Bucket để thay thế lưu trữ local.
       - [x] Cài đặt thư viện AWS SDK cho Python (`boto3`) vào [backend/requirements.txt](file:///d:/file_hoc_tap/Fav_Web/backend/requirements.txt).
@@ -29,12 +29,12 @@ DANH SÁCH CÔNG VIỆC CẦN LÀM (TODO LIST BY WEEKS)
       - [x] Cập nhật hàm `save_log_image` trong [backend/services/db_service.py](file:///d:/file_hoc_tap/Fav_Web/backend/services/db_service.py) để lưu ảnh webcam chụp từ API nhận diện khuôn mặt trực tiếp lên S3 và trả về URL S3 công khai (hoặc signed URL) thay vì path `/static/logs/...`.
       - [x] (Khuyến nghị) Đồng bộ hoặc sao lưu các file vector khuôn mặt dạng `.npy` (trong thư mục embeddings) lên S3 để đảm bảo tính sẵn sàng cao và không bị mất dữ liệu.
     * Triển khai Backend:
-      - [ ] Tạo một EC2 instance (Ubuntu, Free Tier) và cấu hình Security Group (mở port 80, 443, 8000).
-      - [ ] Triển khai FastAPI lên EC2 bằng cách dùng Docker (đóng gói ảnh Docker chạy trên EC2) hoặc chạy trực tiếp bằng Systemd Service + Gunicorn/Uvicorn + Nginx reverse proxy.
+      - [x] Tạo một EC2 instance (Ubuntu, Free Tier) và cấu hình Security Group (mở port 80, 443, 8000).
+      - [x] Triển khai FastAPI lên EC2 bằng cách dùng Docker (đóng gói ảnh Docker chạy trên EC2) hoặc chạy trực tiếp bằng Systemd Service + Gunicorn/Uvicorn + Nginx reverse proxy.
     * Triển khai Frontend:
       - [x] Build mã nguồn React frontend sang thư mục `dist/` bằng lệnh `npm run build` trong thư mục [frontend/](file:///d:/file_hoc_tap/Fav_Web/frontend).
       - [x] Tạo AWS S3 Bucket mới phục vụ Static Website Hosting, phân quyền Public Read và upload toàn bộ nội dung thư mục `dist/` lên bucket này.
-      - [ ] (Khuyến nghị) Cấu hình AWS CloudFront trỏ đến Frontend S3 và Backend EC2/API Gateway để chạy đồng bộ dưới dạng HTTPS nhằm tránh lỗi Mixed Content và tối ưu hóa CDN.
+      - [-] (Khuyến nghị) Cấu hình AWS CloudFront trỏ đến Frontend S3 và Backend EC2/API Gateway để chạy đồng bộ dưới dạng HTTPS nhằm tránh lỗi Mixed Content và tối ưu hóa CDN.
 
 [ ] TUẦN 4: TÍCH HỢP CƠ SỞ DỮ LIỆU CLOUD (AWS RDS)
     - [ ] Khởi tạo cơ sở dữ liệu AWS RDS (PostgreSQL hoặc MySQL - cấu hình Free Tier) trên AWS Console.
