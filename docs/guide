@@ -69,3 +69,8 @@ Nếu không dùng InsightFace thì backend sẽ mặc định chạy với `fac
 - Đảm bảo browser cho phép truy cập camera.
 - Nếu backend và frontend chạy ở các cổng khác nhau, hãy kiểm tra CORS nếu cần.
 - Dữ liệu người dùng và ảnh được lưu trong `backend/ai_core/data` và `static/logs`.
+
+
+#lưu ý cách vào terminal của aws
+
+ssh -i ec2_key.pem ubuntu@52.63.251.110
