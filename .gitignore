@@ -45,6 +45,7 @@ database/*.db
 # Credentials
 *.csv
 *_accessKeys.csv
+*.pem
 
 # Documents
 *.pdf
