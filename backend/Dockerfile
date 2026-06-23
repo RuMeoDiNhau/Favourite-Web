@@ -21,8 +21,9 @@ WORKDIR /app
 # Copy requirements file first to utilize Docker layer caching
 COPY requirements.txt ./backend/requirements.txt
 
-# Install python dependencies (Install CPU-only PyTorch first to save memory and space)
+# Install python dependencies (Install numpy/cython and CPU-only PyTorch first to prevent build errors)
 RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir numpy cython && \
     pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu && \
     pip install --no-cache-dir -r ./backend/requirements.txt
 
