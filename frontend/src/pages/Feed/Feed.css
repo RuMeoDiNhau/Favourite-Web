@@ -2,7 +2,7 @@
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: 28% 44% 28%;
+  grid-template-columns: 23% 41% 36%;
   gap: 20px;
   max-width: 1400px;
   margin: 0 auto;
@@ -452,6 +452,8 @@
 .games-dashboard-container {
   display: flex;
   gap: 16px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .games-dash-sidebar {
@@ -487,6 +489,7 @@
   flex-direction: column;
   gap: 12px;
   flex: 1;
+  min-width: 0;
 }
 
 .games-dash-item {
@@ -499,6 +502,9 @@
   cursor: pointer;
   text-align: left;
   transition: transform 0.2s;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .games-dash-item:hover {
