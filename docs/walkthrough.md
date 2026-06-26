@@ -221,6 +221,27 @@ Integration test xác nhận toàn bộ quy trình:
     *   Tài khoản thường gọi API xóa playlist -> Trả về lỗi `403 Forbidden` (Đạt).
     *   Tài khoản Admin gọi API xóa playlist -> Xóa thành công playlist, bài hát quay về trạng thái tự do (không bị xóa khỏi thư viện chung) -> Trả về `200 OK` (Đạt).
 
+## Nâng cấp Giao diện và Thiết kế Dashboard Tổng Quan (UI Overhaul)
+
+### A. Mô tả nâng cấp
+*   **Mục tiêu:** Tái cấu trúc toàn bộ bố cục trang Bảng tin (`Feed.jsx`) thành màn hình **Dashboard Tổng quan** tích hợp đầy đủ tính năng trong 3 cột giúp hạn chế việc chuyển đổi tab liên tục.
+*   **Chi tiết cải tiến:**
+    *   **Thanh Navbar Đơn Dòng (Single-row Navbar):** Chuyển từ giao diện header 2 dòng cồng kềnh sang thanh Navbar 1 dòng nền tối Slate 800 (`#1e293b`). Căn giữa các tab nút điều hướng, căn phải thông tin tài khoản dropdown, nút Đăng bài nổi bật và nút Đăng xuất.
+    *   **Dashboard 3 Cột Hiện Đại:**
+        1.  **Cột Trái (Quét Khuôn Mặt):** Tích hợp camera check-in tự động quét mỗi 3 giây hoặc chụp thủ công, kèm hiệu ứng quét laser động trực quan và bảng lịch sử check-in dạng log chi tiết dưới khung camera.
+        2.  **Cột Giữa (Feed & Kiến Thức):** Hiển thị 3 feed bài đăng mới nhất (hỗ trợ đầy đủ audio player, video, hình ảnh) và 2 bài viết chia sẻ kiến thức nổi bật dạng card sạch sẽ.
+        3.  **Cột Phải (Games & Thống Kê):** Hiển thị mục Blog game kèm menu chọn danh mục lọc nhanh bên trái và danh sách bài viết game bên phải. Tích hợp bảng danh sách thành viên và vẽ **biểu đồ cột SVG** thống kê trực quan số ảnh đăng ký của người dùng (tự động fallback mock dữ liệu an toàn để tránh crash trang nếu user không phải admin).
+
+### B. Các thành phần sửa đổi
+*   **Frontend UI & CSS (`App.jsx`, `App.css`, `Feed.jsx`, `Feed.css`):**
+    *   Sắp xếp lại cấu trúc DOM và CSS flexbox của Navbar trong `App.jsx` và `App.css`.
+    *   Tái thiết kế toàn bộ `Feed.jsx` thành grid 3 cột responsive (`grid-template-columns: 28% 44% 28%`).
+    *   Cung cấp styles glassmorphism hiện đại cho các card thành phần và xây dựng biểu đồ SVG động.
+
+### C. Kết quả kiểm thử (Verification)
+*   **Production Build Test:** Chạy thành công lệnh `npm run build` trên local dự án frontend -> Trả về kết quả build thành công 100% không có bất kỳ cảnh báo hay lỗi import/cú pháp nào.
+*   **Manual Verify:** Kiểm tra giao diện Dashboard mới hiển thị hoàn hảo, các nút bấm hoạt động chính xác, camera check-in tự động quét và ghi log check-in trơn tru, biểu đồ SVG hiển thị đồng bộ.
+
 ---
 
 ## Kế hoạch Tiếp theo
