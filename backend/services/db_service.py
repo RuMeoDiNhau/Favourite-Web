@@ -105,6 +105,9 @@ def create_user(user_id: str, name: str, department: str, images_base64, email: 
 
     session = _get_session()
     try:
+        is_first = session.query(User).count() == 0
+        role = 'admin' if (is_first or user_id.lower() == 'admin') else 'user'
+        
         user = User(
             user_id=user_id,
             name=name,
@@ -112,6 +115,7 @@ def create_user(user_id: str, name: str, department: str, images_base64, email: 
             password_hash=hash_password(password) if password else None,
             department=department,
             registered_images=len(embeddings),
+            role=role,
         )
         session.add(user)
         session.commit()
@@ -147,6 +151,7 @@ def get_users(page: int = 1, limit: int = 10):
                     'user_id': user.user_id,
                     'name': user.name,
                     'registered_images': user.registered_images,
+                    'role': user.role,
                     'created_at': user.created_at.isoformat() + 'Z',
                 }
                 for user in users

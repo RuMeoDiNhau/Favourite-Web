@@ -44,11 +44,21 @@ def enroll_user(request: EnrollmentRequest):
     return result
 
 @router.get('/users')
-def list_users(page: int = 1, limit: int = 10):
+def list_users(page: int = 1, limit: int = 10, x_user_id: str = Header(None)):
+    if not x_user_id:
+        raise HTTPException(status_code=401, detail='Vui lòng đăng nhập')
+    user = get_user_by_user_id(x_user_id)
+    if not user or user.role != 'admin':
+        raise HTTPException(status_code=403, detail='Bạn không có quyền xem danh sách thành viên')
     return get_users(page=page, limit=limit)
 
 @router.get('/logs')
-def list_logs():
+def list_logs(x_user_id: str = Header(None)):
+    if not x_user_id:
+        raise HTTPException(status_code=401, detail='Vui lòng đăng nhập')
+    user = get_user_by_user_id(x_user_id)
+    if not user or user.role != 'admin':
+        raise HTTPException(status_code=403, detail='Bạn không có quyền xem lịch sử log')
     return get_logs()
 
 
@@ -66,7 +76,8 @@ def login(request: LoginRequest):
         'user': {
             'user_id': user.user_id,
             'name': user.name,
-            'email': user.email
+            'email': user.email,
+            'role': user.role
         }
     }
 
@@ -85,7 +96,8 @@ def login_face(request: FaceLoginRequest):
                     'user': {
                         'user_id': user.user_id,
                         'name': user.name,
-                        'email': user.email
+                        'email': user.email,
+                        'role': user.role
                     }
                 }
     except Exception as e:
@@ -201,8 +213,17 @@ def get_song(song_id: int, db: Session = Depends(get_db)):
     return song
 
 @router.post('/music', response_model=MusicResponse, status_code=201)
-def create_song(request: MusicCreateRequest, db: Session = Depends(get_db)):
-    """Create a new song"""
+def create_song(
+    request: MusicCreateRequest,
+    x_user_id: str = Header(None),
+    db: Session = Depends(get_db)
+):
+    """Create a new song (Admin only)"""
+    if not x_user_id:
+        raise HTTPException(status_code=401, detail="Vui lòng đăng nhập để thực hiện hành động này")
+    user = get_user_by_user_id(x_user_id)
+    if not user or user.role != 'admin':
+        raise HTTPException(status_code=403, detail="Chỉ Admin mới có quyền thêm nhạc")
     return music_service.create_song(
         db,
         title=request.title,
@@ -212,6 +233,20 @@ def create_song(request: MusicCreateRequest, db: Session = Depends(get_db)):
         file_url=request.file_url,
         playlist_id=request.playlist_id
     )
+
+@router.delete('/music/{song_id}', status_code=200)
+def delete_song(song_id: int, x_user_id: str = Header(None), db: Session = Depends(get_db)):
+    """Delete a song by ID (Admin only)"""
+    if not x_user_id:
+        raise HTTPException(status_code=401, detail="Vui lòng đăng nhập")
+    user = get_user_by_user_id(x_user_id)
+    if not user or user.role != 'admin':
+        raise HTTPException(status_code=403, detail="Chỉ Admin mới có quyền xóa bài hát")
+    
+    success = music_service.delete_song(db, song_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Không tìm thấy bài hát")
+    return {"message": "Đã xóa bài hát thành công"}
 
 @router.post('/music/{song_id}/play')
 def play_song(song_id: int, db: Session = Depends(get_db)):

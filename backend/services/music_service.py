@@ -125,3 +125,13 @@ def get_popular_songs(db: Session, limit: int = 10):
 def get_new_songs(db: Session, limit: int = 10):
     """Get newest songs"""
     return db.query(Music).order_by(Music.created_at.desc()).limit(limit).all()
+
+
+def delete_song(db: Session, song_id: int) -> bool:
+    """Delete a song by ID from database"""
+    song = db.query(Music).filter(Music.id == song_id).first()
+    if song:
+        db.delete(song)
+        db.commit()
+        return True
+    return False

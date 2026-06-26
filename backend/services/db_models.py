@@ -27,6 +27,7 @@ class User(Base):
     password_hash = Column(String(255), nullable=True)
     department = Column(String(255), nullable=True)
     registered_images = Column(Integer, default=0)
+    role = Column(String(50), default='user')
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class Log(Base):
