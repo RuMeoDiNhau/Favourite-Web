@@ -7,7 +7,7 @@ from backend.services.db_models import SessionLocal
 from backend.services.schemas import (
     RecognizeRequest, EnrollmentRequest,
     GameResponse, GameCreateRequest,
-    MusicResponse, PlaylistResponse, MusicCreateRequest,
+    MusicResponse, PlaylistResponse, MusicCreateRequest, PlaylistCreateRequest,
     KnowledgeResponse, KnowledgeCreateRequest,
     LoginRequest, FaceLoginRequest,
     PostResponse, PostCreateRequest
@@ -178,6 +178,54 @@ def get_playlists(db: Session = Depends(get_db)):
     """Get all playlists"""
     music_service.init_playlists_and_music(db)
     return music_service.get_all_playlists(db)
+
+@router.post('/playlists', response_model=PlaylistResponse, status_code=201)
+def create_playlist(request: PlaylistCreateRequest, db: Session = Depends(get_db)):
+    """Create a new playlist"""
+    return music_service.create_playlist(
+        db,
+        name=request.name,
+        description=request.description,
+        image_url=request.image_url
+    )
+
+@router.delete('/playlists/{playlist_id}', status_code=200)
+def delete_playlist(playlist_id: int, x_user_id: str = Header(None), db: Session = Depends(get_db)):
+    """Delete a playlist (Admin only)"""
+    if not x_user_id:
+        raise HTTPException(status_code=401, detail="Vui lòng đăng nhập để thực hiện hành động này")
+    user = get_user_by_user_id(x_user_id)
+    if not user or user.role != 'admin':
+        raise HTTPException(status_code=403, detail="Chỉ Admin mới có quyền xóa danh sách phát")
+    
+    success = music_service.delete_playlist(db, playlist_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Không tìm thấy danh sách phát")
+    return {"message": "Đã xóa danh sách phát thành công"}
+
+@router.get('/playlists/{playlist_id}/songs', response_model=list[MusicResponse])
+def get_playlist_songs(playlist_id: int, db: Session = Depends(get_db)):
+    """Get all songs in a specific playlist"""
+    playlist = music_service.get_playlist_by_id(db, playlist_id)
+    if not playlist:
+        raise HTTPException(status_code=404, detail="Không tìm thấy danh sách phát")
+    return music_service.get_songs_by_playlist(db, playlist_id)
+
+@router.post('/playlists/{playlist_id}/songs/{song_id}', status_code=200)
+def add_song_to_playlist(playlist_id: int, song_id: int, db: Session = Depends(get_db)):
+    """Add a song to a playlist"""
+    success = music_service.add_song_to_playlist(db, playlist_id, song_id)
+    if not success:
+        raise HTTPException(status_code=400, detail="Không thể thêm bài hát vào danh sách phát. Hãy kiểm tra lại ID bài hát hoặc playlist.")
+    return {"message": "Đã thêm bài hát vào danh sách phát thành công"}
+
+@router.delete('/playlists/songs/{song_id}', status_code=200)
+def remove_song_from_playlist(song_id: int, db: Session = Depends(get_db)):
+    """Remove a song from its current playlist"""
+    success = music_service.remove_song_from_playlist(db, song_id)
+    if not success:
+        raise HTTPException(status_code=400, detail="Bài hát không nằm trong danh sách phát nào hoặc ID bài hát không đúng.")
+    return {"message": "Đã xóa bài hát khỏi danh sách phát thành công"}
 
 @router.get('/music', response_model=list[MusicResponse])
 def get_all_music(db: Session = Depends(get_db)):

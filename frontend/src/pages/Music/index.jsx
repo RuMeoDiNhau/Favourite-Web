@@ -24,7 +24,7 @@ export default function Music() {
   const [uploadForm, setUploadForm] = useState({
     title: '',
     artist: '',
-    genre: 'Pop',
+    genre: 'Update later',
     duration: '00:00'
   });
   const [musicFile, setMusicFile] = useState(null);
@@ -38,17 +38,39 @@ export default function Music() {
   const [currentTime, setCurrentTime] = useState(0);
   const [volume, setVolume] = useState(0.8);
 
+  // Trạng thái quản lý danh sách phát
+  const [selectedPlaylist, setSelectedPlaylist] = useState(null);
+  const [showCreatePlaylistModal, setShowCreatePlaylistModal] = useState(false);
+  const [newPlaylistForm, setNewPlaylistForm] = useState({
+    name: '',
+    description: '',
+    image_url: '🎵'
+  });
+  const [activePopoverSongId, setActivePopoverSongId] = useState(null);
+  const availableEmojis = ['🎵', '📻', '🎧', '🎸', '🎹', '🍿', '🔥', '❤️', '🌟', '🍀', '✨', '☕', '🌧️', '⚡', '🌙', '🎉', '✈️', '🏖️', '🎮', '🧸'];
+
   const audioRef = useRef(null);
 
   useEffect(() => {
     loadMusicData();
-  }, [selectedCategory]);
+  }, [selectedCategory, selectedPlaylist]);
 
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.volume = volume;
     }
   }, [volume]);
+
+  // Đóng popover thêm vào playlist khi click ra ngoài
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (!e.target.closest('.playlist-popover-container')) {
+        setActivePopoverSongId(null);
+      }
+    };
+    document.addEventListener('click', handleOutsideClick);
+    return () => document.removeEventListener('click', handleOutsideClick);
+  }, []);
 
   const loadMusicData = async () => {
     try {
@@ -61,7 +83,9 @@ export default function Music() {
       }
       
       let songsResponse;
-      if (selectedCategory === 'all') {
+      if (selectedPlaylist) {
+        songsResponse = await api.fetchSongsByPlaylist(selectedPlaylist.id);
+      } else if (selectedCategory === 'all') {
         songsResponse = await api.fetchAllMusic();
       } else if (selectedCategory === 'library') {
         songsResponse = await api.fetchPopularSongs();
@@ -69,6 +93,8 @@ export default function Music() {
         songsResponse = await api.fetchPopularSongs();
       } else if (selectedCategory === 'recent') {
         songsResponse = await api.fetchNewSongs();
+      } else if (selectedCategory === 'playlist') {
+        songsResponse = { data: [] };
       } else {
         songsResponse = await api.fetchAllMusic();
       }
@@ -151,6 +177,87 @@ export default function Music() {
     }
   };
 
+  const handleDeletePlaylist = async (playlistId) => {
+    if (window.confirm('Bạn có chắc chắn muốn xóa danh sách phát này?')) {
+      try {
+        await api.deletePlaylist(playlistId);
+        if (selectedPlaylist && selectedPlaylist.id === playlistId) {
+          setSelectedPlaylist(null);
+        }
+        loadMusicData();
+        alert('Đã xóa danh sách phát thành công!');
+      } catch (err) {
+        console.error('Error deleting playlist:', err);
+        alert(err.response?.data?.detail || 'Không thể xóa danh sách phát');
+      }
+    }
+  };
+
+  const handleCreatePlaylistSubmit = async (e) => {
+    e.preventDefault();
+    if (!newPlaylistForm.name.trim()) {
+      alert('Vui lòng nhập tên danh sách phát!');
+      return;
+    }
+    try {
+      await api.createPlaylist({
+        name: newPlaylistForm.name.trim(),
+        description: newPlaylistForm.description?.trim() || '',
+        image_url: newPlaylistForm.image_url
+      });
+      setShowCreatePlaylistModal(false);
+      setNewPlaylistForm({ name: '', description: '', image_url: '🎵' });
+      loadMusicData();
+      alert('Đã tạo danh sách phát thành công!');
+    } catch (err) {
+      console.error('Error creating playlist:', err);
+      alert(err.response?.data?.detail || 'Không thể tạo danh sách phát');
+    }
+  };
+
+  const handleAddSongToPlaylist = async (playlistId, songId) => {
+    try {
+      await api.addSongToPlaylist(playlistId, songId);
+      setActivePopoverSongId(null);
+      loadMusicData();
+      alert('Đã thêm bài hát vào danh sách phát!');
+    } catch (err) {
+      console.error('Error adding song to playlist:', err);
+      alert(err.response?.data?.detail || 'Không thể thêm bài hát vào danh sách phát');
+    }
+  };
+
+  const handleRemoveSongFromPlaylist = async (songId) => {
+    if (window.confirm('Bạn có chắc chắn muốn xóa bài hát này khỏi danh sách phát?')) {
+      try {
+        await api.removeSongFromPlaylist(songId);
+        loadMusicData();
+        alert('Đã xóa bài hát khỏi danh sách phát thành công!');
+      } catch (err) {
+        console.error('Error removing song from playlist:', err);
+        alert(err.response?.data?.detail || 'Không thể xóa bài hát khỏi danh sách phát');
+      }
+    }
+  };
+
+  const handleNextSong = () => {
+    if (songs && songs.length > 0 && currentSong) {
+      const currentIndex = songs.findIndex(s => s.id === currentSong.id);
+      if (currentIndex !== -1 && currentIndex < songs.length - 1) {
+        handlePlaySong(songs[currentIndex + 1]);
+      }
+    }
+  };
+
+  const handlePrevSong = () => {
+    if (songs && songs.length > 0 && currentSong) {
+      const currentIndex = songs.findIndex(s => s.id === currentSong.id);
+      if (currentIndex > 0) {
+        handlePlaySong(songs[currentIndex - 1]);
+      }
+    }
+  };
+
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -176,8 +283,8 @@ export default function Music() {
       alert('Vui lòng chọn tệp nhạc!');
       return;
     }
-    if (!uploadForm.title || !uploadForm.artist) {
-      alert('Vui lòng điền đầy đủ tiêu đề và ca sĩ!');
+    if (!uploadForm.title) {
+      alert('Vui lòng điền tên bài hát!');
       return;
     }
 
@@ -198,8 +305,8 @@ export default function Music() {
       // Step 2: Create song metadata in library
       await api.createSong({
         title: uploadForm.title,
-        artist: uploadForm.artist,
-        genre: uploadForm.genre,
+        artist: uploadForm.artist.trim() || 'Update later',
+        genre: uploadForm.genre || 'Update later',
         duration: uploadForm.duration,
         file_url: mediaUrl,
         playlist_id: null
@@ -210,7 +317,7 @@ export default function Music() {
       setUploadForm({
         title: '',
         artist: '',
-        genre: 'Pop',
+        genre: 'Update later',
         duration: '00:00'
       });
       setMusicFile(null);
@@ -238,6 +345,13 @@ export default function Music() {
   };
 
   const onAudioEnded = () => {
+    if (songs && songs.length > 0 && currentSong) {
+      const currentIndex = songs.findIndex(s => s.id === currentSong.id);
+      if (currentIndex !== -1 && currentIndex < songs.length - 1) {
+        handlePlaySong(songs[currentIndex + 1]);
+        return;
+      }
+    }
     setIsPlaying(false);
     setCurrentTime(0);
   };
@@ -273,21 +387,37 @@ export default function Music() {
 
   return (
     <div className="music-container" style={{ paddingBottom: currentSong ? '80px' : '0' }}>
-      <Sidebar selectedCategory={selectedCategory} onSelectCategory={setSelectedCategory} />
+      <Sidebar 
+        selectedCategory={selectedCategory} 
+        onSelectCategory={(cat) => {
+          setSelectedPlaylist(null);
+          setSelectedCategory(cat);
+        }} 
+      />
       <div className="music-main">
         <div className="music-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px', textAlign: 'left' }}>
           <div>
             <h1 style={{ margin: 0, fontSize: '48px', fontWeight: '700' }}>🎵 Âm Nhạc Trực Tuyến</h1>
             <p style={{ margin: '5px 0 0 0', fontSize: '18px', color: 'rgba(255, 255, 255, 0.8)' }}>Thưởng thức và thư giãn cùng các bài hát bản quyền đỉnh cao</p>
           </div>
-          {user && user.role === 'admin' && (
-            <button 
-              className="upload-music-btn"
-              onClick={() => setShowUploadModal(true)}
-            >
-              ➕ Thêm Nhạc
-            </button>
-          )}
+          <div style={{ display: 'flex', gap: '15px' }}>
+            {selectedCategory === 'playlist' && !selectedPlaylist && user && (
+              <button 
+                className="create-playlist-btn"
+                onClick={() => setShowCreatePlaylistModal(true)}
+              >
+                ➕ Tạo Playlist
+              </button>
+            )}
+            {user && user.role === 'admin' && (
+              <button 
+                className="upload-music-btn"
+                onClick={() => setShowUploadModal(true)}
+              >
+                ➕ Thêm Nhạc
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="music-content">
@@ -295,26 +425,36 @@ export default function Music() {
             <p style={{ textAlign: 'center', color: 'white' }}>Đang tải âm nhạc...</p>
           ) : error ? (
             <p style={{ textAlign: 'center', color: '#ff6b6b' }}>{error}</p>
-          ) : (
-            <>
-              {(selectedCategory === 'all' || selectedCategory === 'playlist') && playlists.length > 0 && (
-                <section className="music-section">
-                  <h2>📻 Danh Sách Phát Của Tôi</h2>
-                  <div className="playlist-grid">
-                    {playlists.map(playlist => (
-                      <div key={playlist.id} className="playlist-card">
-                        <div className="playlist-image">{playlist.image_url}</div>
-                        <h3>{playlist.name}</h3>
-                        <p>{playlist.song_count} bài hát</p>
-                      </div>
-                    ))}
+          ) : selectedPlaylist ? (
+            /* Chi tiết Playlist */
+            <div className="playlist-detail-view">
+              <button className="playlist-back-btn" onClick={() => setSelectedPlaylist(null)}>
+                ⬅️ Quay lại danh sách phát
+              </button>
+              
+              <div className="playlist-detail-header">
+                <div className="playlist-detail-art">{selectedPlaylist.image_url || '🎵'}</div>
+                <div className="playlist-detail-info">
+                  <span className="playlist-badge">DANH SÁCH PHÁT</span>
+                  <h1>{selectedPlaylist.name}</h1>
+                  {selectedPlaylist.description && <p className="playlist-description">{selectedPlaylist.description}</p>}
+                  <div className="playlist-meta">
+                    <span>{songs.length} bài hát</span>
+                    {user && user.role === 'admin' && (
+                      <button 
+                        className="playlist-detail-delete-btn"
+                        onClick={() => handleDeletePlaylist(selectedPlaylist.id)}
+                      >
+                        🗑️ Xóa Playlist
+                      </button>
+                    )}
                   </div>
-                </section>
-              )}
+                </div>
+              </div>
 
-              {songs.length > 0 && (
-                <section className="music-section">
-                  <h2>🎵 {selectedCategory === 'all' ? 'Nhạc Mới Phát Hành' : 'Bài Hát'}</h2>
+              <div className="music-section">
+                <h2>Danh sách bài hát</h2>
+                {songs.length > 0 ? (
                   <div className="songs-list">
                     {songs.map(song => (
                       <div key={song.id} className={`song-item ${currentSong && currentSong.id === song.id ? 'active' : ''}`}>
@@ -333,6 +473,18 @@ export default function Music() {
                         <button onClick={() => handleLikeSong(song.id)} className="play-btn" style={{ marginLeft: '8px' }}>
                           ❤️
                         </button>
+                        
+                        {user && (
+                          <button 
+                            onClick={() => handleRemoveSongFromPlaylist(song.id)} 
+                            className="play-btn remove-song-btn" 
+                            style={{ marginLeft: '8px', backgroundColor: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.35)' }}
+                            title="Xóa khỏi danh sách phát"
+                          >
+                            ➖
+                          </button>
+                        )}
+
                         {user && user.role === 'admin' && (
                           <button 
                             onClick={() => handleDeleteSong(song.id)} 
@@ -346,11 +498,177 @@ export default function Music() {
                       </div>
                     ))}
                   </div>
+                ) : (
+                  <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontStyle: 'italic', marginTop: '20px' }}>
+                    Danh sách phát này trống. Quay lại tab "Tất Cả" để thêm bài hát.
+                  </p>
+                )}
+              </div>
+            </div>
+          ) : (
+            /* View bình thường (Các danh mục All, Library, Favorite, Recent, Playlist tổng) */
+            <>
+              {selectedCategory === 'playlist' ? (
+                <section className="music-section">
+                  <h2>📻 Danh Sách Phát Của Tôi</h2>
+                  {playlists.length > 0 ? (
+                    <div className="playlist-grid">
+                      {playlists.map(playlist => (
+                        <div 
+                          key={playlist.id} 
+                          className="playlist-card"
+                          onClick={() => setSelectedPlaylist(playlist)}
+                        >
+                          <div className="playlist-image">{playlist.image_url || '🎵'}</div>
+                          <h3>{playlist.name}</h3>
+                          <p>{playlist.song_count} bài hát</p>
+                          {user && user.role === 'admin' && (
+                            <button
+                              className="playlist-card-delete-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeletePlaylist(playlist.id);
+                              }}
+                              title="Xóa danh sách phát"
+                            >
+                              🗑️
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.7)', marginTop: '20px' }}>
+                      Chưa có danh sách phát nào. {user ? 'Bấm "Tạo Playlist" để bắt đầu!' : 'Vui lòng đăng nhập để tạo mới.'}
+                    </p>
+                  )}
                 </section>
-              )}
+              ) : (
+                /* Các danh mục bài hát (All, Library, Favorite, Recent) */
+                <>
+                  {/* Ở tab "Tất Cả", chúng ta vẫn show hàng ngang Playlists nếu có */}
+                  {selectedCategory === 'all' && playlists.length > 0 && (
+                    <section className="music-section">
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                        <h2 style={{ borderBottom: 'none', margin: 0 }}>📻 Danh Sách Phát Của Tôi</h2>
+                        <button 
+                          className="view-all-playlists-btn"
+                          onClick={() => setSelectedCategory('playlist')}
+                          style={{ background: 'none', border: 'none', color: '#a78bfa', cursor: 'pointer', fontWeight: '600' }}
+                        >
+                          Xem tất cả →
+                        </button>
+                      </div>
+                      <div className="playlist-grid">
+                        {playlists.slice(0, 4).map(playlist => (
+                          <div 
+                            key={playlist.id} 
+                            className="playlist-card"
+                            onClick={() => {
+                              setSelectedCategory('playlist');
+                              setSelectedPlaylist(playlist);
+                            }}
+                          >
+                            <div className="playlist-image">{playlist.image_url || '🎵'}</div>
+                            <h3>{playlist.name}</h3>
+                            <p>{playlist.song_count} bài hát</p>
+                            {user && user.role === 'admin' && (
+                              <button
+                                className="playlist-card-delete-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeletePlaylist(playlist.id);
+                                }}
+                                title="Xóa danh sách phát"
+                              >
+                                🗑️
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  )}
 
-              {!loading && songs.length === 0 && playlists.length === 0 && (
-                <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.7)' }}>Không có dữ liệu</p>
+                  {songs.length > 0 && (
+                    <section className="music-section">
+                      <h2>🎵 {selectedCategory === 'all' ? 'Nhạc Mới Phát Hành' : 'Bài Hát'}</h2>
+                      <div className="songs-list">
+                        {songs.map(song => (
+                          <div key={song.id} className={`song-item ${currentSong && currentSong.id === song.id ? 'active' : ''}`}>
+                            <div className="song-info">
+                              <h4>{song.title}</h4>
+                              <p>{song.artist} • <span style={{ opacity: 0.8 }}>🎧 {song.plays} lượt nghe</span></p>
+                            </div>
+                            <div className="song-duration">{song.duration}</div>
+                            <button 
+                              onClick={() => handlePlaySong(song)} 
+                              className="play-btn"
+                              style={{ background: currentSong && currentSong.id === song.id && isPlaying ? 'rgba(255,255,255,0.4)' : '' }}
+                            >
+                              {currentSong && currentSong.id === song.id && isPlaying ? '⏸️' : '▶️'}
+                            </button>
+                            <button onClick={() => handleLikeSong(song.id)} className="play-btn" style={{ marginLeft: '8px' }}>
+                              ❤️
+                            </button>
+
+                            {/* Dropdown Popover để thêm vào Playlist */}
+                            {user && (
+                              <div className="playlist-popover-container" style={{ position: 'relative', marginLeft: '8px' }}>
+                                <button
+                                  className="play-btn add-to-playlist-btn"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActivePopoverSongId(activePopoverSongId === song.id ? null : song.id);
+                                  }}
+                                  title="Thêm vào danh sách phát"
+                                >
+                                  ➕
+                                </button>
+                                {activePopoverSongId === song.id && (
+                                  <div className="playlist-popover">
+                                    <div className="popover-header">Thêm vào playlist</div>
+                                    <div className="popover-list">
+                                      {playlists.length > 0 ? (
+                                        playlists.map(playlist => (
+                                          <button
+                                            key={playlist.id}
+                                            className="popover-item"
+                                            onClick={() => handleAddSongToPlaylist(playlist.id, song.id)}
+                                          >
+                                            <span style={{ marginRight: '8px' }}>{playlist.image_url || '🎵'}</span>
+                                            {playlist.name}
+                                          </button>
+                                        ))
+                                      ) : (
+                                        <div className="popover-empty">Chưa có playlist nào</div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {user && user.role === 'admin' && (
+                              <button 
+                                onClick={() => handleDeleteSong(song.id)} 
+                                className="play-btn delete-song-btn" 
+                                style={{ marginLeft: '8px', backgroundColor: 'rgba(239, 68, 68, 0.2)', border: '1px solid rgba(239, 68, 68, 0.4)' }}
+                                title="Xóa bài hát"
+                              >
+                                🗑️
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
+                  {!loading && songs.length === 0 && (
+                    <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.7)', marginTop: '40px' }}>Không có dữ liệu bài hát</p>
+                  )}
+                </>
               )}
             </>
           )}
@@ -379,11 +697,11 @@ export default function Music() {
 
           <div className="player-controls">
             <div className="controls-buttons">
-              <button className="player-btn">⏮️</button>
+              <button className="player-btn" onClick={handlePrevSong}>⏮️</button>
               <button className="player-btn play-pause" onClick={togglePlayPause}>
                 {isPlaying ? '⏸️' : '▶'}
               </button>
-              <button className="player-btn">⏭️</button>
+              <button className="player-btn" onClick={handleNextSong}>⏭️</button>
             </div>
 
             <div className="progress-container">
@@ -435,14 +753,13 @@ export default function Music() {
               </div>
 
               <div className="music-form-group">
-                <label>Ca sĩ *</label>
+                <label>Ca sĩ (Tác giả)</label>
                 <input 
                   type="text" 
-                  placeholder="Nhập tên ca sĩ..." 
+                  placeholder="Nhập tên ca sĩ (Mặc định: Update later)..." 
                   value={uploadForm.artist}
                   onChange={(e) => setUploadForm({ ...uploadForm, artist: e.target.value })}
                   disabled={isUploading}
-                  required
                 />
               </div>
 
@@ -453,6 +770,7 @@ export default function Music() {
                   onChange={(e) => setUploadForm({ ...uploadForm, genre: e.target.value })}
                   disabled={isUploading}
                 >
+                  <option value="Update later">Chưa xác định (Update later)</option>
                   <option value="Pop">Pop</option>
                   <option value="Ballad">Ballad</option>
                   <option value="Rap">Rap / Hip-hop</option>
@@ -513,6 +831,72 @@ export default function Music() {
                   disabled={isUploading}
                 >
                   {isUploading ? 'Đang xử lý...' : 'Tải lên & Lưu'}
+                </button>
+              </div>
+            </form>
+        </div>
+      )}
+
+      {/* Modal Tạo Playlist (dành cho mọi User đăng nhập) */}
+      {showCreatePlaylistModal && (
+        <div className="music-modal-overlay">
+          <div className="music-modal-content">
+            <div className="music-modal-header">
+              <h2 style={{ color: '#8b5cf6' }}>Tạo Danh Sách Phát Mới</h2>
+              <button className="music-close-btn" onClick={() => setShowCreatePlaylistModal(false)}>×</button>
+            </div>
+            <form onSubmit={handleCreatePlaylistSubmit} className="music-modal-body">
+              <div className="music-form-group">
+                <label>Tên danh sách phát *</label>
+                <input 
+                  type="text" 
+                  placeholder="Ví dụ: Nhạc Học Tập, Chill Vibes..." 
+                  value={newPlaylistForm.name}
+                  onChange={(e) => setNewPlaylistForm({ ...newPlaylistForm, name: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="music-form-group">
+                <label>Mô tả</label>
+                <input 
+                  type="text" 
+                  placeholder="Mô tả ngắn gọn về danh sách phát..." 
+                  value={newPlaylistForm.description}
+                  onChange={(e) => setNewPlaylistForm({ ...newPlaylistForm, description: e.target.value })}
+                />
+              </div>
+
+              <div className="music-form-group">
+                <label>Biểu tượng đại diện (Emoji) *</label>
+                <div className="emoji-selector-panel">
+                  {availableEmojis.map(emoji => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      className={`emoji-option-btn ${newPlaylistForm.image_url === emoji ? 'active' : ''}`}
+                      onClick={() => setNewPlaylistForm({ ...newPlaylistForm, image_url: emoji })}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="music-modal-footer">
+                <button 
+                  type="button" 
+                  className="music-cancel-btn" 
+                  onClick={() => setShowCreatePlaylistModal(false)}
+                >
+                  Hủy
+                </button>
+                <button 
+                  type="submit" 
+                  className="music-submit-btn" 
+                  style={{ backgroundColor: '#8b5cf6' }}
+                >
+                  Tạo mới
                 </button>
               </div>
             </form>

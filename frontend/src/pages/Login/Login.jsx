@@ -96,27 +96,25 @@ export default function Login({ onLoginSuccess }) {
       return;
     }
 
-    if (regFiles.length === 0) {
-      setError('Vui lòng chọn hoặc chụp ít nhất 1 ảnh khuôn mặt để làm dữ liệu nhận dạng.');
-      return;
-    }
-
     try {
       setLoading(true);
       setError('');
       setSuccessMsg('');
 
-      // Chuyển đổi toàn bộ các file ảnh đã chọn sang Base64
-      const imagesBase64 = await Promise.all(
-        regFiles.map((file) =>
-          new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result);
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-          })
-        )
-      );
+      // Chuyển đổi các file ảnh đã chọn sang Base64 (nếu có)
+      let imagesBase64 = [];
+      if (regFiles.length > 0) {
+        imagesBase64 = await Promise.all(
+          regFiles.map((file) =>
+            new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result);
+              reader.onerror = reject;
+              reader.readAsDataURL(file);
+            })
+          )
+        );
+      }
 
       const response = await api.enrollUser({
         user_id: regForm.user_id,
@@ -292,16 +290,15 @@ export default function Login({ onLoginSuccess }) {
                 />
               </div>
               <div className="input-group">
-                <label>Ảnh chụp khuôn mặt *</label>
+                <label>Ảnh chụp khuôn mặt (Không bắt buộc)</label>
                 <input 
                   type="file" 
                   accept="image/*" 
                   multiple 
                   onChange={handleRegFileChange}
                   disabled={loading}
-                  required
                 />
-                <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>Chọn ít nhất 1 ảnh khuôn mặt rõ nét để nhận dạng</span>
+                <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>Không bắt buộc. Chọn ít nhất 1 ảnh rõ nét nếu muốn đăng nhập bằng khuôn mặt</span>
               </div>
               
               <button type="submit" className="login-submit-btn" disabled={loading}>

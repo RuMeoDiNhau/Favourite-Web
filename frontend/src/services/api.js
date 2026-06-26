@@ -80,6 +80,16 @@ export const fetchNewSongs = () => api.get('/music/new/latest');
 
 export const deleteSong = (songId) => api.delete(`/music/${songId}`);
 
+export const createPlaylist = (playlistData) => api.post('/playlists', playlistData);
+
+export const deletePlaylist = (playlistId) => api.delete(`/playlists/${playlistId}`);
+
+export const fetchSongsByPlaylist = (playlistId) => api.get(`/playlists/${playlistId}/songs`);
+
+export const addSongToPlaylist = (playlistId, songId) => api.post(`/playlists/${playlistId}/songs/${songId}`);
+
+export const removeSongFromPlaylist = (songId) => api.delete(`/playlists/songs/${songId}`);
+
 
 // ==================== Knowledge ====================
 export const fetchAllKnowledge = () => api.get('/knowledge');

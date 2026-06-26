@@ -82,26 +82,26 @@ def _save_user_images(user_id: str, images_base64):
 
 
 def create_user(user_id: str, name: str, department: str, images_base64, email: str = None, password: str = None):
-    saved_images = _save_user_images(user_id, images_base64)
     embeddings = []
 
-    for img_data in saved_images:
-        embedding = embed_face(img_data['bytes'])
-        if embedding is not None:
-            embeddings.append(embedding)
+    if images_base64 and len(images_base64) > 0:
+        saved_images = _save_user_images(user_id, images_base64)
+        for img_data in saved_images:
+            embedding = embed_face(img_data['bytes'])
+            if embedding is not None:
+                embeddings.append(embedding)
 
-    if not embeddings:
-        return {
-            'status': 'error',
-            'message': 'Không tìm thấy khuôn mặt hợp lệ trong ảnh đăng ký',
-            'data': None,
-        }
+        if not embeddings:
+            return {
+                'status': 'error',
+                'message': 'Không tìm thấy khuôn mặt hợp lệ trong ảnh đăng ký',
+                'data': None,
+            }
 
-    saved_path = save_user_embedding(user_id, embeddings)
-    
-    # Upload embedding to S3 for backup/sync
-    if saved_path and s3_client:
-        upload_embedding(user_id, Path(saved_path))
+        saved_path = save_user_embedding(user_id, embeddings)
+        # Upload embedding to S3 for backup/sync
+        if saved_path and s3_client:
+            upload_embedding(user_id, Path(saved_path))
 
     session = _get_session()
     try:
@@ -121,7 +121,7 @@ def create_user(user_id: str, name: str, department: str, images_base64, email: 
         session.commit()
         return {
             'status': 'success',
-            'message': 'Đã đăng ký khuôn mặt thành công',
+            'message': 'Đã đăng ký tài khoản thành công',
             'data': {
                 'user_id': user.user_id,
                 'total_embeddings_saved': user.registered_images,

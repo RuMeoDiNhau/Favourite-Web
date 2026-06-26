@@ -39,6 +39,12 @@ class GameCreateRequest(BaseModel):
 
 
 # Music Schemas
+class PlaylistCreateRequest(BaseModel):
+    name: str
+    description: Optional[str] = None
+    image_url: Optional[str] = None
+
+
 class PlaylistResponse(BaseModel):
     id: int
     name: str

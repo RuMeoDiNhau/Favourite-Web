@@ -174,6 +174,55 @@ Integration test xác nhận toàn bộ quy trình:
 
 ---
 
+## Đăng ký tài khoản không bắt buộc khuôn mặt
+
+### A. Mô tả thay đổi
+*   **Mục tiêu:** Cho phép người dùng đăng ký tài khoản mới mà không bắt buộc phải tải lên tệp ảnh chụp khuôn mặt. Họ vẫn có thể đăng nhập bằng mật khẩu như bình thường.
+*   **Chi tiết thực hiện:**
+    *   **Backend (`db_service.py`):** Cập nhật hàm `create_user`. Nếu danh sách `images_base64` rỗng, backend sẽ bỏ qua bước trích xuất embedding và tạo tài khoản với số lượng ảnh đăng ký `registered_images = 0`.
+    *   **Frontend (`Login.jsx`):** Bỏ thuộc tính `required` ở input chọn ảnh và loại bỏ đoạn kiểm tra `regFiles.length === 0`. Cập nhật nhãn thành `"Ảnh chụp khuôn mặt (Không bắt buộc)"`.
+
+---
+
+## Quản lý và Phát nhạc theo Danh sách phát (Playlists)
+
+### A. Mô tả tính năng
+*   **Mục tiêu:** Cho phép người dùng tạo/xóa danh sách phát (Playlist), gán bài hát vào danh sách phát và thưởng thức nhạc trực tiếp từ danh sách phát với giao diện trực quan và trải nghiệm âm thanh mượt mà.
+*   **Chức năng chính:**
+    *   **Tạo Playlist tích hợp Emoji:** Bất kỳ người dùng đăng nhập nào cũng có thể tạo danh sách phát mới, chọn Emoji làm biểu tượng đại diện đại diện (thay vì tải ảnh lên).
+    *   **Xóa danh sách phát bảo vệ bởi Admin:** Chỉ tài khoản quản trị viên (`admin`) mới được quyền xóa hoàn toàn một playlist. Khi xóa playlist, các bài hát thuộc playlist đó sẽ tự động được gán `playlist_id = null` để giữ lại trong thư viện chung thay vì bị xóa theo (cascade-delete).
+    *   **Thêm nhạc nhanh bằng Popover Dropdown:** Cạnh mỗi bài hát có nút `➕`. Khi click, hiển thị một Popover gồm danh sách các playlist có sẵn để người dùng thêm nhạc nhanh chóng. Cạnh mỗi bài hát trong Playlist chi tiết cũng có nút `➖` để xóa nhanh bài hát khỏi playlist đó.
+    *   **Tự động chuyển bài (Auto-play Next):** Khi kết thúc bài hát, trình phát nhạc sẽ tự động tìm và phát bài hát tiếp theo trong danh sách đang hoạt động.
+    *   **Nút chuyển bài (Previous/Next):** Bổ sung chức năng cho nút `⏮️` và `⏭️` trên thanh phát nhạc nổi giúp người dùng dễ dàng chuyển bài thủ công.
+
+### B. Các thành phần sửa đổi
+*   **Backend Database & Services (`db_models.py`, `music_service.py`):**
+    *   Cấu hình SQLAlchemy để hỗ trợ quan hệ 1-N giữa Playlist và Music.
+    *   Hàm `add_song_to_playlist` sử dụng `db.flush()` để giải quyết xung đột cache của SQLAlchemy giúp cập nhật chính xác thuộc tính `song_count` của playlist trong DB.
+    *   Hàm `delete_playlist` tự động cập nhật `playlist_id = None` cho toàn bộ bài hát liên kết trước khi xóa playlist.
+*   **Backend API Endpoints (`api/routes.py` & `schemas.py`):**
+    *   `POST /playlists` (Tạo playlist mới)
+    *   `DELETE /playlists/{playlist_id}` (Xóa playlist - chỉ Admin)
+    *   `GET /playlists/{playlist_id}/songs` (Lấy danh sách bài hát trong playlist)
+    *   `POST /playlists/{playlist_id}/songs/{song_id}` (Thêm bài hát vào playlist)
+    *   `DELETE /playlists/songs/{song_id}` (Xóa bài hát khỏi playlist)
+*   **Frontend API Client (`api.js`):**
+    *   Đăng ký đầy đủ 5 hàm gọi API cho Playlist (`createPlaylist`, `deletePlaylist`, `fetchSongsByPlaylist`, `addSongToPlaylist`, `removeSongFromPlaylist`).
+*   **Frontend UI & CSS (`Music/index.jsx` & `Music.css`):**
+    *   Tích hợp Modal chọn tên, mô tả và Emoji đại diện cho Playlist mới.
+    *   Thiết kế giao diện Chi tiết Playlist với badge, ảnh Emoji lớn, hiển thị danh sách bài hát và các nút tương tác tương ứng.
+    *   Sử dụng hiệu ứng glassmorphism hiện đại cho Popover chọn playlist, tự động đóng popover khi người dùng click bên ngoài.
+
+### C. Kết quả kiểm thử (Verification)
+*   Đã chạy thành công script kiểm thử tích hợp tự động `scratch/verify_playlists.py` trực tiếp với cơ sở dữ liệu:
+    *   Tạo thành công playlist mới với Emoji đại diện -> Trả về `201 Created` (Đạt).
+    *   Thêm bài hát vào playlist thành công, kiểm tra số lượng bài hát cập nhật lên `1` -> Trả về `200 OK` (Đạt).
+    *   Xóa bài hát khỏi playlist thành công, kiểm tra thuộc tính `playlist_id` của bài hát chuyển về `None` -> Trả về `200 OK` (Đạt).
+    *   Tài khoản thường gọi API xóa playlist -> Trả về lỗi `403 Forbidden` (Đạt).
+    *   Tài khoản Admin gọi API xóa playlist -> Xóa thành công playlist, bài hát quay về trạng thái tự do (không bị xóa khỏi thư viện chung) -> Trả về `200 OK` (Đạt).
+
+---
+
 ## Kế hoạch Tiếp theo
 
 1. **AWS RDS Migration:** Thay SQLite bằng PostgreSQL/MySQL trên RDS, cập nhật `DATABASE_URL` trong `db_models.py`.

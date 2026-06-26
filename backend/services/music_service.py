@@ -135,3 +135,53 @@ def delete_song(db: Session, song_id: int) -> bool:
         db.commit()
         return True
     return False
+
+
+def delete_playlist(db: Session, playlist_id: int) -> bool:
+    """Delete a playlist and unset playlist_id for all its songs"""
+    playlist = db.query(Playlist).filter(Playlist.id == playlist_id).first()
+    if playlist:
+        # Reset playlist_id for all songs in this playlist
+        db.query(Music).filter(Music.playlist_id == playlist_id).update({Music.playlist_id: None})
+        db.delete(playlist)
+        db.commit()
+        return True
+    return False
+
+
+def add_song_to_playlist(db: Session, playlist_id: int, song_id: int) -> bool:
+    """Add a song to a playlist and increment playlist song count"""
+    song = db.query(Music).filter(Music.id == song_id).first()
+    playlist = db.query(Playlist).filter(Playlist.id == playlist_id).first()
+    
+    if song and playlist:
+        # Decrement song_count of old playlist if it was in one
+        if song.playlist_id and song.playlist_id != playlist_id:
+            old_playlist = db.query(Playlist).filter(Playlist.id == song.playlist_id).first()
+            if old_playlist and old_playlist.song_count > 0:
+                old_playlist.song_count -= 1
+
+        song.playlist_id = playlist_id
+        db.flush()  # Flush so that count query sees the updated playlist_id
+        
+        # Refresh song count accurately
+        playlist.song_count = db.query(Music).filter(Music.playlist_id == playlist_id).count()
+        db.commit()
+        return True
+    return False
+
+
+def remove_song_from_playlist(db: Session, song_id: int) -> bool:
+    """Remove a song from its current playlist and decrement playlist song count"""
+    song = db.query(Music).filter(Music.id == song_id).first()
+    if song and song.playlist_id:
+        playlist = db.query(Playlist).filter(Playlist.id == song.playlist_id).first()
+        song.playlist_id = None
+        db.commit()
+        
+        # Recalculate count
+        if playlist:
+            playlist.song_count = db.query(Music).filter(Music.playlist_id == playlist.id).count()
+            db.commit()
+        return True
+    return False
