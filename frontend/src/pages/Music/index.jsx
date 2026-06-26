@@ -834,6 +834,7 @@ export default function Music() {
                 </button>
               </div>
             </form>
+          </div>
         </div>
       )}
 
