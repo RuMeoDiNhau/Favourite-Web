@@ -397,7 +397,14 @@ export default function Music() {
       <div className="music-main">
         <div className="music-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px', textAlign: 'left' }}>
           <div>
-            <h1 style={{ margin: 0, fontSize: '48px', fontWeight: '700' }}>🎵 Âm Nhạc Trực Tuyến</h1>
+            <h1 style={{ margin: 0, fontSize: '48px', fontWeight: '700', display: 'flex', alignItems: 'center' }}>
+              <img 
+                src="/music-icon.png" 
+                alt="Music Icon" 
+                style={{ width: '48px', height: '48px', marginRight: '15px', borderRadius: '8px' }} 
+              />
+              Âm Nhạc Trực Tuyến
+            </h1>
             <p style={{ margin: '5px 0 0 0', fontSize: '18px', color: 'rgba(255, 255, 255, 0.8)' }}>Thưởng thức và thư giãn cùng các bài hát bản quyền đỉnh cao</p>
           </div>
           <div style={{ display: 'flex', gap: '15px' }}>
@@ -468,7 +475,15 @@ export default function Music() {
                           className="play-btn"
                           style={{ background: currentSong && currentSong.id === song.id && isPlaying ? 'rgba(255,255,255,0.4)' : '' }}
                         >
-                          {currentSong && currentSong.id === song.id && isPlaying ? '⏸️' : '▶️'}
+                          {currentSong && currentSong.id === song.id && isPlaying ? (
+                            '⏸️'
+                          ) : (
+                            <img 
+                              src="/play-icon.png" 
+                              alt="Play" 
+                              style={{ width: '22px', height: '22px', verticalAlign: 'middle' }} 
+                            />
+                          )}
                         </button>
                         <button onClick={() => handleLikeSong(song.id)} className="play-btn" style={{ marginLeft: '8px' }}>
                           ❤️
@@ -492,7 +507,11 @@ export default function Music() {
                             style={{ marginLeft: '8px', backgroundColor: 'rgba(239, 68, 68, 0.2)', border: '1px solid rgba(239, 68, 68, 0.4)' }}
                             title="Xóa bài hát"
                           >
-                            🗑️
+                            <img 
+                              src="/delete-song-icon.png" 
+                              alt="Delete" 
+                              style={{ width: '22px', height: '22px', verticalAlign: 'middle' }} 
+                            />
                           </button>
                         )}
                       </div>
@@ -606,7 +625,15 @@ export default function Music() {
                               className="play-btn"
                               style={{ background: currentSong && currentSong.id === song.id && isPlaying ? 'rgba(255,255,255,0.4)' : '' }}
                             >
-                              {currentSong && currentSong.id === song.id && isPlaying ? '⏸️' : '▶️'}
+                              {currentSong && currentSong.id === song.id && isPlaying ? (
+                                '⏸️'
+                              ) : (
+                                <img 
+                                  src="/play-icon.png" 
+                                  alt="Play" 
+                                  style={{ width: '22px', height: '22px', verticalAlign: 'middle' }} 
+                                />
+                              )}
                             </button>
                             <button onClick={() => handleLikeSong(song.id)} className="play-btn" style={{ marginLeft: '8px' }}>
                               ❤️
@@ -623,7 +650,11 @@ export default function Music() {
                                   }}
                                   title="Thêm vào danh sách phát"
                                 >
-                                  ➕
+                                  <img 
+                                    src="/add-to-playlist-icon.png" 
+                                    alt="Add to playlist" 
+                                    style={{ width: '22px', height: '22px', verticalAlign: 'middle' }} 
+                                  />
                                 </button>
                                 {activePopoverSongId === song.id && (
                                   <div className="playlist-popover">
@@ -656,7 +687,11 @@ export default function Music() {
                                 style={{ marginLeft: '8px', backgroundColor: 'rgba(239, 68, 68, 0.2)', border: '1px solid rgba(239, 68, 68, 0.4)' }}
                                 title="Xóa bài hát"
                               >
-                                🗑️
+                                <img 
+                                  src="/delete-song-icon.png" 
+                                  alt="Delete" 
+                                  style={{ width: '22px', height: '22px', verticalAlign: 'middle' }} 
+                                />
                               </button>
                             )}
                           </div>
@@ -699,7 +734,15 @@ export default function Music() {
             <div className="controls-buttons">
               <button className="player-btn" onClick={handlePrevSong}>⏮️</button>
               <button className="player-btn play-pause" onClick={togglePlayPause}>
-                {isPlaying ? '⏸️' : '▶'}
+                {isPlaying ? (
+                  '⏸️'
+                ) : (
+                  <img 
+                    src="/play-icon.png" 
+                    alt="Play" 
+                    style={{ width: '24px', height: '24px', verticalAlign: 'middle' }} 
+                  />
+                )}
               </button>
               <button className="player-btn" onClick={handleNextSong}>⏭️</button>
             </div>

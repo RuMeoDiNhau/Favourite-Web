@@ -1,0 +1,12 @@
+ở thư mục gốc:
+# Đăng ký tất cả mọi người
+python -m backend.ai_core.train_from_images
+
+# Chỉ đăng ký một người
+python -m backend.ai_core.train_from_images --user admin
+
+# Xem danh sách embedding đã có
+python -m backend.ai_core.train_from_images --list
+
+# Xem hướng dẫn
+python -m backend.ai_core.train_from_images --guide

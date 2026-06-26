@@ -73,7 +73,14 @@ export default function Games() {
       <Sidebar selectedLibrary={selectedLibrary} onSelectLibrary={setSelectedLibrary} />
       <div className="games-main">
         <div className="games-header">
-          <h1>🎮 Tin Tức & Blog Game</h1>
+          <h1>
+            <img 
+              src="/game-icon.png" 
+              alt="Games Icon" 
+              style={{ width: '42px', height: '42px', display: 'inline-block', verticalAlign: 'middle', marginRight: '10px', borderRadius: '8px' }} 
+            />
+            Tin Tức & Blog Game
+          </h1>
           <p>Cập nhật những bài viết, hướng dẫn và mẹo chơi game mới nhất</p>
         </div>
 

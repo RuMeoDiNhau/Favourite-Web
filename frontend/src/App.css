@@ -1,10 +1,43 @@
 .App {
+  --bg-app: #f3f6fb;
+  --bg-card: #ffffff;
+  --bg-card-hover: #ffffff;
+  --text-main: #1b263b;
+  --text-title: #0f172a;
+  --text-muted: #64748b;
+  --border-color: #cbd5e1;
+  --border-card: #e2e8f0;
+  --bg-item: #f1f5f9;
+  --bg-input: #ffffff;
+  --text-input: #1b263b;
+  --border-input: #cbd5e1;
+  --shadow-card: 0 4px 20px rgba(15, 23, 42, 0.03);
+  --shadow-card-hover: 0 10px 30px rgba(15, 23, 42, 0.06);
+
   font-family: Arial, sans-serif;
-  background: #f3f6fb;
+  background: var(--bg-app);
   min-height: 100vh;
   margin: 0;
   padding: 0 16px 32px;
-  color: #1b263b;
+  color: var(--text-main);
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+.App.dark-theme {
+  --bg-app: #0f172a;
+  --bg-card: #1e293b;
+  --bg-card-hover: #253246;
+  --text-main: #cbd5e1;
+  --text-title: #f8fafc;
+  --text-muted: #94a3b8;
+  --border-color: #334155;
+  --border-card: #334155;
+  --bg-item: #0f172a;
+  --bg-input: #0f172a;
+  --text-input: #cbd5e1;
+  --border-input: #334155;
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.25);
+  --shadow-card-hover: 0 10px 30px rgba(0, 0, 0, 0.35);
 }
 
 .main-navbar {
@@ -19,6 +52,7 @@
   top: 0;
   z-index: 1000;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  flex-wrap: nowrap;
 }
 
 .navbar-logo {
@@ -60,6 +94,7 @@
   align-items: center;
   gap: 6px;
   transition: all 0.25s ease;
+  white-space: nowrap;
 }
 
 .navbar-center button.active {
@@ -78,6 +113,28 @@
   display: flex;
   align-items: center;
   gap: 16px;
+}
+
+.theme-toggle-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #e2e8f0;
+  padding: 8px 16px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.theme-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  transform: translateY(-1px);
 }
 
 .user-profile-dropdown {
@@ -114,6 +171,7 @@
   font-size: 0.9rem;
   font-weight: 600;
   color: #e2e8f0;
+  white-space: nowrap;
 }
 
 .chevron-icon {
@@ -132,6 +190,7 @@
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(168, 85, 247, 0.3);
   transition: all 0.2s;
+  white-space: nowrap;
 }
 
 .create-post-nav-btn:hover {
@@ -152,12 +211,22 @@
   align-items: center;
   gap: 6px;
   transition: all 0.25s ease;
+  white-space: nowrap;
+}
+
+.logout-icon-btn img.logout-btn-icon-img {
+  filter: invert(61%) sepia(85%) saturate(368%) hue-rotate(313deg) brightness(98%) contrast(97%);
+  transition: filter 0.25s ease;
 }
 
 .logout-icon-btn:hover {
   background: #ef4444;
   color: white;
   border-color: #ef4444;
+}
+
+.logout-icon-btn:hover img.logout-btn-icon-img {
+  filter: brightness(0) invert(1);
 }
 
 .page-header {
@@ -176,14 +245,17 @@ main {
 }
 
 .page {
-  background: #fff;
+  background: var(--bg-card);
+  color: var(--text-main);
   border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(24, 39, 75, 0.08);
+  box-shadow: var(--shadow-card-hover);
   padding: 24px;
+  transition: background 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .page h2 {
   margin-top: 0;
+  color: var(--text-title);
 }
 
 .button {
@@ -209,7 +281,8 @@ main {
   margin-top: 16px;
   padding: 16px;
   border-radius: 12px;
-  background: #f5f8ff;
+  background: var(--bg-item);
+  color: var(--text-main);
 }
 
 .status.success {
@@ -229,13 +302,15 @@ main {
 .user-table th,
 .user-table td {
   padding: 12px 10px;
-  border-bottom: 1px solid #e8edf4;
+  border-bottom: 1px solid var(--border-color);
   text-align: left;
+  color: var(--text-main);
 }
 
 .user-table th {
   font-weight: 700;
-  background: #f7fafd;
+  background: var(--bg-item);
+  color: var(--text-title);
 }
 
 .video-grid {
@@ -245,10 +320,38 @@ main {
 
 .video-box,
 .capture-preview {
-  border: 1px solid #d8e1ee;
+  border: 1px solid var(--border-color);
   border-radius: 14px;
   padding: 16px;
-  background: #fafbff;
+  background: var(--bg-item);
+  color: var(--text-main);
+}
+
+/* Global responsive styling for form inputs */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+select,
+textarea {
+  background: var(--bg-input);
+  color: var(--text-input);
+  border: 1px solid var(--border-input);
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="number"]:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
 }
 
 video {

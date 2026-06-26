@@ -6,9 +6,11 @@ function CameraBox({ onCapture, captureTrigger }) {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    let localStream = null;
     const startCamera = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        localStream = stream;
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           videoRef.current.play();
@@ -21,8 +23,8 @@ function CameraBox({ onCapture, captureTrigger }) {
 
     startCamera();
     return () => {
-      if (videoRef.current?.srcObject) {
-        const tracks = videoRef.current.srcObject.getTracks();
+      if (localStream) {
+        const tracks = localStream.getTracks();
         tracks.forEach((track) => track.stop());
       }
     };

@@ -1,23 +1,26 @@
 .music-container {
   display: flex;
   height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--bg-app);
+  color: var(--text-main);
+  transition: all 0.3s ease;
 }
 
 .music-sidebar {
   width: 250px;
-  background: rgba(0, 0, 0, 0.3);
-  color: white;
+  background: var(--bg-card);
+  color: var(--text-main);
   padding: 20px;
   overflow-y: auto;
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  border-right: 1px solid var(--border-color);
 }
 
 .sidebar-header {
   padding: 15px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--bg-item);
   border-radius: 8px;
   margin-bottom: 20px;
+  color: var(--text-title);
 }
 
 .sidebar-header h3 {
@@ -37,9 +40,9 @@
 
 .menu-item {
   padding: 12px 15px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: white;
+  background: var(--bg-item);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
   cursor: pointer;
   border-radius: 6px;
   transition: all 0.3s ease;
@@ -48,13 +51,14 @@
 }
 
 .menu-item:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--bg-card-hover);
   transform: translateX(5px);
 }
 
 .menu-item.active {
-  background: rgba(255, 255, 255, 0.3);
-  border-color: rgba(255, 255, 255, 0.5);
+  background: #6366f1;
+  border-color: #6366f1;
+  color: white;
   font-weight: 600;
 }
 
@@ -80,7 +84,7 @@
   flex: 1;
   overflow-y: auto;
   padding: 30px 40px;
-  color: white;
+  color: var(--text-main);
 }
 
 .music-header {
@@ -92,11 +96,12 @@
   font-size: 48px;
   margin: 0 0 10px 0;
   font-weight: 700;
+  color: var(--text-title);
 }
 
 .music-header p {
   font-size: 18px;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--text-muted);
   margin: 0;
 }
 
@@ -113,7 +118,8 @@
   font-size: 28px;
   margin: 0 0 20px 0;
   padding-bottom: 10px;
-  border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+  color: var(--text-title);
+  border-bottom: 2px solid var(--border-color);
 }
 
 .playlist-grid {

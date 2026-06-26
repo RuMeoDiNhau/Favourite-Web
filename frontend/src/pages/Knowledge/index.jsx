@@ -54,7 +54,14 @@ export default function Knowledge() {
   return (
     <div className="knowledge-container">
       <div className="knowledge-header">
-        <h1>📚 Chia Sẻ Kiến Thức Học Tập & Làm Việc</h1>
+        <h1 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <img 
+            src="/knowledge-icon.png" 
+            alt="Knowledge Icon" 
+            style={{ width: '48px', height: '48px', marginRight: '15px', borderRadius: '8px' }} 
+          />
+          Chia Sẻ Kiến Thức Học Tập & Làm Việc
+        </h1>
         <p>Cộng đồng chia sẻ kiến thức, kỹ năng và kinh nghiệm</p>
         <button className="create-btn">✍️ Viết Bài Mới</button>
       </div>

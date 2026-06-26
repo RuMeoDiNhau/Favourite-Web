@@ -28,6 +28,7 @@ export default function Feed() {
   const [activeGameCategory, setActiveGameCategory] = useState('all');
 
   // 4. Camera/Check-in state
+  const [isCameraOn, setIsCameraOn] = useState(true);
   const [status, setStatus] = useState('idle');
   const [message, setMessage] = useState('Chưa có kết quả');
   const [preview, setPreview] = useState(null);
@@ -48,12 +49,12 @@ export default function Feed() {
 
   // Trigger auto-scan loop
   useEffect(() => {
-    if (!autoScan) return;
+    if (!autoScan || !isCameraOn) return;
     const interval = setInterval(() => {
       setCaptureTrigger((prev) => prev + 1);
     }, 3000);
     return () => clearInterval(interval);
-  }, [autoScan]);
+  }, [autoScan, isCameraOn]);
 
   // Load dashboard data
   useEffect(() => {
@@ -217,21 +218,39 @@ export default function Feed() {
           </div>
 
           <div className="scanner-container">
-            <CameraBox onCapture={handleCapture} captureTrigger={captureTrigger} />
-            <div className="scan-reticle">
-              <div className="reticle-box"></div>
-              <div className="scan-laser"></div>
-            </div>
+            {isCameraOn ? (
+              <>
+                <CameraBox onCapture={handleCapture} captureTrigger={captureTrigger} />
+                <div className="scan-reticle">
+                  <div className="reticle-box"></div>
+                  <div className="scan-laser"></div>
+                </div>
+              </>
+            ) : (
+              <div className="camera-placeholder">
+                <div className="placeholder-icon">📷</div>
+                <p>Camera đang tắt</p>
+              </div>
+            )}
           </div>
 
-          <div className="scanner-actions">
+          <div className="scanner-actions" style={{ gap: '8px', display: 'flex', flexWrap: 'wrap', justifyContent: 'center' }}>
             <button 
-              className={`action-pill ${autoScan ? 'active' : ''}`} 
+              className={`action-pill ${isCameraOn ? 'active' : ''}`} 
               type="button" 
-              onClick={() => setAutoScan((prev) => !prev)}
+              onClick={() => setIsCameraOn((prev) => !prev)}
             >
-              {autoScan ? '⏸️ Tạm dừng Auto Scan' : '▶️ Bật Auto Scan'}
+              {isCameraOn ? '🔌 Tắt Camera' : '🔌 Bật Camera'}
             </button>
+            {isCameraOn && (
+              <button 
+                className={`action-pill ${autoScan ? 'active' : ''}`} 
+                type="button" 
+                onClick={() => setAutoScan((prev) => !prev)}
+              >
+                {autoScan ? '⏸️ Tạm dừng Auto Scan' : '▶️ Bật Auto Scan'}
+              </button>
+            )}
           </div>
 
           <div className="scanner-logs">
@@ -315,7 +334,12 @@ export default function Feed() {
                     {post.post_type === 'game' && (
                       <div className="dash-media-preview game-type">
                         <button className="dash-game-play-btn" onClick={() => setActiveGameUrl({ url: post.media_url, title: post.title })}>
-                          🎮 Chơi trực tuyến: {post.title}
+                          <img 
+                            src="/game-icon.png" 
+                            alt="Game Icon" 
+                            style={{ width: '16px', height: '16px', display: 'inline-block', verticalAlign: 'middle', marginRight: '6px', borderRadius: '3px' }} 
+                          />
+                          Chơi trực tuyến: {post.title}
                         </button>
                       </div>
                     )}
@@ -388,7 +412,17 @@ export default function Feed() {
               {games.length > 0 ? (
                 games.map((game) => (
                   <div key={game.id} className="games-dash-item" onClick={() => setSelectedGame(game)}>
-                    <div className="game-item-emoji">{game.image_url || '🎮'}</div>
+                    <div className="game-item-emoji">
+                      {game.image_url ? (
+                        game.image_url
+                      ) : (
+                        <img 
+                          src="/game-icon.png" 
+                          alt="Game Icon" 
+                          style={{ width: '28px', height: '28px', objectFit: 'contain' }} 
+                        />
+                      )}
+                    </div>
                     <div className="game-item-info">
                       <h4>{game.title}</h4>
                       <p className="game-item-desc">{game.description}</p>
@@ -410,87 +444,89 @@ export default function Feed() {
           </div>
         </section>
 
-        {/* THỐNG KÊ NGƯỜI DÙNG */}
-        <section className="dashboard-card statistics-card-section">
-          <div className="card-title-header">
-            <h3>Thống Kê Người Dùng</h3>
-          </div>
+        {/* THỐNG KÊ NGƯỜI DÙNG (CHỈ DÀNH CHO ADMIN) */}
+        {user && user.role === 'admin' && (
+          <section className="dashboard-card statistics-card-section">
+            <div className="card-title-header">
+              <h3>Thống Kê Người Dùng</h3>
+            </div>
 
-          <div className="stats-dash-container">
-            {/* Table */}
-            <div className="stats-table-wrapper">
-              <table className="stats-mini-table">
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Tên</th>
-                    <th>Số ảnh</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {usersList.slice(0, 3).map((u) => (
-                    <tr key={u.user_id}>
-                      <td className="bold">{u.user_id}</td>
-                      <td>{u.name}</td>
-                      <td className="center">{u.registered_images}</td>
+            <div className="stats-dash-container">
+              {/* Table */}
+              <div className="stats-table-wrapper">
+                <table className="stats-mini-table">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Tên</th>
+                      <th>Số ảnh</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-              {isMockUsers && (
-                <div className="mock-badge">💡 Dữ liệu mẫu (Quyền User)</div>
-              )}
-            </div>
+                  </thead>
+                  <tbody>
+                    {usersList.slice(0, 3).map((u) => (
+                      <tr key={u.user_id}>
+                        <td className="bold">{u.user_id}</td>
+                        <td>{u.name}</td>
+                        <td className="center">{u.registered_images}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {isMockUsers && (
+                  <div className="mock-badge">💡 Dữ liệu mẫu (Quyền User)</div>
+                )}
+              </div>
 
-            {/* SVG Bar Chart */}
-            <div className="stats-chart-wrapper">
-              <svg width="100%" height="110" viewBox="0 0 100 110" preserveAspectRatio="none">
-                <defs>
-                  <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#38bdf8" />
-                    <stop offset="100%" stopColor="#6366f1" />
-                  </linearGradient>
-                </defs>
-                
-                {/* Horizontal reference lines */}
-                <line x1="0" y1="20" x2="100" y2="20" stroke="rgba(255,255,255,0.05)" strokeDasharray="2" />
-                <line x1="0" y1="50" x2="100" y2="50" stroke="rgba(255,255,255,0.05)" strokeDasharray="2" />
-                <line x1="0" y1="80" x2="100" y2="80" stroke="rgba(255,255,255,0.05)" strokeDasharray="2" />
-                <line x1="0" y1="90" x2="100" y2="90" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
+              {/* SVG Bar Chart */}
+              <div className="stats-chart-wrapper">
+                <svg width="100%" height="110" viewBox="0 0 100 110" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#38bdf8" />
+                      <stop offset="100%" stopColor="#6366f1" />
+                    </linearGradient>
+                  </defs>
+                  
+                  {/* Horizontal reference lines */}
+                  <line x1="0" y1="20" x2="100" y2="20" stroke="rgba(148, 163, 184, 0.25)" strokeDasharray="2" />
+                  <line x1="0" y1="50" x2="100" y2="50" stroke="rgba(148, 163, 184, 0.25)" strokeDasharray="2" />
+                  <line x1="0" y1="80" x2="100" y2="80" stroke="rgba(148, 163, 184, 0.25)" strokeDasharray="2" />
+                  <line x1="0" y1="90" x2="100" y2="90" stroke="rgba(148, 163, 184, 0.4)" strokeWidth="1" />
 
-                {usersList.slice(0, 3).map((u, i) => {
-                  const val = u.registered_images || 1;
-                  // Compute height
-                  const height = Math.min(70, val * 45);
-                  const x = 12 + i * 30;
-                  const y = 90 - height;
-                  return (
-                    <g key={u.user_id}>
-                      <rect 
-                        x={x} 
-                        y={y} 
-                        width="16" 
-                        height={height} 
-                        fill="url(#barGrad)" 
-                        rx="4" 
-                      />
-                      <text 
-                        x={x + 8} 
-                        y="102" 
-                        fontSize="6" 
-                        fill="#94a3b8" 
-                        fontWeight="bold"
-                        textAnchor="middle"
-                      >
-                        {u.user_id.substring(0, 6)}
-                      </text>
-                    </g>
-                  );
-                })}
-              </svg>
+                  {usersList.slice(0, 3).map((u, i) => {
+                    const val = u.registered_images || 1;
+                    // Compute height
+                    const height = Math.min(70, val * 45);
+                    const x = 12 + i * 30;
+                    const y = 90 - height;
+                    return (
+                      <g key={u.user_id}>
+                        <rect 
+                          x={x} 
+                          y={y} 
+                          width="16" 
+                          height={height} 
+                          fill="url(#barGrad)" 
+                          rx="4" 
+                        />
+                        <text 
+                          x={x + 8} 
+                          y="102" 
+                          fontSize="6" 
+                          fill="#94a3b8" 
+                          fontWeight="bold"
+                          textAnchor="middle"
+                        >
+                          {u.user_id.substring(0, 6)}
+                        </text>
+                      </g>
+                    );
+                  })}
+                </svg>
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
       </div>
 
@@ -501,7 +537,14 @@ export default function Feed() {
         <div className="game-overlay-modal" onClick={() => setActiveGameUrl(null)}>
           <div className="game-modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="game-modal-header">
-              <h2>🎮 {activeGameUrl.title}</h2>
+              <h2>
+                <img 
+                  src="/game-icon.png" 
+                  alt="Game" 
+                  style={{ width: '22px', height: '22px', display: 'inline-block', verticalAlign: 'middle', marginRight: '8px', borderRadius: '4px' }} 
+                />
+                {activeGameUrl.title}
+              </h2>
               <button className="close-game-btn" onClick={() => setActiveGameUrl(null)}>✕ Đóng</button>
             </div>
             <div className="game-modal-body">

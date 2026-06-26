@@ -174,7 +174,12 @@ export default function PostModal({ onClose, onPostCreated }) {
               onClick={() => { setPostType('audio'); setMainFile(null); setThumbnailFile(null); setError(''); }}
               disabled={loading}
             >
-              🎵 Nhạc
+              <img 
+                src="/music-icon.png" 
+                alt="Music" 
+                style={{ width: '16px', height: '16px', display: 'inline-block', verticalAlign: 'middle', marginRight: '6px', borderRadius: '3px' }} 
+              />
+              Nhạc
             </button>
             <button 
               type="button" 
@@ -182,7 +187,12 @@ export default function PostModal({ onClose, onPostCreated }) {
               onClick={() => { setPostType('game'); setMainFile(null); setThumbnailFile(null); setError(''); }}
               disabled={loading}
             >
-              🎮 Game
+              <img 
+                src="/game-icon.png" 
+                alt="Game" 
+                style={{ width: '16px', height: '16px', display: 'inline-block', verticalAlign: 'middle', marginRight: '6px', borderRadius: '3px' }} 
+              />
+              Game
             </button>
           </div>
 

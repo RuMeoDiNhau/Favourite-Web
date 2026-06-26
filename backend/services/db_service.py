@@ -51,31 +51,27 @@ def _save_user_images(user_id: str, images_base64):
             raw_data = raw_data.split(',', 1)[1]
         image_bytes = base64.b64decode(raw_data)
         filename = f'{user_id}_{idx:03d}.png'
-        
-        # Try S3 first
+
+        # --- Luôn lưu ảnh xuống local (để dùng cho train AI) ---
+        user_dir = DATA_RAW_DIR / user_id
+        user_dir.mkdir(parents=True, exist_ok=True)
+        local_path = user_dir / filename
+        local_path.write_bytes(image_bytes)
+
+        # --- Đồng thời upload lên S3 nếu có kết nối ---
+        s3_url = None
         if s3_client:
             try:
                 s3_key = f"raw/{user_id}/{filename}"
                 s3_url = upload_file_to_s3(image_bytes, s3_key, content_type="image/png")
-                saved_files.append({
-                    'path_or_url': s3_url,
-                    'bytes': image_bytes,
-                    'is_s3': True
-                })
-                continue
             except Exception:
-                # Fallback to local
-                pass
-                
-        # Local fallback
-        user_dir = DATA_RAW_DIR / user_id
-        user_dir.mkdir(parents=True, exist_ok=True)
-        filepath = user_dir / filename
-        filepath.write_bytes(image_bytes)
+                pass  # S3 thất bại không ảnh hưởng, đã có bản local
+
         saved_files.append({
-            'path_or_url': str(filepath),
+            'path_or_url': s3_url or str(local_path),
             'bytes': image_bytes,
-            'is_s3': False
+            'is_s3': s3_url is not None,
+            'local_path': str(local_path),
         })
 
     return saved_files
