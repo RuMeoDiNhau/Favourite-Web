@@ -32,40 +32,20 @@ function App() {
 
   return (
     <div className="App">
-      <header className="App-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <h1>Fav Web</h1>
-            <p>Nền tảng tích hợp nhận diện khuôn mặt, trò chơi, âm nhạc, chia sẻ kiến thức</p>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-            <button 
-              className="create-post-nav-btn"
-              onClick={() => setShowPostModal(true)}
-              style={{
-                background: 'linear-gradient(135deg, #6366f1 0%, #ec4899 100%)',
-                color: 'white',
-                border: 'none',
-                padding: '10px 20px',
-                borderRadius: '30px',
-                fontWeight: '700',
-                fontSize: '0.9rem',
-                cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
-                transition: 'all 0.2s'
-              }}
-            >
-              ➕ Đăng bài
-            </button>
-            <span className="user-welcome-banner">👋 Xin chào, <strong>{user.name}</strong></span>
+      <header className="main-navbar">
+        <div className="navbar-left">
+          <div className="navbar-logo">
+            <span className="logo-icon">🌐</span>
+            <span className="logo-text">Fav Web</span>
           </div>
         </div>
-        <nav className="app-nav">
+        
+        <nav className="navbar-center">
           <button className={view === 'feed' ? 'active' : ''} onClick={() => setView('feed')}>
             📰 Bảng tin
           </button>
           <button className={view === 'dashboard' ? 'active' : ''} onClick={() => setView('dashboard')}>
-            🎯 Check-in
+            📷 Quét khuôn mặt
           </button>
           {user && user.role === 'admin' && (
             <>
@@ -77,7 +57,6 @@ function App() {
               </button>
             </>
           )}
-          <div className="nav-divider"></div>
           <button className={view === 'games' ? 'active' : ''} onClick={() => setView('games')}>
             🎮 Games
           </button>
@@ -87,11 +66,21 @@ function App() {
           <button className={view === 'knowledge' ? 'active' : ''} onClick={() => setView('knowledge')}>
             📚 Knowledge
           </button>
-          <div className="nav-divider"></div>
-          <button className="logout-btn" onClick={handleLogout}>
+        </nav>
+
+        <div className="navbar-right">
+          <div className="user-profile-dropdown">
+            <div className="avatar-circle">{user.name.substring(0, 2).toUpperCase()}</div>
+            <span className="username-text">{user.name} ({user.role})</span>
+            <span className="chevron-icon">▼</span>
+          </div>
+          <button className="create-post-nav-btn" onClick={() => setShowPostModal(true)}>
+            ➕ Đăng bài
+          </button>
+          <button className="logout-icon-btn" onClick={handleLogout} title="Đăng xuất">
             🚪 Đăng xuất
           </button>
-        </nav>
+        </div>
       </header>
 
       <main>
