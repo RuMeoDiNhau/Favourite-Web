@@ -118,8 +118,64 @@ Integration test xác nhận toàn bộ quy trình:
 
 ---
 
+## Phân quyền User/Admin & Chức năng Xóa bài hát
+
+### A. Phân quyền vai trò User/Admin (RBAC)
+*   **Database (`db_models.py`, `db_service.py`):**
+    *   Thêm cột `role` (mặc định `'user'`) vào bảng `users`.
+    *   Tự động gán quyền `'admin'` cho tài khoản đăng ký **đầu tiên** trên hệ thống hoặc tài khoản có username là `'admin'`. Các tài khoản đăng ký sau mặc định nhận quyền `'user'`.
+*   **Backend API Guards (`routes.py`):**
+    *   Cập nhật các API đăng nhập (`/auth/login` và `/auth/login-face`) để trả về thêm trường `role` của người dùng.
+    *   Bảo vệ các route quản trị: `GET /users` và `GET /logs` bằng cách đối chiếu Header `X-User-Id`. Trả về lỗi `403 Forbidden` đối với tài khoản không phải `admin`.
+*   **Frontend UI Protections (`App.jsx`):**
+    *   Ẩn các tab điều hướng **👥 Users** và **📋 Logs** trên thanh điều hướng đối với tài khoản thường.
+    *   Chặn render nội dung các tab quản trị ở Client-side đối với tài khoản thường.
+
+### B. Chức năng Xóa bài hát
+*   **Backend (`music_service.py`, `routes.py`):**
+    *   Thêm hàm `delete_song()` trong `music_service.py` để xóa bản ghi nhạc khỏi database.
+    *   Thêm endpoint `DELETE /api/v1/music/{song_id}` chỉ cho phép `admin` thực hiện.
+*   **Frontend (`api.js`, `Music/index.jsx`):**
+    *   Tích hợp hàm API `deleteSong(songId)`.
+    *   Hiển thị nút **🗑️ Xóa** màu đỏ cạnh mỗi dòng bài hát đối với tài khoản Admin. Có cảnh báo xác nhận khi click, tự động reload danh sách và dừng phát nhạc nếu bài bị xóa đang chạy.
+
+### C. Kết quả kiểm thử (Verification)
+*   Đã chạy script kiểm thử tự động [verify_rbac.py](file:///C:/Users/T&T%20Center/.gemini/antigravity-ide/brain/c5f2723b-74be-4dc9-b5bf-924927695c93/scratch/verify_rbac.py) kiểm tra trực tiếp các hàm router.
+*   Kết quả xác minh:
+    *   User thường gọi API `/users` & `/logs` -> `403 Forbidden` (Đạt).
+    *   Admin gọi API `/users` & `/logs` -> `200 OK` (Đạt).
+    *   User xóa bài hát -> `403 Forbidden` (Đạt).
+    *   Admin xóa bài hát -> `200 OK` và dữ liệu bị xóa thực tế trong DB (Đạt).
+
+---
+
+## Giao diện Tải nhạc dành riêng cho Admin
+
+### A. Mô tả tính năng
+*   **Mục tiêu:** Cho phép Admin dễ dàng thêm nhạc vào thư viện bằng giao diện kéo thả trực quan mà không cần gọi API thủ công.
+*   **Chức năng chính:**
+    *   Tự động đo thời lượng nhạc (`Duration`) bằng Audio API của trình duyệt khi chọn tệp tin.
+    *   Thanh tiến trình tải lên (% Upload Progress) được hiển thị theo thời gian thực nhờ Axios `onUploadProgress`.
+    *   Tự động xử lý tuần tự 2 bước: tải file nhạc lên S3/Local (`POST /posts/upload`), sau đó lưu siêu dữ liệu bài hát (`POST /music`) vào cơ sở dữ liệu.
+
+### B. Các thành phần sửa đổi
+*   **Backend (`api/routes.py`):**
+    *   Bảo mật API `POST /api/v1/music` để chỉ cho phép tài khoản có vai trò `'admin'` (Xác thực qua Header `X-User-Id`) thêm nhạc vào thư viện. Trả về `403 Forbidden` đối với tài khoản thường.
+*   **Frontend (`Music/index.jsx` & `Music.css`):**
+    *   Tích hợp nút **"➕ Thêm Nhạc"** ở góc phải Header của thư viện nhạc (chỉ hiển thị đối với Admin).
+    *   Xây dựng hộp thoại Modal nhập liệu (`UploadMusicModal`) với các trường: Tiêu đề, Ca sĩ, Thể loại, Thời lượng (tự động điền), và Tệp âm thanh.
+    *   Thêm style CSS đồng bộ thiết kế glassmorphism hiện đại cho Modal và thanh tiến trình.
+
+### C. Kết quả kiểm thử (Verification)
+*   Đã chạy script kiểm thử bảo mật API [verify_music_post_security.py](file:///C:/Users/T&T%20Center/.gemini/antigravity-ide/brain/c5f2723b-74be-4dc9-b5bf-924927695c93/scratch/verify_music_post_security.py).
+*   Kết quả xác minh:
+    *   Tài khoản thường gửi request tạo nhạc -> Trả về lỗi `403 Forbidden` (Đạt).
+    *   Tài khoản Admin gửi request tạo nhạc -> Tạo thành công bài hát và trả về trạng thái `201 Created` (Đạt).
+
+---
+
 ## Kế hoạch Tiếp theo
 
 1. **AWS RDS Migration:** Thay SQLite bằng PostgreSQL/MySQL trên RDS, cập nhật `DATABASE_URL` trong `db_models.py`.
-2. **Video Upload:** Test upload video thực tế qua bảng tin.
-3. **CORS / CloudFront:** Cấu hình HTTPS cho frontend trên CloudFront.
+2. **Cập nhật lên AWS EC2:** Đẩy code backend mới lên git, SSH vào EC2 để pull và rebuild Docker container.
+3. **Build & Re-deploy Frontend:** Rebuild frontend `npm run build` và upload đè các file lên bucket S3 `fav-web-frontend-bucket`.

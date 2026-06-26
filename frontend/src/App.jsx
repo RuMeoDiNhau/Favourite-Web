@@ -67,12 +67,16 @@ function App() {
           <button className={view === 'dashboard' ? 'active' : ''} onClick={() => setView('dashboard')}>
             🎯 Check-in
           </button>
-          <button className={view === 'users' ? 'active' : ''} onClick={() => setView('users')}>
-            👥 Users
-          </button>
-          <button className={view === 'logs' ? 'active' : ''} onClick={() => setView('logs')}>
-            📋 Logs
-          </button>
+          {user && user.role === 'admin' && (
+            <>
+              <button className={view === 'users' ? 'active' : ''} onClick={() => setView('users')}>
+                👥 Users
+              </button>
+              <button className={view === 'logs' ? 'active' : ''} onClick={() => setView('logs')}>
+                📋 Logs
+              </button>
+            </>
+          )}
           <div className="nav-divider"></div>
           <button className={view === 'games' ? 'active' : ''} onClick={() => setView('games')}>
             🎮 Games
@@ -93,8 +97,8 @@ function App() {
       <main>
         {view === 'feed' && <Feed key={feedKey} />}
         {view === 'dashboard' && <Dashboard />}
-        {view === 'users' && <Users />}
-        {view === 'logs' && <Logs />}
+        {view === 'users' && user?.role === 'admin' && <Users />}
+        {view === 'logs' && user?.role === 'admin' && <Logs />}
         {view === 'games' && <Games />}
         {view === 'music' && <Music />}
         {view === 'knowledge' && <Knowledge />}

@@ -78,6 +78,8 @@ export const fetchPopularSongs = () => api.get('/music/popular/trending');
 
 export const fetchNewSongs = () => api.get('/music/new/latest');
 
+export const deleteSong = (songId) => api.delete(`/music/${songId}`);
+
 
 // ==================== Knowledge ====================
 export const fetchAllKnowledge = () => api.get('/knowledge');

@@ -4,11 +4,32 @@ import './Music.css';
 import * as api from '../../services/api';
 
 export default function Music() {
+  const user = (() => {
+    try {
+      const saved = localStorage.getItem('user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  })();
+
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [playlists, setPlaylists] = useState([]);
   const [songs, setSongs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Trạng thái upload nhạc dành cho Admin
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadForm, setUploadForm] = useState({
+    title: '',
+    artist: '',
+    genre: 'Pop',
+    duration: '00:00'
+  });
+  const [musicFile, setMusicFile] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
 
   // Trạng thái phát nhạc
   const [currentSong, setCurrentSong] = useState(null);
@@ -111,6 +132,98 @@ export default function Music() {
     }
   };
 
+  const handleDeleteSong = async (songId) => {
+    if (window.confirm('Bạn có chắc chắn muốn xóa bài hát này khỏi thư viện?')) {
+      try {
+        await api.deleteSong(songId);
+        loadMusicData();
+        if (currentSong && currentSong.id === songId) {
+          if (audioRef.current) {
+            audioRef.current.pause();
+          }
+          setCurrentSong(null);
+          setIsPlaying(false);
+        }
+      } catch (err) {
+        console.error('Error deleting song:', err);
+        alert(err.response?.data?.detail || 'Không thể xóa bài hát');
+      }
+    }
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setMusicFile(file);
+
+    // Auto calculate duration using Audio API
+    try {
+      const audio = new Audio(URL.createObjectURL(file));
+      audio.addEventListener('loadedmetadata', () => {
+        const minutes = Math.floor(audio.duration / 60);
+        const seconds = Math.floor(audio.duration % 60);
+        const formatted = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+        setUploadForm(prev => ({ ...prev, duration: formatted }));
+      });
+    } catch (err) {
+      console.error('Failed to parse audio duration:', err);
+    }
+  };
+
+  const handleUploadSubmit = async (e) => {
+    e.preventDefault();
+    if (!musicFile) {
+      alert('Vui lòng chọn tệp nhạc!');
+      return;
+    }
+    if (!uploadForm.title || !uploadForm.artist) {
+      alert('Vui lòng điền đầy đủ tiêu đề và ca sĩ!');
+      return;
+    }
+
+    try {
+      setIsUploading(true);
+      setUploadProgress(0);
+
+      // Step 1: Upload music file
+      const uploadRes = await api.uploadPostFile(musicFile, 'audio', (progress) => {
+        setUploadProgress(progress);
+      });
+
+      const mediaUrl = uploadRes.data.media_url;
+      if (!mediaUrl) {
+        throw new Error('Không nhận được URL tệp tin sau khi upload');
+      }
+
+      // Step 2: Create song metadata in library
+      await api.createSong({
+        title: uploadForm.title,
+        artist: uploadForm.artist,
+        genre: uploadForm.genre,
+        duration: uploadForm.duration,
+        file_url: mediaUrl,
+        playlist_id: null
+      });
+
+      alert('Đã thêm bài hát vào thư viện thành công!');
+      setShowUploadModal(false);
+      setUploadForm({
+        title: '',
+        artist: '',
+        genre: 'Pop',
+        duration: '00:00'
+      });
+      setMusicFile(null);
+      setUploadProgress(0);
+      loadMusicData();
+    } catch (err) {
+      console.error('Error uploading/creating music:', err);
+      alert(err.response?.data?.detail || 'Quá trình upload hoặc thêm nhạc thất bại');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   // Trình phát nhạc tự động cập nhật tiến trình
   const onTimeUpdate = () => {
     if (audioRef.current) {
@@ -162,9 +275,19 @@ export default function Music() {
     <div className="music-container" style={{ paddingBottom: currentSong ? '80px' : '0' }}>
       <Sidebar selectedCategory={selectedCategory} onSelectCategory={setSelectedCategory} />
       <div className="music-main">
-        <div className="music-header">
-          <h1>🎵 Âm Nhạc Trực Tuyến</h1>
-          <p>Thưởng thức và thư giãn cùng các bài hát bản quyền đỉnh cao</p>
+        <div className="music-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px', textAlign: 'left' }}>
+          <div>
+            <h1 style={{ margin: 0, fontSize: '48px', fontWeight: '700' }}>🎵 Âm Nhạc Trực Tuyến</h1>
+            <p style={{ margin: '5px 0 0 0', fontSize: '18px', color: 'rgba(255, 255, 255, 0.8)' }}>Thưởng thức và thư giãn cùng các bài hát bản quyền đỉnh cao</p>
+          </div>
+          {user && user.role === 'admin' && (
+            <button 
+              className="upload-music-btn"
+              onClick={() => setShowUploadModal(true)}
+            >
+              ➕ Thêm Nhạc
+            </button>
+          )}
         </div>
 
         <div className="music-content">
@@ -210,6 +333,16 @@ export default function Music() {
                         <button onClick={() => handleLikeSong(song.id)} className="play-btn" style={{ marginLeft: '8px' }}>
                           ❤️
                         </button>
+                        {user && user.role === 'admin' && (
+                          <button 
+                            onClick={() => handleDeleteSong(song.id)} 
+                            className="play-btn delete-song-btn" 
+                            style={{ marginLeft: '8px', backgroundColor: 'rgba(239, 68, 68, 0.2)', border: '1px solid rgba(239, 68, 68, 0.4)' }}
+                            title="Xóa bài hát"
+                          >
+                            🗑️
+                          </button>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -276,6 +409,113 @@ export default function Music() {
               value={volume}
               onChange={(e) => setVolume(parseFloat(e.target.value))}
             />
+          </div>
+        </div>
+      )}
+
+      {/* Modal Upload nhạc (dành riêng cho Admin) */}
+      {showUploadModal && (
+        <div className="music-modal-overlay">
+          <div className="music-modal-content">
+            <div className="music-modal-header">
+              <h2>Thêm Nhạc Vào Thư Viện</h2>
+              <button className="music-close-btn" onClick={() => !isUploading && setShowUploadModal(false)}>×</button>
+            </div>
+            <form onSubmit={handleUploadSubmit} className="music-modal-body">
+              <div className="music-form-group">
+                <label>Tên bài hát *</label>
+                <input 
+                  type="text" 
+                  placeholder="Nhập tên bài hát..." 
+                  value={uploadForm.title}
+                  onChange={(e) => setUploadForm({ ...uploadForm, title: e.target.value })}
+                  disabled={isUploading}
+                  required
+                />
+              </div>
+
+              <div className="music-form-group">
+                <label>Ca sĩ *</label>
+                <input 
+                  type="text" 
+                  placeholder="Nhập tên ca sĩ..." 
+                  value={uploadForm.artist}
+                  onChange={(e) => setUploadForm({ ...uploadForm, artist: e.target.value })}
+                  disabled={isUploading}
+                  required
+                />
+              </div>
+
+              <div className="music-form-group">
+                <label>Thể loại</label>
+                <select 
+                  value={uploadForm.genre}
+                  onChange={(e) => setUploadForm({ ...uploadForm, genre: e.target.value })}
+                  disabled={isUploading}
+                >
+                  <option value="Pop">Pop</option>
+                  <option value="Ballad">Ballad</option>
+                  <option value="Rap">Rap / Hip-hop</option>
+                  <option value="EDM">EDM / Dance</option>
+                  <option value="Anime">Anime</option>
+                  <option value="Rock">Rock</option>
+                  <option value="Lofi">Lofi</option>
+                  <option value="Soundtrack">Soundtrack</option>
+                </select>
+              </div>
+
+              <div className="music-form-group">
+                <label>Thời lượng (Được tính tự động)</label>
+                <input 
+                  type="text" 
+                  value={uploadForm.duration}
+                  onChange={(e) => setUploadForm({ ...uploadForm, duration: e.target.value })}
+                  disabled={isUploading}
+                  placeholder="00:00"
+                />
+              </div>
+
+              <div className="music-form-group">
+                <label>Tệp âm thanh (.mp3, .wav) *</label>
+                <input 
+                  type="file" 
+                  accept="audio/*" 
+                  onChange={handleFileChange}
+                  disabled={isUploading}
+                  required
+                />
+              </div>
+
+              {isUploading && (
+                <div className="music-progress-container">
+                  <div className="music-progress-text">
+                    <span>Đang tải lên...</span>
+                    <span>{uploadProgress}%</span>
+                  </div>
+                  <div className="music-progress-bar">
+                    <div className="music-progress-filled" style={{ width: `${uploadProgress}%` }}></div>
+                  </div>
+                </div>
+              )}
+
+              <div className="music-modal-footer">
+                <button 
+                  type="button" 
+                  className="music-cancel-btn" 
+                  onClick={() => setShowUploadModal(false)}
+                  disabled={isUploading}
+                >
+                  Hủy
+                </button>
+                <button 
+                  type="submit" 
+                  className="music-submit-btn" 
+                  disabled={isUploading}
+                >
+                  {isUploading ? 'Đang xử lý...' : 'Tải lên & Lưu'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
