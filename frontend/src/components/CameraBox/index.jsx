@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
+import './CameraBox.css';
 
-function CameraBox({ onCapture, captureTrigger }) {
+function CameraBox({ onCapture, captureTrigger, status = 'idle' }) {
   const videoRef = useRef(null);
   const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState(null);
@@ -51,16 +52,55 @@ function CameraBox({ onCapture, captureTrigger }) {
     }, 'image/png');
   };
 
+  // Map backend status to HUD CSS state classes
+  const getHudClass = () => {
+    if (status === 'loading' || status === 'scanning') return 'hud-loading';
+    if (status === 'success') return 'hud-success';
+    if (status === 'error') return 'hud-error';
+    return 'hud-idle';
+  };
+
+  const getStatusText = () => {
+    if (status === 'loading' || status === 'scanning') return 'Scanning...';
+    if (status === 'success') return 'Verified';
+    if (status === 'error') return 'Access Denied';
+    return 'Sys Active';
+  };
+
   return (
     <div className="video-box">
-      <h3>Camera</h3>
+      <h3>Quét Khuôn Mặt</h3>
       {error ? (
         <p>{error}</p>
       ) : (
-        <video ref={videoRef} autoPlay muted playsInline />
+        <div className="camera-wrapper">
+          <video ref={videoRef} autoPlay muted playsInline />
+          
+          {/* Tech HUD overlay layout */}
+          <div className={`hud-overlay ${getHudClass()}`}>
+            <div className="hud-corners" />
+            
+            <div className="hud-header">
+              <span>FACE_ID v2.0</span>
+              <span>LOCK: {status === 'success' ? 'OK' : 'SEARCHING'}</span>
+            </div>
+            
+            {/* Pulsing reticle and scanning laser */}
+            <div className="hud-face-reticle">
+              <div className="hud-face-box" />
+            </div>
+            <div className="hud-scan-line" />
+            
+            <div className="hud-footer">
+              <span className="hud-status-badge">{getStatusText()}</span>
+            </div>
+            
+            <div className="hud-corners-bottom" />
+          </div>
+        </div>
       )}
       <button className="button" onClick={handleCapture} disabled={!streaming}>
-        Chụp ảnh
+        Chụp & Nhận Diện
       </button>
     </div>
   );

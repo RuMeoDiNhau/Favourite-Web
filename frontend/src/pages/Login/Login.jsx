@@ -205,7 +205,7 @@ export default function Login({ onLoginSuccess }) {
             ) : (
               <div className="login-face-section">
                 <div className="login-camera-container">
-                  <CameraBox onCapture={handleFaceCapture} captureTrigger={0} />
+                  <CameraBox onCapture={handleFaceCapture} captureTrigger={0} status={faceStatus} />
                 </div>
                 
                 <div className="face-scan-status">

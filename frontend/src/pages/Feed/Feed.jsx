@@ -2,6 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import './Feed.css';
 import * as api from '../../services/api';
 import CameraBox from '../../components/CameraBox';
+import { 
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  BarChart, Bar, Legend
+} from 'recharts';
 
 export default function Feed() {
   const user = (() => {
@@ -22,7 +26,9 @@ export default function Feed() {
   const [articles, setArticles] = useState([]);
   const [games, setGames] = useState([]);
   const [usersList, setUsersList] = useState([]);
-  const [isMockUsers, setIsMockUsers] = useState(false);
+  const [logsData, setLogsData] = useState([]);
+  const [popularSongs, setPopularSongs] = useState([]);
+  const [activeTab, setActiveTab] = useState('checkin');
 
   // 3. Category filter for Games Blog
   const [activeGameCategory, setActiveGameCategory] = useState('all');
@@ -52,7 +58,7 @@ export default function Feed() {
     if (!autoScan || !isCameraOn) return;
     const interval = setInterval(() => {
       setCaptureTrigger((prev) => prev + 1);
-    }, 3000);
+    }, 300000);
     return () => clearInterval(interval);
   }, [autoScan, isCameraOn]);
 
@@ -60,6 +66,51 @@ export default function Feed() {
   useEffect(() => {
     loadDashboardData();
   }, [activeGameCategory]);
+
+  const processLogsByHour = (logs) => {
+    const hours = Array.from({ length: 24 }, (_, i) => ({
+      hour: `${i.toString().padStart(2, '0')}:00`,
+      success: 0,
+      failed: 0
+    }));
+    
+    logs.forEach(log => {
+      if (log.timestamp) {
+        try {
+          const date = new Date(log.timestamp);
+          const hour = date.getHours();
+          if (log.status === 'success') {
+            hours[hour].success += 1;
+          } else {
+            hours[hour].failed += 1;
+          }
+        } catch (e) {
+          console.error('Error parsing log timestamp:', e);
+        }
+      }
+    });
+    
+    const activeHours = hours.filter(h => h.success > 0 || h.failed > 0);
+    if (activeHours.length === 0) {
+      return [
+        { hour: '08:00', success: 0, failed: 0 },
+        { hour: '10:00', success: 0, failed: 0 },
+        { hour: '12:00', success: 0, failed: 0 },
+        { hour: '14:00', success: 0, failed: 0 },
+        { hour: '16:00', success: 0, failed: 0 },
+        { hour: '18:00', success: 0, failed: 0 }
+      ];
+    }
+    return activeHours;
+  };
+
+  const processPopularSongs = (songsList) => {
+    return songsList.slice(0, 5).map(song => ({
+      name: song.title.length > 12 ? song.title.substring(0, 12) + '...' : song.title,
+      plays: song.plays || 0,
+      likes: song.likes || 0
+    }));
+  };
 
   const loadDashboardData = async () => {
     try {
@@ -83,18 +134,22 @@ export default function Feed() {
       }
       setGames((gamesRes.data || []).slice(0, 2));
 
-      // Fetch User Stats (Admin only or fallback to mock)
       if (user && user.role === 'admin') {
         try {
-          const usersRes = await api.fetchUsers(1, 4);
+          const [usersRes, logsRes, songsRes] = await Promise.all([
+            api.fetchUsers(1, 4),
+            api.fetchLogs(),
+            api.fetchPopularSongs()
+          ]);
           setUsersList(usersRes.data.data || usersRes.data || []);
-          setIsMockUsers(false);
+          setLogsData(processLogsByHour(logsRes.data || []));
+          setPopularSongs(processPopularSongs(songsRes.data || []));
         } catch (uErr) {
-          console.warn('Failed to load real user statistics. Using fallback.', uErr);
-          useFallbackUsers();
+          console.warn('Failed to load real user statistics.', uErr);
+          setUsersList([]);
         }
       } else {
-        useFallbackUsers();
+        setUsersList([]);
       }
 
     } catch (err) {
@@ -105,14 +160,7 @@ export default function Feed() {
     }
   };
 
-  const useFallbackUsers = () => {
-    setUsersList([
-      { user_id: 'admin', name: 'admin', registered_images: 1 },
-      { user_id: 'user_test', name: 'User Tester', registered_images: 1 },
-      { user_id: 'admin_test', name: 'Admin Tester', registered_images: 1 }
-    ]);
-    setIsMockUsers(true);
-  };
+
 
   // Face scanning capture callback
   const handleCapture = async (file) => {
@@ -208,70 +256,6 @@ export default function Feed() {
 
   return (
     <div className="dashboard-grid">
-      
-      {/* ==================== CỘT TRÁI: QUÉT KHUÔN MẶT ==================== */}
-      <div className="dashboard-col left-col">
-        <section className="dashboard-card camera-card">
-          <div className="card-title-header">
-            <h3>Quét Khuôn Mặt Thông Minh</h3>
-            <p className="card-subtitle">Auto scan mỗi 3 giây hoặc chụp thủ công khi cần.</p>
-          </div>
-
-          <div className="scanner-container">
-            {isCameraOn ? (
-              <>
-                <CameraBox onCapture={handleCapture} captureTrigger={captureTrigger} />
-                <div className="scan-reticle">
-                  <div className="reticle-box"></div>
-                  <div className="scan-laser"></div>
-                </div>
-              </>
-            ) : (
-              <div className="camera-placeholder">
-                <div className="placeholder-icon">📷</div>
-                <p>Camera đang tắt</p>
-              </div>
-            )}
-          </div>
-
-          <div className="scanner-actions" style={{ gap: '8px', display: 'flex', flexWrap: 'wrap', justifyContent: 'center' }}>
-            <button 
-              className={`action-pill ${isCameraOn ? 'active' : ''}`} 
-              type="button" 
-              onClick={() => setIsCameraOn((prev) => !prev)}
-            >
-              {isCameraOn ? '🔌 Tắt Camera' : '🔌 Bật Camera'}
-            </button>
-            {isCameraOn && (
-              <button 
-                className={`action-pill ${autoScan ? 'active' : ''}`} 
-                type="button" 
-                onClick={() => setAutoScan((prev) => !prev)}
-              >
-                {autoScan ? '⏸️ Tạm dừng Auto Scan' : '▶️ Bật Auto Scan'}
-              </button>
-            )}
-          </div>
-
-          <div className="scanner-logs">
-            <div className="logs-header">Lịch sử check-in</div>
-            <div className="logs-list">
-              {scanLogs.map((log) => (
-                <div key={log.id} className={`log-item-line ${log.type}`}>
-                  {log.text}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {preview && (
-            <div className="face-preview-box">
-              <span>Ảnh quét mới nhất:</span>
-              <img className="face-img-small" src={preview} alt="face preview" />
-            </div>
-          )}
-        </section>
-      </div>
 
       {/* ==================== CỘT GIỮA: FEED & KIẾN THỨC ==================== */}
       <div className="dashboard-col center-col">
@@ -472,57 +456,67 @@ export default function Feed() {
                     ))}
                   </tbody>
                 </table>
-                {isMockUsers && (
-                  <div className="mock-badge">💡 Dữ liệu mẫu (Quyền User)</div>
-                )}
               </div>
 
-              {/* SVG Bar Chart */}
-              <div className="stats-chart-wrapper">
-                <svg width="100%" height="110" viewBox="0 0 100 110" preserveAspectRatio="none">
-                  <defs>
-                    <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#38bdf8" />
-                      <stop offset="100%" stopColor="#6366f1" />
-                    </linearGradient>
-                  </defs>
-                  
-                  {/* Horizontal reference lines */}
-                  <line x1="0" y1="20" x2="100" y2="20" stroke="rgba(148, 163, 184, 0.25)" strokeDasharray="2" />
-                  <line x1="0" y1="50" x2="100" y2="50" stroke="rgba(148, 163, 184, 0.25)" strokeDasharray="2" />
-                  <line x1="0" y1="80" x2="100" y2="80" stroke="rgba(148, 163, 184, 0.25)" strokeDasharray="2" />
-                  <line x1="0" y1="90" x2="100" y2="90" stroke="rgba(148, 163, 184, 0.4)" strokeWidth="1" />
+              {/* Dynamic Recharts Column */}
+              <div className="stats-chart-column" style={{ display: 'flex', flexDirection: 'column', width: '100%', minWidth: 0 }}>
+                {/* Tabs */}
+                <div className="chart-tabs-nav">
+                  <button 
+                    type="button"
+                    className={`chart-tab-btn ${activeTab === 'checkin' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('checkin')}
+                  >
+                    📊 Check-in
+                  </button>
+                  <button 
+                    type="button"
+                    className={`chart-tab-btn ${activeTab === 'songs' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('songs')}
+                  >
+                    🎵 Top 5 Nhạc
+                  </button>
+                </div>
 
-                  {usersList.slice(0, 3).map((u, i) => {
-                    const val = u.registered_images || 1;
-                    // Compute height
-                    const height = Math.min(70, val * 45);
-                    const x = 12 + i * 30;
-                    const y = 90 - height;
-                    return (
-                      <g key={u.user_id}>
-                        <rect 
-                          x={x} 
-                          y={y} 
-                          width="16" 
-                          height={height} 
-                          fill="url(#barGrad)" 
-                          rx="4" 
-                        />
-                        <text 
-                          x={x + 8} 
-                          y="102" 
-                          fontSize="6" 
-                          fill="#94a3b8" 
-                          fontWeight="bold"
-                          textAnchor="middle"
-                        >
-                          {u.user_id.substring(0, 6)}
-                        </text>
-                      </g>
-                    );
-                  })}
-                </svg>
+                {activeTab === 'checkin' ? (
+                  <div className="stats-chart-wrapper" style={{ height: '180px', width: '100%', background: 'var(--bg-item)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '10px' }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={logsData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="colorSuccess" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                          </linearGradient>
+                          <linearGradient id="colorFailed" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.1)" />
+                        <XAxis dataKey="hour" stroke="#94a3b8" fontSize={9} />
+                        <YAxis stroke="#94a3b8" fontSize={9} allowDecimals={false} />
+                        <Tooltip contentStyle={{ fontSize: '11px' }} />
+                        <Legend iconSize={8} wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} />
+                        <Area type="monotone" dataKey="success" name="Thành công" stroke="#10b981" fillOpacity={1} fill="url(#colorSuccess)" strokeWidth={2} />
+                        <Area type="monotone" dataKey="failed" name="Thất bại" stroke="#ef4444" fillOpacity={1} fill="url(#colorFailed)" strokeWidth={2} />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="stats-chart-wrapper" style={{ height: '180px', width: '100%', background: 'var(--bg-item)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '10px' }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={popularSongs} layout="vertical" margin={{ top: 5, right: 10, left: -15, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.1)" />
+                        <XAxis type="number" stroke="#94a3b8" fontSize={9} allowDecimals={false} />
+                        <YAxis dataKey="name" type="category" stroke="#94a3b8" fontSize={9} width={70} />
+                        <Tooltip contentStyle={{ fontSize: '11px' }} />
+                        <Legend iconSize={8} wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} />
+                        <Bar dataKey="plays" name="Lượt nghe" fill="#06b6d4" radius={[0, 4, 4, 0]} barSize={10} />
+                        <Bar dataKey="likes" name="Thích" fill="#ec4899" radius={[0, 4, 4, 0]} barSize={10} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
               </div>
             </div>
           </section>

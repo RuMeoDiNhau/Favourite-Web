@@ -500,6 +500,13 @@
   cursor: pointer;
 }
 
+/* Fix browser native dropdown option colors */
+.music-form-group select option {
+  background: #1e2235;
+  color: #ffffff;
+}
+
+
 .music-progress-container {
   margin-top: 15px;
   display: flex;

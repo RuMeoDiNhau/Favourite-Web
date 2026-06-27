@@ -5,18 +5,12 @@ const api = axios.create({
   timeout: 15000,
 });
 
-// Auto attach X-User-Id header if logged in
+// Auto attach JWT Authorization header if logged in
 api.interceptors.request.use((config) => {
-  const userStr = localStorage.getItem('user');
-  if (userStr) {
-    try {
-      const user = JSON.parse(userStr);
-      if (user && user.user_id) {
-        config.headers['X-User-Id'] = user.user_id;
-      }
-    } catch (e) {
-      console.error('Error parsing user from localStorage', e);
-    }
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers['Authorization'] = `Bearer ${token}`;
+    config.headers['X-User-Id'] = token; // Fallback compatibility
   }
   return config;
 }, (error) => {
@@ -39,6 +33,9 @@ export const loginWithPassword = (usernameOrEmail, password) =>
 
 export const loginWithFace = (imageBase64) => 
   api.post('/auth/login-face', { image_base64: imageBase64 });
+
+export const registerFace = (imagesBase64) =>
+  api.post('/users/me/register-face', { images_base64: imagesBase64 });
 
 
 // ==================== Games ====================

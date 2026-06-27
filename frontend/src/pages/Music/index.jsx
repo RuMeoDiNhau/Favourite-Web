@@ -18,6 +18,7 @@ export default function Music() {
   const [songs, setSongs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [musicStats, setMusicStats] = useState({ totalSongs: 0, totalPlaylists: 0, totalDuration: '0h 00m' });
 
   // Trạng thái upload nhạc dành cho Admin
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -71,6 +72,45 @@ export default function Music() {
     document.addEventListener('click', handleOutsideClick);
     return () => document.removeEventListener('click', handleOutsideClick);
   }, []);
+
+  useEffect(() => {
+    loadMusicStats();
+  }, []);
+
+  const loadMusicStats = async () => {
+    try {
+      const [songsRes, playlistsRes] = await Promise.all([
+        api.fetchAllMusic(),
+        api.fetchPlaylists()
+      ]);
+      const allSongs = songsRes.data || [];
+      const allPlaylists = playlistsRes.data || [];
+      
+      let totalSeconds = 0;
+      allSongs.forEach(song => {
+        if (song.duration) {
+          const parts = song.duration.split(':');
+          if (parts.length === 2) {
+            const min = parseInt(parts[0], 10) || 0;
+            const sec = parseInt(parts[1], 10) || 0;
+            totalSeconds += (min * 60) + sec;
+          }
+        }
+      });
+      
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const durationStr = `${hours}h ${minutes}m`;
+      
+      setMusicStats({
+        totalSongs: allSongs.length,
+        totalPlaylists: allPlaylists.length,
+        totalDuration: durationStr
+      });
+    } catch (err) {
+      console.error('Error loading music stats:', err);
+    }
+  };
 
   const loadMusicData = async () => {
     try {
@@ -163,6 +203,7 @@ export default function Music() {
       try {
         await api.deleteSong(songId);
         loadMusicData();
+        loadMusicStats();
         if (currentSong && currentSong.id === songId) {
           if (audioRef.current) {
             audioRef.current.pause();
@@ -185,6 +226,7 @@ export default function Music() {
           setSelectedPlaylist(null);
         }
         loadMusicData();
+        loadMusicStats();
         alert('Đã xóa danh sách phát thành công!');
       } catch (err) {
         console.error('Error deleting playlist:', err);
@@ -208,6 +250,7 @@ export default function Music() {
       setShowCreatePlaylistModal(false);
       setNewPlaylistForm({ name: '', description: '', image_url: '🎵' });
       loadMusicData();
+      loadMusicStats();
       alert('Đã tạo danh sách phát thành công!');
     } catch (err) {
       console.error('Error creating playlist:', err);
@@ -220,6 +263,7 @@ export default function Music() {
       await api.addSongToPlaylist(playlistId, songId);
       setActivePopoverSongId(null);
       loadMusicData();
+      loadMusicStats();
       alert('Đã thêm bài hát vào danh sách phát!');
     } catch (err) {
       console.error('Error adding song to playlist:', err);
@@ -232,6 +276,7 @@ export default function Music() {
       try {
         await api.removeSongFromPlaylist(songId);
         loadMusicData();
+        loadMusicStats();
         alert('Đã xóa bài hát khỏi danh sách phát thành công!');
       } catch (err) {
         console.error('Error removing song from playlist:', err);
@@ -323,6 +368,7 @@ export default function Music() {
       setMusicFile(null);
       setUploadProgress(0);
       loadMusicData();
+      loadMusicStats();
     } catch (err) {
       console.error('Error uploading/creating music:', err);
       alert(err.response?.data?.detail || 'Quá trình upload hoặc thêm nhạc thất bại');
@@ -393,6 +439,7 @@ export default function Music() {
           setSelectedPlaylist(null);
           setSelectedCategory(cat);
         }} 
+        stats={musicStats}
       />
       <div className="music-main">
         <div className="music-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px', textAlign: 'left' }}>

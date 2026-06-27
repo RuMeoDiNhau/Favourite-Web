@@ -9,6 +9,7 @@ import Knowledge from './pages/Knowledge';
 import Login from './pages/Login/Login';
 import Feed from './pages/Feed/Feed';
 import PostModal from './pages/Feed/PostModal';
+import FaceSetupModal from './components/FaceSetupModal';
 
 function App() {
   const [user, setUser] = useState(() => {
@@ -18,6 +19,7 @@ function App() {
   const [view, setView] = useState('feed');
   const [showPostModal, setShowPostModal] = useState(false);
   const [feedKey, setFeedKey] = useState(0);
+  const [showFaceSetup, setShowFaceSetup] = useState(false);
 
   // Khởi tạo trạng thái giao diện sáng/tối từ localStorage
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -30,6 +32,15 @@ function App() {
       localStorage.setItem('theme', next ? 'dark' : 'light');
       return next;
     });
+  };
+
+  const getFullAssetUrl = (url) => {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    const base = import.meta.env.VITE_API_URL 
+      ? import.meta.env.VITE_API_URL.replace('/api/v1', '') 
+      : 'http://localhost:8000';
+    return `${base}${url}`;
   };
 
   const handleLogout = () => {
@@ -137,7 +148,16 @@ function App() {
           </button>
 
           <div className="user-profile-dropdown">
-            <div className="avatar-circle">{user.name.substring(0, 2).toUpperCase()}</div>
+            {user.avatar_url ? (
+              <img 
+                src={getFullAssetUrl(user.avatar_url)} 
+                alt="Avatar" 
+                className="avatar-circle" 
+                style={{ objectFit: 'cover', border: '2px solid var(--primary-color, #6366f1)' }} 
+              />
+            ) : (
+              <div className="avatar-circle">{user.name.substring(0, 2).toUpperCase()}</div>
+            )}
             <span className="username-text">{user.name} ({user.role})</span>
             <span className="chevron-icon">▼</span>
           </div>
@@ -161,6 +181,52 @@ function App() {
         </div>
       </header>
 
+      {/* Banner kích hoạt Face ID nếu user chưa đăng ký khuôn mặt */}
+      {(!user.registered_images || user.registered_images === 0) && (
+        <div style={{
+          background: 'linear-gradient(90deg, rgba(99,102,241,0.15) 0%, rgba(79,70,229,0.1) 100%)',
+          borderBottom: '1px solid rgba(99,102,241,0.25)',
+          padding: '10px 24px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px',
+          flexWrap: 'wrap',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '18px' }}>🔐</span>
+            <div>
+              <span style={{ fontWeight: 600, fontSize: '0.88rem', color: '#a5b4fc' }}>
+                Bạn chưa kích hoạt Face ID.
+              </span>
+              <span style={{ fontSize: '0.82rem', color: '#64748b', marginLeft: '8px' }}>
+                Đăng ký khuôn mặt để đăng nhập nhanh hơn bằng camera.
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowFaceSetup(true)}
+            style={{
+              background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '8px 16px',
+              fontSize: '0.82rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              boxShadow: '0 2px 12px rgba(99,102,241,0.4)',
+              transition: 'all 0.2s',
+            }}
+            onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
+            onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+          >
+            📷 Kích hoạt Face ID ngay
+          </button>
+        </div>
+      )}
+
       <main>
         {view === 'feed' && <Feed key={feedKey} />}
         {view === 'dashboard' && <Dashboard />}
@@ -175,6 +241,19 @@ function App() {
         <PostModal 
           onClose={() => setShowPostModal(false)} 
           onPostCreated={() => setFeedKey(prev => prev + 1)}
+        />
+      )}
+
+      {showFaceSetup && (
+        <FaceSetupModal
+          onClose={() => setShowFaceSetup(false)}
+          onSuccess={(data) => {
+            // Cập nhật user trong localStorage để không hiện banner nữa
+            const updated = { ...user, registered_images: data.data?.total_registered_images || 1 };
+            localStorage.setItem('user', JSON.stringify(updated));
+            setUser(updated);
+            setShowFaceSetup(false);
+          }}
         />
       )}
     </div>

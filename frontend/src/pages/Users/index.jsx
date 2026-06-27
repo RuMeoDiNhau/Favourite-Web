@@ -109,9 +109,14 @@ function Users() {
             onChange={handleChange}
             placeholder="Khoa / Bộ phận"
           />
-          <input type="file" accept="image/*" multiple onChange={handleFileChange} />
-          <button className="button" type="submit" disabled={files.length === 0}>
-            Đăng ký tài khoản & khuôn mặt mới
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <label style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+              Ảnh đăng ký khuôn mặt (Tùy chọn - Dùng cho Face ID):
+            </label>
+            <input type="file" accept="image/*" multiple onChange={handleFileChange} />
+          </div>
+          <button className="button" type="submit">
+            Đăng ký tài khoản mới
           </button>
         </div>
         {message && <p>{message}</p>}

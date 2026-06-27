@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function Sidebar({ selectedLibrary, onSelectLibrary }) {
+export default function Sidebar({ selectedLibrary, onSelectLibrary, stats }) {
   const menuItems = [
     { id: 'all', label: '📚 Tất Cả Bài Viết', icon: '📚' },
     { id: 'Puzzle', label: '🧩 Giải Đố (Puzzle)', icon: '🧩' },
@@ -29,8 +29,8 @@ export default function Sidebar({ selectedLibrary, onSelectLibrary }) {
 
       <div className="sidebar-footer">
         <div className="stats">
-          <p>✍️ Thể loại bài viết: 5</p>
-          <p>📰 Tổng số bài viết: 6</p>
+          <p>✍️ Thể loại bài viết: {stats?.totalCategories || 0}</p>
+          <p>📰 Tổng số bài viết: {stats?.totalPosts || 0}</p>
         </div>
       </div>
     </div>

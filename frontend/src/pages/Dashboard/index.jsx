@@ -17,7 +17,7 @@ function Dashboard() {
 
     const interval = setInterval(() => {
       setCaptureTrigger((prev) => prev + 1);
-    }, 3000);
+    }, 300000);
 
     return () => clearInterval(interval);
   }, [autoScan]);
@@ -48,14 +48,14 @@ function Dashboard() {
       <div className="page-header">
         <div>
           <h2>Quét Khuôn Mặt</h2>
-          <p>Auto scan mỗi 3 giây hoặc chụp thủ công khi cần.</p>
+          <p>Auto scan mỗi 5 phút hoặc chụp thủ công khi cần.</p>
         </div>
         <button className="button" type="button" onClick={() => setAutoScan((prev) => !prev)}>
           {autoScan ? 'Tắt auto scan' : 'Bật auto scan'}
         </button>
       </div>
       <div className="video-grid">
-        <CameraBox onCapture={handleCapture} captureTrigger={captureTrigger} />
+        <CameraBox onCapture={handleCapture} captureTrigger={captureTrigger} status={status} />
         {preview && (
           <div className="capture-preview">
             <h3>Ảnh đã chụp</h3>
