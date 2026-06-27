@@ -12,3 +12,4 @@ pydantic
 sqlalchemy
 python-dotenv
 boto3
+pyjwt

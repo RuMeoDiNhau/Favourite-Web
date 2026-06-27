@@ -26,6 +26,9 @@ app.include_router(router)
 static_dir = Path(__file__).resolve().parents[1] / 'static'
 app.mount('/static', StaticFiles(directory=str(static_dir.resolve())), name='static')
 
+from backend.services.db_models import DATA_RAW_DIR
+app.mount('/raw_images', StaticFiles(directory=str(DATA_RAW_DIR.resolve())), name='raw_images')
+
 @app.get('/')
 def root():
     return {'message': 'Backend is running'}

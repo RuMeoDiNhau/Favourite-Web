@@ -261,6 +261,15 @@ def main():
         return
 
     train_all(target_user=args.user, verbose=not args.quiet)
+    
+    # Auto sync embeddings to AWS S3 after offline training
+    try:
+        from backend.services.s3_service import sync_local_embeddings_to_s3
+        print("\nSyncing local embeddings to S3...")
+        sync_local_embeddings_to_s3()
+    except Exception as e:
+        print(f"\nSkipping S3 sync: {e}")
+
 
 
 if __name__ == '__main__':

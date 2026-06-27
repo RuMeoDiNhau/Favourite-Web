@@ -132,3 +132,33 @@ def download_all_embeddings():
         logger.error(f"Error syncing embeddings from S3: {e}")
     except Exception as e:
         logger.error(f"Unexpected error syncing embeddings: {e}")
+
+
+def sync_local_embeddings_to_s3():
+    """
+    Scans the local embeddings directory and uploads all .npy files to S3.
+    This ensures S3 is always in sync with any training done offline.
+    """
+    if not s3_client or not AWS_STORAGE_BUCKET_NAME:
+        logger.warning("S3 client not initialized. Skipping local embedding sync to S3.")
+        return False
+
+    logger.info("Scanning local embeddings for S3 synchronization...")
+    try:
+        if not EMBED_DIR.exists():
+            logger.info("Local embeddings directory does not exist. Skipping.")
+            return False
+
+        uploaded_count = 0
+        for local_path in EMBED_DIR.glob('*.npy'):
+            user_id = local_path.stem
+            success = upload_embedding(user_id, local_path)
+            if success:
+                uploaded_count += 1
+                
+        logger.info(f"Successfully synced {uploaded_count} embeddings to S3.")
+        return True
+    except Exception as e:
+        logger.error(f"Unexpected error syncing local embeddings to S3: {e}")
+        return False
+

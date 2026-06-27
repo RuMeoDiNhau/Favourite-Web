@@ -1,3 +1,4 @@
+# pyrefly: ignore [missing-import]
 from torch.utils.data import Dataset
 
 class FaceDataset(Dataset):

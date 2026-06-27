@@ -1,9 +1,11 @@
-import secrets
+import jwt
+from pydantic import BaseModel
 from fastapi import APIRouter, HTTPException, Depends, Header, UploadFile, File, Form
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from backend.services.face_service import recognize_face
-from backend.services.db_service import create_user, get_users, get_logs, verify_user_credentials, get_user_by_user_id
-from backend.services.db_models import SessionLocal
+from backend.services.db_service import create_user, get_users, get_logs, verify_user_credentials, get_user_by_user_id, add_face_images
+from backend.services.db_models import SessionLocal, DATA_RAW_DIR
 from backend.services.schemas import (
     RecognizeRequest, EnrollmentRequest,
     GameResponse, GameCreateRequest,
@@ -13,6 +15,7 @@ from backend.services.schemas import (
     PostResponse, PostCreateRequest
 )
 from backend.services import games_service, music_service, knowledge_service, posts_service
+from backend.services.auth_service import create_access_token, decode_access_token
 
 router = APIRouter(prefix='/api/v1')
 
@@ -22,6 +25,40 @@ def get_db():
         yield db
     finally:
         db.close()
+
+# JWT Token extraction and authentication dependencies
+security = HTTPBearer(auto_error=False)
+
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    x_user_id: str = Header(None)
+):
+    token = None
+    if credentials:
+        token = credentials.credentials
+    elif x_user_id:
+        # Fallback/Backward compatibility for header token
+        if x_user_id.startswith("Bearer "):
+            token = x_user_id.replace("Bearer ", "")
+        else:
+            token = x_user_id
+
+    if not token:
+        raise HTTPException(status_code=401, detail="Vui lòng đăng nhập")
+
+    try:
+        payload = decode_access_token(token)
+        return payload
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Mã xác thực đã hết hạn, vui lòng đăng nhập lại")
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="Mã xác thực không hợp lệ")
+
+def get_admin_user(current_user: dict = Depends(get_current_user)):
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Bạn không có quyền thực hiện hành động này")
+    return current_user
+
 
 # ==================== Face Recognition Endpoints ====================
 
@@ -44,22 +81,22 @@ def enroll_user(request: EnrollmentRequest):
     return result
 
 @router.get('/users')
-def list_users(page: int = 1, limit: int = 10, x_user_id: str = Header(None)):
-    if not x_user_id:
-        raise HTTPException(status_code=401, detail='Vui lòng đăng nhập')
-    user = get_user_by_user_id(x_user_id)
-    if not user or user.role != 'admin':
-        raise HTTPException(status_code=403, detail='Bạn không có quyền xem danh sách thành viên')
+def list_users(page: int = 1, limit: int = 10, admin: dict = Depends(get_admin_user)):
     return get_users(page=page, limit=limit)
 
 @router.get('/logs')
-def list_logs(x_user_id: str = Header(None)):
-    if not x_user_id:
-        raise HTTPException(status_code=401, detail='Vui lòng đăng nhập')
-    user = get_user_by_user_id(x_user_id)
-    if not user or user.role != 'admin':
-        raise HTTPException(status_code=403, detail='Bạn không có quyền xem lịch sử log')
+def list_logs(admin: dict = Depends(get_admin_user)):
     return get_logs()
+
+
+def get_user_avatar_url(user_id: str) -> str:
+    user_dir = DATA_RAW_DIR / user_id
+    if user_dir.exists():
+        images = list(user_dir.glob('*.png')) + list(user_dir.glob('*.jpg'))
+        if images:
+            first_image = sorted(images)[0]
+            return f"/raw_images/{user_id}/{first_image.name}"
+    return None
 
 
 # ==================== Authentication Endpoints ====================
@@ -69,7 +106,9 @@ def login(request: LoginRequest):
     user = verify_user_credentials(request.username_or_email, request.password)
     if not user:
         raise HTTPException(status_code=401, detail='Tài khoản hoặc mật khẩu không chính xác')
-    token = secrets.token_hex(16)
+    
+    # Tạo JWT token mã hóa user_id và role
+    token = create_access_token(data={"user_id": user.user_id, "role": user.role})
     return {
         'status': 'success',
         'token': token,
@@ -77,7 +116,9 @@ def login(request: LoginRequest):
             'user_id': user.user_id,
             'name': user.name,
             'email': user.email,
-            'role': user.role
+            'role': user.role,
+            'registered_images': user.registered_images,
+            'avatar_url': get_user_avatar_url(user.user_id)
         }
     }
 
@@ -89,7 +130,8 @@ def login_face(request: FaceLoginRequest):
             user_id = result['data']['user_id']
             user = get_user_by_user_id(user_id)
             if user:
-                token = secrets.token_hex(16)
+                # Tạo JWT token mã hóa user_id và role
+                token = create_access_token(data={"user_id": user.user_id, "role": user.role})
                 return {
                     'status': 'success',
                     'token': token,
@@ -97,13 +139,36 @@ def login_face(request: FaceLoginRequest):
                         'user_id': user.user_id,
                         'name': user.name,
                         'email': user.email,
-                        'role': user.role
+                        'role': user.role,
+                        'registered_images': user.registered_images,
+                        'avatar_url': get_user_avatar_url(user.user_id)
                     }
                 }
     except Exception as e:
-        # If face recognition fails or throws HTTPException
         pass
     raise HTTPException(status_code=401, detail='Không nhận diện được khuôn mặt hoặc người lạ')
+
+
+class RegisterFaceRequest(BaseModel):
+    images_base64: list
+
+
+@router.post('/users/me/register-face')
+def register_my_face(
+    request: RegisterFaceRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """User tự đăng ký khuôn mặt sau khi đã có tài khoản."""
+    user_id = current_user.get('user_id')
+    if not user_id:
+        raise HTTPException(status_code=401, detail='Không xác định được tài khoản')
+    if not request.images_base64:
+        raise HTTPException(status_code=400, detail='Vui lòng cung cấp ít nhất 1 ảnh')
+
+    result = add_face_images(user_id, request.images_base64)
+    if result['status'] == 'error':
+        raise HTTPException(status_code=400, detail=result['message'])
+    return result
 
 
 # ==================== Games Endpoints ====================
@@ -190,14 +255,8 @@ def create_playlist(request: PlaylistCreateRequest, db: Session = Depends(get_db
     )
 
 @router.delete('/playlists/{playlist_id}', status_code=200)
-def delete_playlist(playlist_id: int, x_user_id: str = Header(None), db: Session = Depends(get_db)):
+def delete_playlist(playlist_id: int, admin: dict = Depends(get_admin_user), db: Session = Depends(get_db)):
     """Delete a playlist (Admin only)"""
-    if not x_user_id:
-        raise HTTPException(status_code=401, detail="Vui lòng đăng nhập để thực hiện hành động này")
-    user = get_user_by_user_id(x_user_id)
-    if not user or user.role != 'admin':
-        raise HTTPException(status_code=403, detail="Chỉ Admin mới có quyền xóa danh sách phát")
-    
     success = music_service.delete_playlist(db, playlist_id)
     if not success:
         raise HTTPException(status_code=404, detail="Không tìm thấy danh sách phát")
@@ -263,15 +322,10 @@ def get_song(song_id: int, db: Session = Depends(get_db)):
 @router.post('/music', response_model=MusicResponse, status_code=201)
 def create_song(
     request: MusicCreateRequest,
-    x_user_id: str = Header(None),
+    admin: dict = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """Create a new song (Admin only)"""
-    if not x_user_id:
-        raise HTTPException(status_code=401, detail="Vui lòng đăng nhập để thực hiện hành động này")
-    user = get_user_by_user_id(x_user_id)
-    if not user or user.role != 'admin':
-        raise HTTPException(status_code=403, detail="Chỉ Admin mới có quyền thêm nhạc")
     return music_service.create_song(
         db,
         title=request.title,
@@ -283,14 +337,8 @@ def create_song(
     )
 
 @router.delete('/music/{song_id}', status_code=200)
-def delete_song(song_id: int, x_user_id: str = Header(None), db: Session = Depends(get_db)):
+def delete_song(song_id: int, admin: dict = Depends(get_admin_user), db: Session = Depends(get_db)):
     """Delete a song by ID (Admin only)"""
-    if not x_user_id:
-        raise HTTPException(status_code=401, detail="Vui lòng đăng nhập")
-    user = get_user_by_user_id(x_user_id)
-    if not user or user.role != 'admin':
-        raise HTTPException(status_code=403, detail="Chỉ Admin mới có quyền xóa bài hát")
-    
     success = music_service.delete_song(db, song_id)
     if not success:
         raise HTTPException(status_code=404, detail="Không tìm thấy bài hát")
@@ -389,10 +437,8 @@ def like_article(article_id: int, db: Session = Depends(get_db)):
 async def upload_post_file(
     file: UploadFile = File(...),
     post_type: str = Form(...),
-    x_user_id: str = Header(None)
+    current_user: dict = Depends(get_current_user)
 ):
-    if not x_user_id:
-        raise HTTPException(status_code=401, detail="Vui lòng đăng nhập để thực hiện tải file")
     try:
         file_bytes = await file.read()
         media_url = posts_service.upload_media_file(file_bytes, file.filename, post_type)
@@ -404,24 +450,20 @@ async def upload_post_file(
 @router.post('/posts', response_model=PostResponse, status_code=201)
 def create_post(
     request: PostCreateRequest,
-    x_user_id: str = Header(None),
+    current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    if not x_user_id:
-        raise HTTPException(status_code=401, detail="Vui lòng đăng nhập để đăng bài")
     try:
-        return posts_service.create_post(db, request, x_user_id)
+        return posts_service.create_post(db, request, current_user.get("user_id"))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lỗi khi tạo bài đăng: {str(e)}")
 
 
 @router.get('/posts', response_model=list[PostResponse])
 def get_posts(
-    x_user_id: str = Header(None),
+    current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    if not x_user_id:
-        raise HTTPException(status_code=401, detail="Vui lòng đăng nhập để xem bảng tin")
     try:
         return posts_service.get_posts(db)
     except Exception as e:

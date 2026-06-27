@@ -87,17 +87,11 @@ def create_user(user_id: str, name: str, department: str, images_base64, email: 
             if embedding is not None:
                 embeddings.append(embedding)
 
-        if not embeddings:
-            return {
-                'status': 'error',
-                'message': 'Không tìm thấy khuôn mặt hợp lệ trong ảnh đăng ký',
-                'data': None,
-            }
-
-        saved_path = save_user_embedding(user_id, embeddings)
-        # Upload embedding to S3 for backup/sync
-        if saved_path and s3_client:
-            upload_embedding(user_id, Path(saved_path))
+        if embeddings:
+            saved_path = save_user_embedding(user_id, embeddings)
+            # Upload embedding to S3 for backup/sync
+            if saved_path and s3_client:
+                upload_embedding(user_id, Path(saved_path))
 
     session = _get_session()
     try:
@@ -129,6 +123,65 @@ def create_user(user_id: str, name: str, department: str, images_base64, email: 
             'status': 'error',
             'message': 'User ID đã tồn tại',
             'data': None,
+        }
+    finally:
+        session.close()
+
+
+def add_face_images(user_id: str, images_base64: list) -> dict:
+    """Thêm ảnh khuôn mặt cho user đã tồn tại, dùng cho tính năng kích hoạt Face ID."""
+    session = _get_session()
+    try:
+        user = session.query(User).filter(User.user_id == user_id).first()
+        if not user:
+            return {'status': 'error', 'message': 'Không tìm thấy người dùng'}
+
+        # Xác định index tiếp theo để không ghi đè ảnh cũ
+        user_dir = DATA_RAW_DIR / user_id
+        user_dir.mkdir(parents=True, exist_ok=True)
+        existing = list(user_dir.glob(f'{user_id}_*.png')) + list(user_dir.glob(f'{user_id}_*.jpg'))
+        next_idx = len(existing) + 1
+
+        embeddings = []
+        for i, raw_data in enumerate(images_base64):
+            if ',' in raw_data:
+                raw_data = raw_data.split(',', 1)[1]
+            image_bytes = base64.b64decode(raw_data)
+            filename = f'{user_id}_{next_idx + i:03d}.png'
+            local_path = user_dir / filename
+            local_path.write_bytes(image_bytes)
+
+            # Upload lên S3 nếu có
+            if s3_client:
+                try:
+                    s3_key = f"raw/{user_id}/{filename}"
+                    upload_file_to_s3(image_bytes, s3_key, content_type="image/png")
+                except Exception:
+                    pass
+
+            # Trích xuất embedding khuôn mặt
+            embedding = embed_face(image_bytes)
+            if embedding is not None:
+                embeddings.append(embedding)
+
+        new_face_count = len(embeddings)
+        if embeddings:
+            saved_path = save_user_embedding(user_id, embeddings)
+            if saved_path and s3_client:
+                upload_embedding(user_id, Path(saved_path))
+
+        # Cập nhật số lượng ảnh đã đăng ký
+        user.registered_images = (user.registered_images or 0) + new_face_count
+        session.commit()
+
+        return {
+            'status': 'success',
+            'message': f'Đã thêm {new_face_count} khuôn mặt thành công',
+            'data': {
+                'user_id': user_id,
+                'new_faces': new_face_count,
+                'total_registered_images': user.registered_images,
+            }
         }
     finally:
         session.close()
