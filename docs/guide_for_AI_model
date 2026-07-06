@@ -1,3 +1,5 @@
+#nhớ chạy venv trước
+
 ở thư mục gốc:
 # Đăng ký tất cả mọi người
 python -m backend.ai_core.train_from_images
@@ -10,3 +12,6 @@ python -m backend.ai_core.train_from_images --list
 
 # Xem hướng dẫn
 python -m backend.ai_core.train_from_images --guide
+
+# Đánh giá
+python -m backend.ai_core.evaluate

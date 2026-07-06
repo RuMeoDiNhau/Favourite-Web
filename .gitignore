@@ -78,3 +78,4 @@ backend/ai_core/data/embeddings/
 # Scratch / Temp Files
 scratch/
 
+docs/walkthrough.md
