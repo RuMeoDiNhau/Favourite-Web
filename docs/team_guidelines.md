@@ -48,3 +48,15 @@ Dự án hiện đang vận hành trên hạ tầng AWS với các thiết lập
 ### AWS CloudWatch Logs (Giám sát hệ thống)
 - Máy chủ EC2 đã được gán **IAM Instance Profile Role** (`EC2-CloudWatch-Role`) để tự động đẩy nhật ký hoạt động của backend lên CloudWatch.
 - **Xem log:** Logs của backend được đẩy thời gian thực về Log Group **`fav-web-log-group`**, Stream **`backend-logs`** trên AWS CloudWatch Console. Có thể lên đây để debug thay vì phải SSH vào EC2 gõ lệnh.
+
+---
+
+## 4. QUY QUYẾT PHÂN QUYỀN DEPLOY (QUAN TRỌNG)
+
+Để đảm bảo hệ thống production hoạt động ổn định và tránh rủi ro mất mát dữ liệu:
+- **Nguyên tắc:** **Các thành viên KHÔNG tự ý SSH vào EC2 để deploy hoặc thay đổi container.** Quyền SSH truy cập EC2 chỉ dành cho Trưởng nhóm (Leader).
+- **Quy trình cập nhật hệ thống (Deployment Flow):**
+  1. Các thành viên code và test ổn định dưới local -> Đẩy lên nhánh tính năng riêng -> Tạo **Pull Request (PR)** trên GitHub.
+  2. Toàn team cùng review code -> Leader duyệt và thực hiện **Merge** PR vào nhánh `main`.
+  3. **Leader** sẽ là người SSH vào EC2, thực hiện kéo code mới nhất (`git pull`) và khởi chạy lại Docker container theo đúng quy chuẩn cấu hình cổng `:80` và mount volume dữ liệu.
+
