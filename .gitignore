@@ -33,17 +33,21 @@ frontend/.env.development
 
 # Databases
 database/*.db
+database/app.db
 *.db
 *.sqlite3
 
 # IDEs & Editors
 .vscode/
+.vscode
 .idea/
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.swp
+*.log
+
 
 # Credentials & Keys
 *.csv
