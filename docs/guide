@@ -98,13 +98,29 @@ docker build -t fav-web-backend .
 cd ..
 docker stop backend-service || true
 docker rm backend-service || true
-docker run -d --name backend-service -p 8000:8000 fav-web-backend
+
+# QUAN TRỌNG: Dùng -v để giữ lại database và dữ liệu khi rebuild container
+# Lần đầu chạy cần tạo thư mục trước:
+mkdir -p ~/Favourite-Web/database
+mkdir -p ~/Favourite-Web/static/logs
+mkdir -p ~/Favourite-Web/backend/ai_core/data/embeddings
+
+docker run -d \
+  --name backend-service \
+  -p 80:8000 \
+  --env-file ~/Favourite-Web/.env \
+  -v ~/Favourite-Web/database:/app/database \
+  -v ~/Favourite-Web/static:/app/static \
+  -v ~/Favourite-Web/backend/ai_core/data:/app/backend/ai_core/data \
+  fav-web-backend
+
 
 #có thể dùng lệnh sau để kiểm tra backend-service đang RUNNING không
 docker ps
 
-curl http://localhost:8000
+curl http://localhost
 # Phải trả về: {"message": "Backend is running"}
+
 
 #Nếu thay đổi code ở Frontend thì sau đó đồng bộ code frontend local lên aws s3 bằng cách:
 1. Ở máy local: 
