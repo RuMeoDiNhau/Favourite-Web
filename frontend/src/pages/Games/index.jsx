@@ -10,6 +10,7 @@ export default function Games() {
   const [error, setError] = useState(null);
   const [selectedGame, setSelectedGame] = useState(null); // Trạng thái bài viết đang đọc chi tiết
   const [stats, setStats] = useState({ totalPosts: 0, totalCategories: 0 });
+  const [categories, setCategories] = useState([]);
 
   useEffect(() => {
     loadGames();
@@ -20,10 +21,11 @@ export default function Games() {
       try {
         const response = await api.fetchGames();
         const allGames = response.data || [];
-        const uniqueCategories = new Set(allGames.map(g => g.category).filter(Boolean));
+        const uniqueCategories = Array.from(new Set(allGames.map(g => g.category).filter(Boolean)));
+        setCategories(uniqueCategories);
         setStats({
           totalPosts: allGames.length,
-          totalCategories: uniqueCategories.size
+          totalCategories: uniqueCategories.length
         });
       } catch (err) {
         console.error('Error fetching game stats:', err);
@@ -88,7 +90,12 @@ export default function Games() {
 
   return (
     <div className="games-container">
-      <Sidebar selectedLibrary={selectedLibrary} onSelectLibrary={setSelectedLibrary} stats={stats} />
+      <Sidebar 
+        selectedLibrary={selectedLibrary} 
+        onSelectLibrary={setSelectedLibrary} 
+        stats={stats} 
+        categories={categories} 
+      />
       <div className="games-main">
         <div className="games-header">
           <h1>

@@ -1,14 +1,16 @@
 import React from 'react';
 
-export default function Sidebar({ selectedLibrary, onSelectLibrary, stats }) {
-  const menuItems = [
-    { id: 'all', label: '📚 Tất Cả Bài Viết', icon: '📚' },
-    { id: 'Puzzle', label: '🧩 Giải Đố (Puzzle)', icon: '🧩' },
-    { id: 'Action', label: '⚡ Hành Động (Action)', icon: '⚡' },
-    { id: 'Quiz', label: '🏆 Trắc Nghiệm (Quiz)', icon: '🏆' },
-    { id: 'Casual', label: '🎲 Phổ Thông (Casual)', icon: '🎲' },
-    { id: 'Arcade', label: '🌟 Cổ Điển (Arcade)', icon: '🌟' },
-  ];
+export default function Sidebar({ selectedLibrary, onSelectLibrary, stats, categories = [] }) {
+  const getCategoryEmoji = (cat) => {
+    const emojis = {
+      'Puzzle': '🧩',
+      'Action': '⚡',
+      'Quiz': '🏆',
+      'Casual': '🎲',
+      'Arcade': '🌟'
+    };
+    return emojis[cat] || '🎮';
+  };
 
   return (
     <div className="games-sidebar">
@@ -16,13 +18,19 @@ export default function Sidebar({ selectedLibrary, onSelectLibrary, stats }) {
         <h3>📰 CHỦ ĐỀ BLOG</h3>
       </div>
       <nav className="sidebar-menu">
-        {menuItems.map(item => (
+        <button
+          className={`menu-item ${selectedLibrary === 'all' ? 'active' : ''}`}
+          onClick={() => onSelectLibrary('all')}
+        >
+          📚 Tất Cả Bài Viết
+        </button>
+        {categories.map(cat => (
           <button
-            key={item.id}
-            className={`menu-item ${selectedLibrary === item.id ? 'active' : ''}`}
-            onClick={() => onSelectLibrary(item.id)}
+            key={cat}
+            className={`menu-item ${selectedLibrary === cat ? 'active' : ''}`}
+            onClick={() => onSelectLibrary(cat)}
           >
-            {item.label}
+            {getCategoryEmoji(cat)} {cat}
           </button>
         ))}
       </nav>

@@ -32,6 +32,7 @@ export default function Feed() {
 
   // 3. Category filter for Games Blog
   const [activeGameCategory, setActiveGameCategory] = useState('all');
+  const [gameCategories, setGameCategories] = useState([]);
 
   // 4. Camera/Check-in state
   const [isCameraOn, setIsCameraOn] = useState(true);
@@ -66,6 +67,21 @@ export default function Feed() {
   useEffect(() => {
     loadDashboardData();
   }, [activeGameCategory]);
+
+  // Fetch unique categories dynamically from DB on mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await api.fetchGames();
+        const allGames = response.data || [];
+        const uniqueCats = Array.from(new Set(allGames.map(g => g.category).filter(Boolean)));
+        setGameCategories(uniqueCats);
+      } catch (err) {
+        console.error('Error fetching game categories:', err);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   const processLogsByHour = (logs) => {
     const hours = Array.from({ length: 24 }, (_, i) => ({
@@ -384,11 +400,21 @@ export default function Feed() {
           <div className="games-dashboard-container">
             {/* Category Filter */}
             <div className="games-dash-sidebar">
-              <button className={activeGameCategory === 'all' ? 'active' : ''} onClick={() => setActiveGameCategory('all')}>Tất Cả</button>
-              <button className={activeGameCategory === 'Puzzle' ? 'active' : ''} onClick={() => setActiveGameCategory('Puzzle')}>Giải Đố</button>
-              <button className={activeGameCategory === 'Action' ? 'active' : ''} onClick={() => setActiveGameCategory('Action')}>Hành Động</button>
-              <button className={activeGameCategory === 'Quiz' ? 'active' : ''} onClick={() => setActiveGameCategory('Quiz')}>Trắc Nghiệm</button>
-              <button className={activeGameCategory === 'Casual' ? 'active' : ''} onClick={() => setActiveGameCategory('Casual')}>Vui Vẻ</button>
+              <button 
+                className={activeGameCategory === 'all' ? 'active' : ''} 
+                onClick={() => setActiveGameCategory('all')}
+              >
+                Tất Cả
+              </button>
+              {gameCategories.map(cat => (
+                <button 
+                  key={cat}
+                  className={activeGameCategory === cat ? 'active' : ''} 
+                  onClick={() => setActiveGameCategory(cat)}
+                >
+                  {cat}
+                </button>
+              ))}
             </div>
 
             {/* Game posts list */}
