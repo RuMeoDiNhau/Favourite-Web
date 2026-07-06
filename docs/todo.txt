@@ -43,10 +43,10 @@ DANH SÁCH CÔNG VIỆC CẦN LÀM (TODO LIST BY WEEKS)
     - [x] Cập nhật file kết nối cơ sở dữ liệu [backend/services/db_models.py](file:///d:/file_hoc_tap/Fav_Web/backend/services/db_models.py): thay đổi dòng `DATABASE_URL` để đọc từ biến môi trường của AWS thay vì fix cứng SQLite `app.db`.
     - [x] Viết script migration dữ liệu ban đầu hoặc gọi `init_db()` khi khởi động server trên Cloud để tự động tạo cấu trúc bảng (User, Log, Game, Music, Playlist, Knowledge) trên RDS.
 
-[ ] TUẦN 5: TÍCH HỢP LOGGING & MONITORING VỚI AWS CLOUDWATCH
-    - [ ] Thêm thư viện hỗ trợ đẩy log lên CloudWatch (ví dụ: `watchtower`) vào requirements của backend.
-    - [ ] Cấu hình logging of FastAPI trong [backend/main.py](file:///d:/file_hoc_tap/Fav_Web/backend/main.py) để gửi các sự kiện quan trọng (nhận diện thành công, nhận diện thất bại, lỗi DB, lỗi hệ thống) trực tiếp lên AWS CloudWatch Logs.
-    - [ ] Cấu hình Metric Filters và Alarms trên AWS CloudWatch để theo dõi tài nguyên (CPU Utilization của EC2) hoặc cảnh báo lỗi hệ thống.
+[x] TUẦN 5: TÍCH HỢP LOGGING & MONITORING VỚI AWS CLOUDWATCH
+    - [x] Thêm thư viện hỗ trợ đẩy log lên CloudWatch (ví dụ: `watchtower`) vào requirements của backend.
+    - [x] Cấu hình logging of FastAPI trong [backend/main.py](file:///d:/file_hoc_tap/Fav_Web/backend/main.py) để gửi các sự kiện quan trọng (nhận diện thành công, nhận diện thất bại, lỗi DB, lỗi hệ thống) trực tiếp lên AWS CloudWatch Logs.
+    - [x] Cấu hình Metric Filters và Alarms trên AWS CloudWatch để theo dõi tài nguyên (CPU Utilization của EC2) hoặc cảnh báo lỗi hệ thống.
 
 [ ] TUẦN 6: PHÁT TRIỂN NÂNG CAO, TỐI ƯU HÓA CẤU TRÚC CODE & API
     - [ ] Chuyển các thông tin cấu hình nhạy cảm (AWS Credentials, RDS Connection String) từ file `.env` sang quản lý tập trung bằng **AWS Systems Manager (SSM) Parameter Store** hoặc **AWS Secrets Manager**.

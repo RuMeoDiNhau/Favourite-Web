@@ -16,6 +16,7 @@ from backend.services.schemas import (
 )
 from backend.services import games_service, music_service, knowledge_service, posts_service
 from backend.services.auth_service import create_access_token, decode_access_token
+from backend.services.logging_service import logger
 
 router = APIRouter(prefix='/api/v1')
 
@@ -77,7 +78,9 @@ def enroll_user(request: EnrollmentRequest):
         images_base64=request.images_base64,
     )
     if result['status'] == 'error':
+        logger.warning(f"Failed to enroll user {request.user_id}: {result['message']}")
         raise HTTPException(status_code=400, detail=result['message'])
+    logger.info(f"Successfully enrolled new user: {request.user_id} (Name: {request.name})")
     return result
 
 @router.get('/users')
@@ -105,10 +108,12 @@ def get_user_avatar_url(user_id: str) -> str:
 def login(request: LoginRequest):
     user = verify_user_credentials(request.username_or_email, request.password)
     if not user:
+        logger.warning(f"Failed password login attempt for: {request.username_or_email}")
         raise HTTPException(status_code=401, detail='Tài khoản hoặc mật khẩu không chính xác')
     
     # Tạo JWT token mã hóa user_id và role
     token = create_access_token(data={"user_id": user.user_id, "role": user.role})
+    logger.info(f"User logged in successfully via password: {user.user_id} (Role: {user.role})")
     return {
         'status': 'success',
         'token': token,
@@ -132,6 +137,7 @@ def login_face(request: FaceLoginRequest):
             if user:
                 # Tạo JWT token mã hóa user_id và role
                 token = create_access_token(data={"user_id": user.user_id, "role": user.role})
+                logger.info(f"User logged in successfully via Face ID: {user.user_id} (Confidence: {result['data'].get('confidence', 'N/A')})")
                 return {
                     'status': 'success',
                     'token': token,
@@ -145,7 +151,8 @@ def login_face(request: FaceLoginRequest):
                     }
                 }
     except Exception as e:
-        pass
+        logger.error(f"Error during Face ID login execution: {e}")
+    logger.warning("Failed Face ID login attempt (unrecognized face or stranger).")
     raise HTTPException(status_code=401, detail='Không nhận diện được khuôn mặt hoặc người lạ')
 
 
@@ -167,7 +174,9 @@ def register_my_face(
 
     result = add_face_images(user_id, request.images_base64)
     if result['status'] == 'error':
+        logger.warning(f"User {user_id} failed to register face: {result['message']}")
         raise HTTPException(status_code=400, detail=result['message'])
+    logger.info(f"User {user_id} successfully registered {len(request.images_base64)} new face images. Total: {result.get('data', {}).get('total_registered_images', 'N/A')}")
     return result
 
 

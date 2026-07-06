@@ -6,11 +6,21 @@ from fastapi.staticfiles import StaticFiles
 from backend.api.routes import router
 from backend.services.db_models import init_db
 from backend.services.s3_service import download_all_embeddings
+from backend.services.logging_service import logger
 
 init_db()
 download_all_embeddings()
 
 app = FastAPI(title='Fav Web Face Recognition')
+
+@app.on_event("startup")
+def on_startup():
+    logger.info("FastAPI Web Application starting up...")
+
+@app.on_event("shutdown")
+def on_shutdown():
+    logger.info("FastAPI Web Application shutting down...")
+
 
 # Configure CORS to allow access from any origin (e.g. S3 static site)
 app.add_middleware(
