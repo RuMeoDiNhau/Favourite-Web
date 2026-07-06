@@ -13,3 +13,6 @@ sqlalchemy
 python-dotenv
 boto3
 pyjwt
+psycopg2-binary
+pymysql
+

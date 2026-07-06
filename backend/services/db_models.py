@@ -3,7 +3,12 @@ from pathlib import Path
 from sqlalchemy import Column, Integer, String, DateTime, create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
+import os
+from dotenv import load_dotenv
+
 BASE_DIR = Path(__file__).resolve().parents[2]
+load_dotenv(BASE_DIR / '.env')
+
 DB_PATH = BASE_DIR / 'database' / 'app.db'
 STATIC_LOG_DIR = BASE_DIR / 'static' / 'logs'
 DATA_RAW_DIR = BASE_DIR / 'backend' / 'ai_core' / 'data' / 'raw'
@@ -12,8 +17,14 @@ STATIC_LOG_DIR.mkdir(parents=True, exist_ok=True)
 DATA_RAW_DIR.mkdir(parents=True, exist_ok=True)
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
-DATABASE_URL = f'sqlite:///{DB_PATH}'
-engine = create_engine(DATABASE_URL, connect_args={'check_same_thread': False})
+DATABASE_URL = os.getenv('DATABASE_URL', f'sqlite:///{DB_PATH}')
+
+if DATABASE_URL.startswith('sqlite'):
+    engine = create_engine(DATABASE_URL, connect_args={'check_same_thread': False})
+else:
+    # RDS (PostgreSQL/MySQL) does not use check_same_thread
+    engine = create_engine(DATABASE_URL)
+
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 Base = declarative_base()
 
