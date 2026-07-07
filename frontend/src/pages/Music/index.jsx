@@ -3,7 +3,7 @@ import Sidebar from './Sidebar';
 import './Music.css';
 import * as api from '../../services/api';
 import { readJson } from '../../lib/safeStorage';
-import { getLikedSongIds, toggleLikedSong } from '../../lib/likedSongs';
+import { getLikedSongIds, toggleLikedSong, isLikedSong } from '../../lib/likedSongs';
 
 export default function Music() {
   const user = readJson('user');
@@ -190,16 +190,26 @@ export default function Music() {
   };
 
   const handleLikeSong = async (songId) => {
+    // BE only exposes POST /music/{id}/like (no /unlike). Drive the
+    // liked-state from localStorage and only call the backend when going
+    // from "not liked" → "liked". Previously we always called /like AND
+    // toggled localStorage, so a second click bumped the backend count by
+    // another +1 but left the song stuck in Favorites forever.
+    const wasLiked = isLikedSong(songId);
+    const nowLiked = toggleLikedSong(songId);
+    const delta = nowLiked ? 1 : -1;
     try {
-      await api.likeSong(songId);
-      // Track locally so the 'favorite' tab filter works without a backend endpoint.
-      toggleLikedSong(songId);
+      if (nowLiked && !wasLiked) {
+        await api.likeSong(songId);
+      }
       loadMusicData();
       if (currentSong && currentSong.id === songId) {
-        setCurrentSong(prev => ({ ...prev, likes: prev.likes + 1 }));
+        setCurrentSong(prev => ({ ...prev, likes: Math.max(0, (prev.likes || 0) + delta) }));
       }
     } catch (err) {
-      console.error('Error liking song:', err);
+      // Roll back local toggle so the UI matches the server state.
+      toggleLikedSong(songId);
+      console.error('Error toggling song like; reverted local state', err);
     }
   };
 

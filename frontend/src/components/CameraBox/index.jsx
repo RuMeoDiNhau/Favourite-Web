@@ -41,6 +41,12 @@ function CameraBox({ onCapture, captureTrigger, status = 'idle' }) {
     startCamera();
     return () => {
       cancelled = true;
+      // Detach the stream from the <video> element first so the browser stops
+      // rendering the final frame. Some browsers (notably Chrome) keep the
+      // last frame visible until srcObject is cleared, even after tracks stop.
+      if (videoRef.current && videoRef.current.srcObject) {
+        videoRef.current.srcObject = null;
+      }
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
         streamRef.current = null;
