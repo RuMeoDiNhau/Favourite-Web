@@ -55,14 +55,19 @@ export default function PostModal({ onClose, onPostCreated }) {
       return;
     }
 
+    // Track every uploaded URL so we can best-effort delete them if the final
+    // createPost call fails. Without this, a 500 on createPost leaves the
+    // uploaded file as an orphan on the backend. Declared outside the try
+    // block so the catch handler can read it.
+    const uploadedUrls = [];
+    let mediaUrl = null;
+    let thumbnailUrl = null;
+
     try {
       setLoading(true);
       setError('');
       setProgress(0);
       setSuccess(false);
-
-      let mediaUrl = null;
-      let thumbnailUrl = null;
 
       // 1. Upload main media file
       if (mainFile) {
@@ -71,6 +76,7 @@ export default function PostModal({ onClose, onPostCreated }) {
           setProgress(percent);
         });
         mediaUrl = resMain.data.media_url;
+        if (mediaUrl) uploadedUrls.push(mediaUrl);
       }
 
       // 2. Upload thumbnail/album art file if present
@@ -81,6 +87,7 @@ export default function PostModal({ onClose, onPostCreated }) {
           setProgress(percent);
         });
         thumbnailUrl = resThumb.data.media_url;
+        if (thumbnailUrl) uploadedUrls.push(thumbnailUrl);
       }
 
       // 3. Create the post in database
@@ -105,6 +112,11 @@ export default function PostModal({ onClose, onPostCreated }) {
     } catch (err) {
       console.error('Error creating post:', err);
       setError(err.response?.data?.detail || 'Đã xảy ra lỗi trong quá trình đăng bài. Vui lòng thử lại.');
+      // Best-effort orphan cleanup. Safe to await sequentially because we
+      // are already on the failure path; user is shown the error message.
+      if (uploadedUrls.length) {
+        await Promise.all(uploadedUrls.map((u) => api.deleteUploadedFile(u)));
+      }
     } finally {
       setLoading(false);
     }

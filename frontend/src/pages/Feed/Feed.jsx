@@ -232,8 +232,14 @@ export default function Feed() {
       if (playingAudioId && audioRefs.current[playingAudioId]) {
         audioRefs.current[playingAudioId].pause();
       }
-      currentAudio.play();
-      setPlayingAudioId(postId);
+      currentAudio.play()
+        .then(() => setPlayingAudioId(postId))
+        .catch((err) => {
+          // play() can reject due to autoplay policy, 404, CORS, or unsupported
+          // format. Keep the UI in the paused state so the button label matches
+          // reality; the user can retry or pick another post.
+          console.warn('Audio play() rejected; keeping UI paused', err);
+        });
     }
   };
 

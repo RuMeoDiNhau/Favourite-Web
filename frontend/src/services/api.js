@@ -143,6 +143,19 @@ export const fetchPosts = () => api.get('/posts');
 
 export const createPost = (postData) => api.post('/posts', postData);
 
+// Best-effort cleanup of an orphan post upload when the subsequent createPost
+// fails. The backend currently does not expose a DELETE /posts/upload endpoint
+// (TODO follow-up), so this helper will log a warning and return undefined
+// until that endpoint lands. Callers should `await` it inside a catch block.
+export const deleteUploadedFile = async (mediaUrl) => {
+  if (!mediaUrl) return;
+  try {
+    return await api.delete('/posts/upload', { params: { url: mediaUrl } });
+  } catch (err) {
+    console.warn('[cleanup] Failed to delete orphan upload', mediaUrl, err?.message);
+  }
+};
+
 export const uploadPostFile = (file, postType, onProgress) => {
   const formData = new FormData();
   formData.append('file', file);

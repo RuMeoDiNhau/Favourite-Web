@@ -167,8 +167,9 @@ export default function Music() {
           audioRef.current.pause();
           setIsPlaying(false);
         } else {
-          audioRef.current.play();
-          setIsPlaying(true);
+          audioRef.current.play()
+            .then(() => setIsPlaying(true))
+            .catch((err) => console.warn('Audio play() rejected', err));
         }
         return;
       }
@@ -423,8 +424,9 @@ export default function Music() {
       audioRef.current.pause();
       setIsPlaying(false);
     } else {
-      audioRef.current.play();
-      setIsPlaying(true);
+      audioRef.current.play()
+        .then(() => setIsPlaying(true))
+        .catch((err) => console.warn('Audio play() rejected', err));
     }
   };
 
