@@ -308,19 +308,47 @@ export default function Music() {
     }
   };
 
-  const handleFileChange = (e) => {
+  // Probe audio element used to extract the duration of a user-selected file.
+// Holds the in-flight blob URL so we can revoke it exactly once on metadata
+// load, on error, or on modal unmount.
+const probeAudioRef = useRef(null);
+
+useEffect(() => () => {
+  if (probeAudioRef.current && probeAudioRef.current.src) {
+    URL.revokeObjectURL(probeAudioRef.current.src);
+    probeAudioRef.current = null;
+  }
+}, []);
+
+const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
     setMusicFile(file);
 
-    // Auto calculate duration using Audio API
+    // Revoke the previous probe's blob URL before allocating a new one.
+    if (probeAudioRef.current && probeAudioRef.current.src) {
+      URL.revokeObjectURL(probeAudioRef.current.src);
+    }
+
+    // Auto calculate duration using Audio API.
+    // We free the blob URL immediately after extracting the duration (the
+    // most common case) and again on error / unmount — previously this URL
+    // was never revoked, leaking one full file-size blob per selection.
     try {
-      const audio = new Audio(URL.createObjectURL(file));
+      const objectUrl = URL.createObjectURL(file);
+      const audio = new Audio(objectUrl);
+      probeAudioRef.current = audio;
       audio.addEventListener('loadedmetadata', () => {
         const minutes = Math.floor(audio.duration / 60);
         const seconds = Math.floor(audio.duration % 60);
         const formatted = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
         setUploadForm(prev => ({ ...prev, duration: formatted }));
+        URL.revokeObjectURL(objectUrl);
+        audio.src = '';
+      });
+      audio.addEventListener('error', () => {
+        URL.revokeObjectURL(objectUrl);
+        console.error('Failed to parse audio metadata');
       });
     } catch (err) {
       console.error('Failed to parse audio duration:', err);
