@@ -103,7 +103,8 @@ export const fetchPopularArticles = () => api.get('/knowledge/popular/trending')
 
 export const fetchTrendingArticles = () => api.get('/knowledge/trending/hot');
 
-export const searchKnowledge = (query) => api.get(`/knowledge/search/${query}`);
+export const searchKnowledge = (query) =>
+  api.get('/knowledge/search', { params: { q: query } });
 
 export const fetchKnowledgeCategories = () => api.get('/knowledge/categories');
 

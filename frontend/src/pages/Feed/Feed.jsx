@@ -2,20 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import './Feed.css';
 import * as api from '../../services/api';
 import CameraBox from '../../components/CameraBox';
-import { 
+import { readJson } from '../../lib/safeStorage';
+import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Legend
 } from 'recharts';
 
 export default function Feed() {
-  const user = (() => {
-    try {
-      const saved = localStorage.getItem('user');
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  })();
+  const user = readJson('user');
 
   // 1. Loading & error states
   const [loading, setLoading] = useState(true);

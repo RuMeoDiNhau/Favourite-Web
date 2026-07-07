@@ -404,11 +404,11 @@ def get_knowledge_by_category(category: str, db: Session = Depends(get_db)):
     knowledge_service.init_articles(db)
     return knowledge_service.get_articles_by_category(db, category)
 
-@router.get('/knowledge/search/{query}', response_model=list[KnowledgeResponse])
-def search_knowledge(query: str, db: Session = Depends(get_db)):
-    """Search articles"""
+@router.get('/knowledge/search', response_model=list[KnowledgeResponse])
+def search_knowledge(q: str, db: Session = Depends(get_db)):
+    """Search articles by free-text query (`?q=...`)."""
     knowledge_service.init_articles(db)
-    return knowledge_service.search_articles(db, query)
+    return knowledge_service.search_articles(db, q)
 
 # Wildcard route comes last
 @router.get('/knowledge/{article_id}', response_model=KnowledgeResponse)

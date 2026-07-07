@@ -2,16 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import Sidebar from './Sidebar';
 import './Music.css';
 import * as api from '../../services/api';
+import { readJson } from '../../lib/safeStorage';
+import { getLikedSongIds, toggleLikedSong } from '../../lib/likedSongs';
 
 export default function Music() {
-  const user = (() => {
-    try {
-      const saved = localStorage.getItem('user');
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  })();
+  const user = readJson('user');
 
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [playlists, setPlaylists] = useState([]);
@@ -130,7 +125,14 @@ export default function Music() {
       } else if (selectedCategory === 'library') {
         songsResponse = await api.fetchPopularSongs();
       } else if (selectedCategory === 'favorite') {
-        songsResponse = await api.fetchPopularSongs();
+        // Favorites tab: read liked song ids from localStorage and filter
+        // the full music list. Backend endpoint `/users/me/liked-songs` is
+        // planned; until then this is the source of truth client-side.
+        const allSongsRes = await api.fetchAllMusic();
+        const likedIds = getLikedSongIds();
+        songsResponse = {
+          data: (allSongsRes.data || []).filter((s) => likedIds.has(s.id)),
+        };
       } else if (selectedCategory === 'recent') {
         songsResponse = await api.fetchNewSongs();
       } else if (selectedCategory === 'playlist') {
@@ -189,6 +191,8 @@ export default function Music() {
   const handleLikeSong = async (songId) => {
     try {
       await api.likeSong(songId);
+      // Track locally so the 'favorite' tab filter works without a backend endpoint.
+      toggleLikedSong(songId);
       loadMusicData();
       if (currentSong && currentSong.id === songId) {
         setCurrentSong(prev => ({ ...prev, likes: prev.likes + 1 }));
