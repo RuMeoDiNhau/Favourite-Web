@@ -562,12 +562,36 @@ export default function Feed() {
               <button className="close-game-btn" onClick={() => setActiveGameUrl(null)}>✕ Đóng</button>
             </div>
             <div className="game-modal-body">
-              <iframe 
-                src={getFullAssetUrl(activeGameUrl.url)} 
-                title={activeGameUrl.title}
-                allowFullScreen
-                scrolling="no"
-              />
+              {(() => {
+                const fullUrl = getFullAssetUrl(activeGameUrl.url);
+                const apiBase = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace('/api/v1', '');
+                let isTrusted = false;
+                try {
+                  isTrusted = new URL(fullUrl).origin === new URL(apiBase).origin;
+                } catch {
+                  isTrusted = false;
+                }
+                if (!isTrusted) {
+                  return (
+                    <div style={{ padding: '24px', color: '#ff6b6b' }}>
+                      ⚠️ Không thể mở game từ nguồn không đáng tin cậy: {fullUrl}
+                      {/* TODO(security): move JWT from localStorage to httpOnly cookie so
+                          the iframe can keep `allow-same-origin` without exposing the
+                          token to framed scripts. */}
+                    </div>
+                  );
+                }
+                return (
+                  <iframe
+                    src={fullUrl}
+                    title={activeGameUrl.title}
+                    allowFullScreen
+                    scrolling="no"
+                    sandbox="allow-scripts allow-same-origin allow-forms"
+                    referrerPolicy="no-referrer"
+                  />
+                );
+              })()}
             </div>
           </div>
         </div>

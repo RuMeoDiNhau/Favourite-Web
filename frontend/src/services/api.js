@@ -10,12 +10,41 @@ api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
     config.headers['Authorization'] = `Bearer ${token}`;
-    config.headers['X-User-Id'] = token; // Fallback compatibility
+    // Fallback for clients that cannot set Authorization (e.g. <img>/<audio>).
+    // Renamed from the misleading `X-User-Id` to `X-Auth-Token` so the header
+    // name reflects its actual payload (a JWT, not a numeric user id).
+    config.headers['X-Auth-Token'] = token;
   }
   return config;
 }, (error) => {
   return Promise.reject(error);
 });
+
+// Auto-logout on 401 (expired/invalid token). A hard reload is the simplest
+// way to clear the cached `user` state in App.jsx — the entire UI is gated on
+// `user` (App.jsx renders Login when user is null).
+let isHandling401 = false;
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error?.response?.status;
+    if (status === 401 && !isHandling401) {
+      isHandling401 = true;
+      try {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      } catch (err) {
+        console.warn('[auth] Failed to clear localStorage on 401', err);
+      } finally {
+        window.location.href = '/';
+        // Reset the flag after the reload completes; in practice this branch
+        // never runs because window.location.href triggers a full reload.
+        isHandling401 = false;
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 // ==================== Face Recognition ====================
 export const fetchUsers = (page = 1, limit = 10) => api.get('/users', { params: { page, limit } });
