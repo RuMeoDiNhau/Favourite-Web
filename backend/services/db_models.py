@@ -123,3 +123,27 @@ class Post(Base):
 def init_db():
     Base.metadata.create_all(bind=engine)
 
+    # Seed default admin if no admin user exists. Idempotent: safe to run
+    # on every startup. Password hash is generated once and pinned here so
+    # the dev doesn't need to read a random password from logs.
+    db = SessionLocal()
+    try:
+        has_admin = db.query(User).filter(User.role == 'admin').first()
+        if not has_admin:
+            # Lazy import to avoid circular dependency at module load time.
+            from services.db_service import hash_password
+            admin = User(
+                user_id='admin',
+                name='Admin',
+                email='admin@example.com',
+                department='IT',
+                password_hash=hash_password('123456'),
+                role='admin',
+                registered_images=0,
+            )
+            db.add(admin)
+            db.commit()
+            print('[init_db] Seeded default admin user (user_id=admin, password=123456)')
+    finally:
+        db.close()
+
