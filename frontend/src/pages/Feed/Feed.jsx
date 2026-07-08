@@ -2,20 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import './Feed.css';
 import * as api from '../../services/api';
 import CameraBox from '../../components/CameraBox';
-import { 
+import { readJson } from '../../lib/safeStorage';
+import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Legend
 } from 'recharts';
 
 export default function Feed() {
-  const user = (() => {
-    try {
-      const saved = localStorage.getItem('user');
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  })();
+  const user = readJson('user');
 
   // 1. Loading & error states
   const [loading, setLoading] = useState(true);
@@ -238,8 +232,14 @@ export default function Feed() {
       if (playingAudioId && audioRefs.current[playingAudioId]) {
         audioRefs.current[playingAudioId].pause();
       }
-      currentAudio.play();
-      setPlayingAudioId(postId);
+      currentAudio.play()
+        .then(() => setPlayingAudioId(postId))
+        .catch((err) => {
+          // play() can reject due to autoplay policy, 404, CORS, or unsupported
+          // format. Keep the UI in the paused state so the button label matches
+          // reality; the user can retry or pick another post.
+          console.warn('Audio play() rejected; keeping UI paused', err);
+        });
     }
   };
 
@@ -568,12 +568,36 @@ export default function Feed() {
               <button className="close-game-btn" onClick={() => setActiveGameUrl(null)}>✕ Đóng</button>
             </div>
             <div className="game-modal-body">
-              <iframe 
-                src={getFullAssetUrl(activeGameUrl.url)} 
-                title={activeGameUrl.title}
-                allowFullScreen
-                scrolling="no"
-              />
+              {(() => {
+                const fullUrl = getFullAssetUrl(activeGameUrl.url);
+                const apiBase = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace('/api/v1', '');
+                let isTrusted = false;
+                try {
+                  isTrusted = new URL(fullUrl).origin === new URL(apiBase).origin;
+                } catch {
+                  isTrusted = false;
+                }
+                if (!isTrusted) {
+                  return (
+                    <div style={{ padding: '24px', color: '#ff6b6b' }}>
+                      ⚠️ Không thể mở game từ nguồn không đáng tin cậy: {fullUrl}
+                      {/* TODO(security): move JWT from localStorage to httpOnly cookie so
+                          the iframe can keep `allow-same-origin` without exposing the
+                          token to framed scripts. */}
+                    </div>
+                  );
+                }
+                return (
+                  <iframe
+                    src={fullUrl}
+                    title={activeGameUrl.title}
+                    allowFullScreen
+                    scrolling="no"
+                    sandbox="allow-scripts allow-same-origin allow-forms"
+                    referrerPolicy="no-referrer"
+                  />
+                );
+              })()}
             </div>
           </div>
         </div>

@@ -32,17 +32,19 @@ security = HTTPBearer(auto_error=False)
 
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    x_user_id: str = Header(None)
+    x_auth_token: str = Header(None, alias="X-Auth-Token")
 ):
     token = None
     if credentials:
         token = credentials.credentials
-    elif x_user_id:
-        # Fallback/Backward compatibility for header token
-        if x_user_id.startswith("Bearer "):
-            token = x_user_id.replace("Bearer ", "")
+    elif x_auth_token:
+        # Fallback header token for clients that cannot set Authorization
+        # (e.g. <img>/<audio>). Renamed from X-User-Id → X-Auth-Token so the
+        # header name reflects its actual payload (a JWT, not a numeric id).
+        if x_auth_token.startswith("Bearer "):
+            token = x_auth_token.replace("Bearer ", "")
         else:
-            token = x_user_id
+            token = x_auth_token
 
     if not token:
         raise HTTPException(status_code=401, detail="Vui lòng đăng nhập")
@@ -404,11 +406,11 @@ def get_knowledge_by_category(category: str, db: Session = Depends(get_db)):
     knowledge_service.init_articles(db)
     return knowledge_service.get_articles_by_category(db, category)
 
-@router.get('/knowledge/search/{query}', response_model=list[KnowledgeResponse])
-def search_knowledge(query: str, db: Session = Depends(get_db)):
-    """Search articles"""
+@router.get('/knowledge/search', response_model=list[KnowledgeResponse])
+def search_knowledge(q: str, db: Session = Depends(get_db)):
+    """Search articles by free-text query (`?q=...`)."""
     knowledge_service.init_articles(db)
-    return knowledge_service.search_articles(db, query)
+    return knowledge_service.search_articles(db, q)
 
 # Wildcard route comes last
 @router.get('/knowledge/{article_id}', response_model=KnowledgeResponse)

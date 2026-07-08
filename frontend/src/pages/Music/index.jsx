@@ -2,16 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import Sidebar from './Sidebar';
 import './Music.css';
 import * as api from '../../services/api';
+import { readJson } from '../../lib/safeStorage';
+import { getLikedSongIds, toggleLikedSong, isLikedSong } from '../../lib/likedSongs';
 
 export default function Music() {
-  const user = (() => {
-    try {
-      const saved = localStorage.getItem('user');
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  })();
+  const user = readJson('user');
 
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [playlists, setPlaylists] = useState([]);
@@ -130,7 +125,14 @@ export default function Music() {
       } else if (selectedCategory === 'library') {
         songsResponse = await api.fetchPopularSongs();
       } else if (selectedCategory === 'favorite') {
-        songsResponse = await api.fetchPopularSongs();
+        // Favorites tab: read liked song ids from localStorage and filter
+        // the full music list. Backend endpoint `/users/me/liked-songs` is
+        // planned; until then this is the source of truth client-side.
+        const allSongsRes = await api.fetchAllMusic();
+        const likedIds = getLikedSongIds();
+        songsResponse = {
+          data: (allSongsRes.data || []).filter((s) => likedIds.has(s.id)),
+        };
       } else if (selectedCategory === 'recent') {
         songsResponse = await api.fetchNewSongs();
       } else if (selectedCategory === 'playlist') {
@@ -165,8 +167,9 @@ export default function Music() {
           audioRef.current.pause();
           setIsPlaying(false);
         } else {
-          audioRef.current.play();
-          setIsPlaying(true);
+          audioRef.current.play()
+            .then(() => setIsPlaying(true))
+            .catch((err) => console.warn('Audio play() rejected', err));
         }
         return;
       }
@@ -187,14 +190,26 @@ export default function Music() {
   };
 
   const handleLikeSong = async (songId) => {
+    // BE only exposes POST /music/{id}/like (no /unlike). Drive the
+    // liked-state from localStorage and only call the backend when going
+    // from "not liked" → "liked". Previously we always called /like AND
+    // toggled localStorage, so a second click bumped the backend count by
+    // another +1 but left the song stuck in Favorites forever.
+    const wasLiked = isLikedSong(songId);
+    const nowLiked = toggleLikedSong(songId);
+    const delta = nowLiked ? 1 : -1;
     try {
-      await api.likeSong(songId);
+      if (nowLiked && !wasLiked) {
+        await api.likeSong(songId);
+      }
       loadMusicData();
       if (currentSong && currentSong.id === songId) {
-        setCurrentSong(prev => ({ ...prev, likes: prev.likes + 1 }));
+        setCurrentSong(prev => ({ ...prev, likes: Math.max(0, (prev.likes || 0) + delta) }));
       }
     } catch (err) {
-      console.error('Error liking song:', err);
+      // Roll back local toggle so the UI matches the server state.
+      toggleLikedSong(songId);
+      console.error('Error toggling song like; reverted local state', err);
     }
   };
 
@@ -303,19 +318,47 @@ export default function Music() {
     }
   };
 
-  const handleFileChange = (e) => {
+  // Probe audio element used to extract the duration of a user-selected file.
+// Holds the in-flight blob URL so we can revoke it exactly once on metadata
+// load, on error, or on modal unmount.
+const probeAudioRef = useRef(null);
+
+useEffect(() => () => {
+  if (probeAudioRef.current && probeAudioRef.current.src) {
+    URL.revokeObjectURL(probeAudioRef.current.src);
+    probeAudioRef.current = null;
+  }
+}, []);
+
+const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
     setMusicFile(file);
 
-    // Auto calculate duration using Audio API
+    // Revoke the previous probe's blob URL before allocating a new one.
+    if (probeAudioRef.current && probeAudioRef.current.src) {
+      URL.revokeObjectURL(probeAudioRef.current.src);
+    }
+
+    // Auto calculate duration using Audio API.
+    // We free the blob URL immediately after extracting the duration (the
+    // most common case) and again on error / unmount — previously this URL
+    // was never revoked, leaking one full file-size blob per selection.
     try {
-      const audio = new Audio(URL.createObjectURL(file));
+      const objectUrl = URL.createObjectURL(file);
+      const audio = new Audio(objectUrl);
+      probeAudioRef.current = audio;
       audio.addEventListener('loadedmetadata', () => {
         const minutes = Math.floor(audio.duration / 60);
         const seconds = Math.floor(audio.duration % 60);
         const formatted = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
         setUploadForm(prev => ({ ...prev, duration: formatted }));
+        URL.revokeObjectURL(objectUrl);
+        audio.src = '';
+      });
+      audio.addEventListener('error', () => {
+        URL.revokeObjectURL(objectUrl);
+        console.error('Failed to parse audio metadata');
       });
     } catch (err) {
       console.error('Failed to parse audio duration:', err);
@@ -419,8 +462,9 @@ export default function Music() {
       audioRef.current.pause();
       setIsPlaying(false);
     } else {
-      audioRef.current.play();
-      setIsPlaying(true);
+      audioRef.current.play()
+        .then(() => setIsPlaying(true))
+        .catch((err) => console.warn('Audio play() rejected', err));
     }
   };
 
