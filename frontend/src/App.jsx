@@ -10,12 +10,10 @@ import Login from './pages/Login/Login';
 import Feed from './pages/Feed/Feed';
 import PostModal from './pages/Feed/PostModal';
 import FaceSetupModal from './components/FaceSetupModal';
+import { readJson } from './lib/safeStorage';
 
 function App() {
-  const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('user');
-    return saved ? JSON.parse(saved) : null;
-  });
+  const [user, setUser] = useState(() => readJson('user'));
   const [view, setView] = useState('feed');
   const [showPostModal, setShowPostModal] = useState(false);
   const [feedKey, setFeedKey] = useState(0);
