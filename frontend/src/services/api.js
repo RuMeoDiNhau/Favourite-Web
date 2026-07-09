@@ -137,6 +137,12 @@ export const searchKnowledge = (query) =>
 
 export const fetchKnowledgeCategories = () => api.get('/knowledge/categories');
 
+// Fetch related YouTube videos for an article. Returns an array (possibly
+// empty) of {videoId, title, channel}. Backend returns 200 with empty list
+// when YOUTUBE_API_KEY is missing or upstream search fails.
+export const fetchArticleVideos = (articleId) =>
+  api.get(`/knowledge/${articleId}/videos`).then((res) => res.data?.videos || []);
+
 
 // ==================== Unified Posts ====================
 export const fetchPosts = () => api.get('/posts');

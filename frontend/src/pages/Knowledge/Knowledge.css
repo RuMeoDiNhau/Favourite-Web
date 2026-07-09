@@ -240,3 +240,174 @@
     font-size: 13px;
   }
 }
+
+/* ============ Article modal ============
+   Clicking "Đọc Thêm →" on a card opens a full-width modal showing the
+   article body and up to 3 related YouTube videos. Same overlay pattern
+   as PostModal so the visual language stays consistent across pages.
+*/
+
+.article-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  z-index: 1100;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 40px 16px;
+  overflow-y: auto;
+  animation: article-modal-fade-in 0.18s ease;
+}
+
+@keyframes article-modal-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.article-modal {
+  background: #ffffff;
+  color: #1e293b;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 880px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  animation: article-modal-slide-in 0.22s ease;
+}
+
+@keyframes article-modal-slide-in {
+  from { transform: translateY(-16px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.article-modal-header {
+  padding: 24px 28px 16px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.article-modal-header h2 {
+  margin: 8px 0 4px;
+  font-size: 1.5rem;
+  color: #0f172a;
+  line-height: 1.3;
+}
+
+.article-modal-meta {
+  display: flex;
+  gap: 14px;
+  font-size: 0.88rem;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.article-modal-close {
+  background: #f1f5f9;
+  border: none;
+  color: #475569;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.article-modal-close:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.article-modal-body {
+  padding: 20px 28px 28px;
+}
+
+.article-modal-desc {
+  font-size: 1.05rem;
+  color: #334155;
+  margin: 0 0 14px;
+  font-weight: 500;
+}
+
+.article-modal-content {
+  font-size: 0.96rem;
+  color: #475569;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  margin: 0 0 24px;
+}
+
+.article-modal-videos h3 {
+  font-size: 1.05rem;
+  color: #0f172a;
+  margin: 0 0 14px;
+}
+
+.videos-status {
+  color: #64748b;
+  font-size: 0.92rem;
+  font-style: italic;
+}
+
+.video-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.video-item {
+  display: flex;
+  flex-direction: column;
+  background: #f8fafc;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+}
+
+.video-item iframe {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: none;
+  display: block;
+  background: #0f172a;
+}
+
+.video-meta {
+  padding: 10px 12px 12px;
+}
+
+.video-title {
+  margin: 0 0 4px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.35;
+  /* Clamp to 2 lines so the grid stays balanced even when one title is long. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.video-channel {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+@media (max-width: 600px) {
+  .article-modal-overlay {
+    padding: 12px;
+  }
+
+  .article-modal-header,
+  .article-modal-body {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}

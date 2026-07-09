@@ -12,7 +12,8 @@ from backend.services.schemas import (
     MusicResponse, PlaylistResponse, MusicCreateRequest, PlaylistCreateRequest,
     KnowledgeResponse, KnowledgeCreateRequest,
     LoginRequest, FaceLoginRequest,
-    PostResponse, PostCreateRequest
+    PostResponse, PostCreateRequest,
+    VideoListResponse
 )
 from backend.services import games_service, music_service, knowledge_service, posts_service
 from backend.services.auth_service import create_access_token, decode_access_token
@@ -413,6 +414,18 @@ def search_knowledge(q: str, db: Session = Depends(get_db)):
     return knowledge_service.search_articles(db, q)
 
 # Wildcard route comes last
+@router.get('/knowledge/{article_id}/videos', response_model=VideoListResponse)
+def get_article_videos(article_id: int, db: Session = Depends(get_db)):
+    """Return up to 3 YouTube videos related to an article. The search query
+    is built from the article's title + category inside the service layer.
+    Returns an empty list (not 404) if the API key is missing or upstream
+    fails — the FE renders a graceful empty state instead of an error."""
+    article = knowledge_service.get_article_by_id(db, article_id)
+    if not article:
+        raise HTTPException(status_code=404, detail='Article not found')
+    videos = knowledge_service.search_youtube_videos(article, max_results=3)
+    return {'videos': videos}
+
 @router.get('/knowledge/{article_id}', response_model=KnowledgeResponse)
 def get_article(article_id: int, db: Session = Depends(get_db)):
     """Get article by ID and increment views"""
