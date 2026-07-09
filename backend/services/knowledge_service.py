@@ -1,5 +1,16 @@
 from sqlalchemy.orm import Session
 from backend.services.db_models import Knowledge
+from backend.services.schemas import VideoItem
+import os
+import requests
+from dotenv import load_dotenv
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parents[2]
+load_dotenv(dotenv_path=BASE_DIR / ".env")
+
+YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
+YOUTUBE_SEARCH_URL = "https://www.googleapis.com/youtube/v3/search"
 
 # Sample knowledge articles
 SAMPLE_ARTICLES = [
@@ -149,3 +160,59 @@ def search_articles(db: Session, query: str):
 def get_categories(db: Session):
     """Get all unique categories"""
     return db.query(Knowledge.category).distinct().all()
+
+
+def _youtube_query_for(article) -> str:
+    """Build a YouTube search query from an article. Title alone is too narrow
+    when titles are short like "Machine Learning Cơ Bản"; combining with the
+    category adds Vietnamese context that surfaces better tutorials."""
+    parts = [article.title]
+    if article.category:
+        parts.append(f"hướng dẫn {article.category}")
+    return " ".join(parts)
+
+
+def search_youtube_videos(article, max_results: int = 3) -> list[VideoItem]:
+    """Search YouTube for short, embed-friendly videos related to an article.
+
+    Returns an empty list if YOUTUBE_API_KEY is unset or the upstream call
+    fails. The caller (route handler) should treat an empty list as a soft
+    failure — the FE renders "no related videos" gracefully instead of an
+    error banner. We never raise here so a missing key does not 500 the
+    knowledge view.
+    """
+    if not YOUTUBE_API_KEY:
+        print("[knowledge_service] YOUTUBE_API_KEY not set; skipping video lookup")
+        return []
+
+    query = _youtube_query_for(article)
+    params = {
+        "part": "snippet",
+        "q": query,
+        "type": "video",
+        "maxResults": max_results,
+        "relevanceLanguage": "vi",
+        "safeSearch": "strict",
+        "key": YOUTUBE_API_KEY,
+    }
+    try:
+        resp = requests.get(YOUTUBE_SEARCH_URL, params=params, timeout=5)
+        resp.raise_for_status()
+    except requests.RequestException as e:
+        print(f"[knowledge_service] YouTube search failed: {e}")
+        return []
+
+    items = resp.json().get("items", [])
+    results = []
+    for item in items:
+        # Prefer videoId; some items (channels/playlists) lack it — skip them.
+        vid = item.get("id", {}).get("videoId")
+        if not vid:
+            continue
+        snippet = item.get("snippet", {})
+        results.append(VideoItem(
+            videoId=vid,
+            title=snippet.get("title", ""),
+            channel=snippet.get("channelTitle", ""),
+        ))
+    return results

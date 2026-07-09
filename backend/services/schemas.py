@@ -140,3 +140,18 @@ class PostCreateRequest(BaseModel):
     thumbnail: Optional[str] = None
     status: Optional[str] = 'public'
 
+
+class VideoItem(BaseModel):
+    """A single YouTube video reference returned by the /knowledge/{id}/videos
+    endpoint. videoId is the YouTube channel id (the part after v= in a watch
+    URL) used by https://www.youtube.com/embed/{videoId} for iframe embeds."""
+    videoId: str
+    title: str
+    channel: str
+
+
+class VideoListResponse(BaseModel):
+    """List of related videos for an article. Kept short (3 by default) so the
+    modal UI stays compact — FE renders this directly inside the article view."""
+    videos: List[VideoItem]
+
