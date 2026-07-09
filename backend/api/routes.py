@@ -12,7 +12,8 @@ from backend.services.schemas import (
     MusicResponse, PlaylistResponse, MusicCreateRequest, PlaylistCreateRequest,
     KnowledgeResponse, KnowledgeCreateRequest,
     LoginRequest, FaceLoginRequest,
-    PostResponse, PostCreateRequest
+    PostResponse, PostCreateRequest,
+    VideoListResponse
 )
 from backend.services import games_service, music_service, knowledge_service, posts_service
 from backend.services.auth_service import create_access_token, decode_access_token
@@ -32,17 +33,19 @@ security = HTTPBearer(auto_error=False)
 
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    x_user_id: str = Header(None)
+    x_auth_token: str = Header(None, alias="X-Auth-Token")
 ):
     token = None
     if credentials:
         token = credentials.credentials
-    elif x_user_id:
-        # Fallback/Backward compatibility for header token
-        if x_user_id.startswith("Bearer "):
-            token = x_user_id.replace("Bearer ", "")
+    elif x_auth_token:
+        # Fallback header token for clients that cannot set Authorization
+        # (e.g. <img>/<audio>). Renamed from X-User-Id → X-Auth-Token so the
+        # header name reflects its actual payload (a JWT, not a numeric id).
+        if x_auth_token.startswith("Bearer "):
+            token = x_auth_token.replace("Bearer ", "")
         else:
-            token = x_user_id
+            token = x_auth_token
 
     if not token:
         raise HTTPException(status_code=401, detail="Vui lòng đăng nhập")
@@ -404,13 +407,25 @@ def get_knowledge_by_category(category: str, db: Session = Depends(get_db)):
     knowledge_service.init_articles(db)
     return knowledge_service.get_articles_by_category(db, category)
 
-@router.get('/knowledge/search/{query}', response_model=list[KnowledgeResponse])
-def search_knowledge(query: str, db: Session = Depends(get_db)):
-    """Search articles"""
+@router.get('/knowledge/search', response_model=list[KnowledgeResponse])
+def search_knowledge(q: str, db: Session = Depends(get_db)):
+    """Search articles by free-text query (`?q=...`)."""
     knowledge_service.init_articles(db)
-    return knowledge_service.search_articles(db, query)
+    return knowledge_service.search_articles(db, q)
 
 # Wildcard route comes last
+@router.get('/knowledge/{article_id}/videos', response_model=VideoListResponse)
+def get_article_videos(article_id: int, db: Session = Depends(get_db)):
+    """Return up to 3 YouTube videos related to an article. The search query
+    is built from the article's title + category inside the service layer.
+    Returns an empty list (not 404) if the API key is missing or upstream
+    fails — the FE renders a graceful empty state instead of an error."""
+    article = knowledge_service.get_article_by_id(db, article_id)
+    if not article:
+        raise HTTPException(status_code=404, detail='Article not found')
+    videos = knowledge_service.search_youtube_videos(article, max_results=3)
+    return {'videos': videos}
+
 @router.get('/knowledge/{article_id}', response_model=KnowledgeResponse)
 def get_article(article_id: int, db: Session = Depends(get_db)):
     """Get article by ID and increment views"""

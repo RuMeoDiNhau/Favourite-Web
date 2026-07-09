@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './App.css';
 import Dashboard from './pages/Dashboard';
 import Users from './pages/Users';
@@ -10,16 +10,51 @@ import Login from './pages/Login/Login';
 import Feed from './pages/Feed/Feed';
 import PostModal from './pages/Feed/PostModal';
 import FaceSetupModal from './components/FaceSetupModal';
+import { readJson } from './lib/safeStorage';
+
+// Map view name <-> URL path so the navbar becomes bookmarkable and
+// back/forward works. `feed` lives at '/' (the dashboard for the
+// currently signed-in user). Admin views stay hidden until role check.
+const VIEW_PATHS = ['/', '/dashboard', '/users', '/logs', '/games', '/music', '/knowledge'];
+const VIEW_NAMES = ['feed', 'dashboard', 'users', 'logs', 'games', 'music', 'knowledge'];
+
+const pathToView = (pathname) => {
+  const idx = VIEW_PATHS.indexOf(pathname);
+  return idx === -1 ? 'feed' : VIEW_NAMES[idx];
+};
+
+const viewToPath = (viewName) => {
+  const idx = VIEW_NAMES.indexOf(viewName);
+  return idx === -1 ? '/' : VIEW_PATHS[idx];
+};
 
 function App() {
-  const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('user');
-    return saved ? JSON.parse(saved) : null;
-  });
-  const [view, setView] = useState('feed');
+  const [user, setUser] = useState(() => readJson('user'));
+  const [view, setViewRaw] = useState(() => pathToView(window.location.pathname));
   const [showPostModal, setShowPostModal] = useState(false);
   const [feedKey, setFeedKey] = useState(0);
   const [showFaceSetup, setShowFaceSetup] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Wrap setView so clicking a nav button also updates the URL. We use
+  // pushState (not replaceState) so each tab becomes a history entry
+  // and the browser back/forward buttons cycle through them.
+  const setView = useCallback((next) => {
+    setViewRaw(next);
+    const nextPath = viewToPath(next);
+    if (window.location.pathname !== nextPath) {
+      window.history.pushState(null, '', nextPath);
+    }
+    setMobileMenuOpen(false);
+  }, []);
+
+  // Browser back/forward: popstate fires with the new location. Sync state
+  // without re-pushing (we already navigated).
+  useEffect(() => {
+    const onPop = () => setViewRaw(pathToView(window.location.pathname));
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
 
   // Khởi tạo trạng thái giao diện sáng/tối từ localStorage
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -54,6 +89,29 @@ function App() {
     return <Login onLoginSuccess={(u) => setUser(u)} />;
   }
 
+  // Single source of truth for nav items so desktop <nav> and mobile drawer
+  // can't drift. `adminOnly` is gated against the current user's role.
+  const NAV_ITEMS = [
+    { name: 'feed', label: '📰 Bảng tin' },
+    { name: 'dashboard', label: '📷 Quét khuôn mặt' },
+    { name: 'users', label: '👥 Users', adminOnly: true },
+    { name: 'logs', label: '📋 Logs', adminOnly: true },
+    { name: 'games', label: '🎮 Games' },
+    { name: 'music', label: '🎵 Music' },
+    { name: 'knowledge', label: '📚 Knowledge' },
+  ];
+  const visibleNav = NAV_ITEMS.filter((it) => !it.adminOnly || user.role === 'admin');
+
+  const renderNavButton = (item) => (
+    <button
+      key={item.name}
+      className={view === item.name ? 'active' : ''}
+      onClick={() => setView(item.name)}
+    >
+      {item.label}
+    </button>
+  );
+
   return (
     <div className={`App ${isDarkMode ? 'dark-theme' : ''}`}>
       <header className="main-navbar">
@@ -65,76 +123,7 @@ function App() {
         </div>
         
         <nav className="navbar-center">
-          <button className={view === 'feed' ? 'active' : ''} onClick={() => setView('feed')}>
-            📰 Bảng tin
-          </button>
-          <button className={view === 'dashboard' ? 'active' : ''} onClick={() => setView('dashboard')}>
-            📷 Quét khuôn mặt
-          </button>
-          {user && user.role === 'admin' && (
-            <>
-              <button className={view === 'users' ? 'active' : ''} onClick={() => setView('users')}>
-                <svg 
-                  width="18" 
-                  height="18" 
-                  viewBox="0 0 24 24" 
-                  fill="currentColor"
-                  stroke="#1e293b"
-                  strokeWidth="1"
-                  style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '6px' }}
-                >
-                  <circle cx="4" cy="14" r="2.2" />
-                  <path d="M4,16.5 C2.5,16.5 1.5,17.5 1.5,19.5 L1.5,24 L6.5,24 L6.5,19.5 C6.5,17.5 5.5,16.5 4,16.5 Z" />
-                  
-                  <circle cx="20" cy="14" r="2.2" />
-                  <path d="M20,16.5 C18.5,16.5 17.5,17.5 17.5,19.5 L17.5,24 L22.5,24 L22.5,19.5 C22.5,17.5 21.5,16.5 20,16.5 Z" />
-
-                  <circle cx="7" cy="12" r="2.5" />
-                  <path d="M7,14.8 C5,14.8 3.5,16 3.5,18 L3.5,24 L10.5,24 L10.5,18 C10.5,16 9,14.8 7,14.8 Z" />
-
-                  <circle cx="17" cy="12" r="2.5" />
-                  <path d="M17,14.8 C15,14.8 13.5,16 13.5,18 L13.5,24 L20.5,24 L20.5,18 C20.5,16 19,14.8 17,14.8 Z" />
-
-                  <circle cx="9.5" cy="10" r="2.8" />
-                  <path d="M9.5,13 C7.2,13 5.5,14.5 5.5,16.8 L5.5,24 L13.5,24 L13.5,16.8 C13.5,14.5 11.8,13 9.5,13 Z" />
-
-                  <circle cx="14.5" cy="10" r="2.8" />
-                  <path d="M14.5,13 C12.2,13 10.5,14.5 10.5,16.8 L10.5,24 L18.5,24 L18.5,16.8 C18.5,14.5 16.8,13 14.5,13 Z" />
-
-                  <circle cx="12" cy="8" r="3.2" />
-                  <path d="M12,11.5 C9.3,11.5 7.2,13.2 7.2,15.8 L7.2,24 L16.8,24 L16.8,15.8 C16.8,13.2 14.7,11.5 12,11.5 Z" />
-                </svg>
-                Users
-              </button>
-              <button className={view === 'logs' ? 'active' : ''} onClick={() => setView('logs')}>
-                📋 Logs
-              </button>
-            </>
-          )}
-          <button className={view === 'games' ? 'active' : ''} onClick={() => setView('games')}>
-            <img 
-              src="/game-icon.png" 
-              alt="Games" 
-              style={{ width: '18px', height: '18px', display: 'inline-block', verticalAlign: 'middle', marginRight: '6px', borderRadius: '4px' }} 
-            />
-            Games
-          </button>
-          <button className={view === 'music' ? 'active' : ''} onClick={() => setView('music')}>
-            <img 
-              src="/music-icon.png" 
-              alt="Music" 
-              style={{ width: '18px', height: '18px', display: 'inline-block', verticalAlign: 'middle', marginRight: '6px', borderRadius: '4px' }} 
-            />
-            Music
-          </button>
-          <button className={view === 'knowledge' ? 'active' : ''} onClick={() => setView('knowledge')}>
-            <img 
-              src="/knowledge-icon.png" 
-              alt="Knowledge" 
-              style={{ width: '18px', height: '18px', display: 'inline-block', verticalAlign: 'middle', marginRight: '6px', borderRadius: '4px' }} 
-            />
-            Knowledge
-          </button>
+          {visibleNav.map(renderNavButton)}
         </nav>
 
         <div className="navbar-right">
@@ -170,14 +159,36 @@ function App() {
             Đăng bài
           </button>
           <button className="logout-icon-btn" onClick={handleLogout} title="Đăng xuất">
-            <img 
-              src="/logout-icon.png" 
-              alt="Logout" 
+            <img
+              src="/logout-icon.png"
+              alt="Logout"
               className="logout-btn-icon-img"
-              style={{ width: '16px', height: '16px', display: 'inline-block', verticalAlign: 'middle', marginRight: '6px' }} 
+              style={{ width: '16px', height: '16px', display: 'inline-block', verticalAlign: 'middle', marginRight: '6px' }}
             />
             Đăng xuất
           </button>
+
+          {/* Hamburger toggle — only meaningful on mobile (CSS hides on desktop). */}
+          <button
+            className="mobile-menu-btn"
+            onClick={() => setMobileMenuOpen((v) => !v)}
+            aria-label="Toggle navigation menu"
+            aria-expanded={mobileMenuOpen}
+          >
+            {mobileMenuOpen ? '✕' : '☰'}
+          </button>
+        </div>
+
+        {/* Mobile drawer. CSS shows this only below 900px and hides the desktop
+            <nav> at the same breakpoint, so on desktop the drawer is invisible.
+            Click on the overlay closes it. */}
+        {mobileMenuOpen && (
+          <div className="mobile-menu-overlay" onClick={() => setMobileMenuOpen(false)} />
+        )}
+        <div className={`mobile-menu ${mobileMenuOpen ? 'open' : ''}`}>
+          <nav className="mobile-menu-nav">
+            {visibleNav.map(renderNavButton)}
+          </nav>
         </div>
       </header>
 

@@ -3,30 +3,53 @@ import './CameraBox.css';
 
 function CameraBox({ onCapture, captureTrigger, status = 'idle' }) {
   const videoRef = useRef(null);
+  const streamRef = useRef(null);
   const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    let localStream = null;
+    let cancelled = false;
     const startCamera = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-        localStream = stream;
+        // If the component unmounted while getUserMedia was pending, stop
+        // the freshly-allocated stream immediately so the camera LED goes off
+        // and the MediaStream doesn't leak until the tab closes.
+        if (cancelled) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        streamRef.current = stream;
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
-          videoRef.current.play();
+          try {
+            await videoRef.current.play();
+          } catch {
+            // Autoplay rejection is harmless for a CameraBox (capture is
+            // triggered manually via button click or captureTrigger, both
+            // of which count as user gestures).
+          }
           setStreaming(true);
         }
       } catch (err) {
-        setError('Không thể mở camera. Vui lòng kiểm tra quyền truy cập.');
+        if (!cancelled) {
+          setError('Không thể mở camera. Vui lòng kiểm tra quyền truy cập.');
+        }
       }
     };
 
     startCamera();
     return () => {
-      if (localStream) {
-        const tracks = localStream.getTracks();
-        tracks.forEach((track) => track.stop());
+      cancelled = true;
+      // Detach the stream from the <video> element first so the browser stops
+      // rendering the final frame. Some browsers (notably Chrome) keep the
+      // last frame visible until srcObject is cleared, even after tracks stop.
+      if (videoRef.current && videoRef.current.srcObject) {
+        videoRef.current.srcObject = null;
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
       }
     };
   }, []);

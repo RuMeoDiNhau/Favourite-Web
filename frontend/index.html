@@ -3,6 +3,21 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      Content Security Policy (meta-tag form).
+      Notes:
+        - `style-src 'unsafe-inline'` is required because the codebase uses many
+          inline styles; refactoring those to CSS classes is a follow-up.
+        - `frame-src http://localhost:8000 https:` lets the in-app game iframe
+          overlay load game files served from the backend or any HTTPS origin.
+          For production, replace `http://localhost:8000` with the real backend
+          origin (templated from VITE_API_URL via a Vite HTML transform plugin,
+          ideally delivered as a response header rather than a meta tag).
+        - `frame-ancestors 'none'` disables clickjacking of this app into another site.
+        - `connect-src 'self' http://localhost:8000` matches the axios baseURL.
+    -->
+    <meta http-equiv="Content-Security-Policy"
+          content="default-src 'self'; img-src 'self' data: https:; script-src 'self'; style-src 'self' 'unsafe-inline'; frame-src http://localhost:8000 https:; frame-ancestors 'none'; connect-src 'self' http://localhost:8000;" />
     <title>Fav Web Face Recognition</title>
   </head>
   <body>

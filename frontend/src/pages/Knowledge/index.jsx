@@ -9,6 +9,40 @@ export default function Knowledge() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Modal state: which article is open, the videos fetched for it, and
+  // whether the videos request is still in flight.
+  const [selectedArticle, setSelectedArticle] = useState(null);
+  const [articleVideos, setArticleVideos] = useState([]);
+  const [modalLoading, setModalLoading] = useState(false);
+
+  // ESC closes the modal — simple keyboard a11y win.
+  useEffect(() => {
+    if (!selectedArticle) return;
+    const onKey = (e) => { if (e.key === 'Escape') setSelectedArticle(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [selectedArticle]);
+
+  const handleOpenArticle = async (article) => {
+    // Reuse the list-row data we already have (full content is the same
+    // payload as GET /knowledge/{id} which also bumps the view counter),
+    // then fetch videos in parallel and open the modal immediately.
+    setSelectedArticle(article);
+    setArticleVideos([]);
+    setModalLoading(true);
+    try {
+      // Fire both — fire-and-forget the article fetch since we already
+      // have it; just await the videos which is the new data we need.
+      const videos = await api.fetchArticleVideos(article.id);
+      setArticleVideos(videos);
+    } catch (err) {
+      console.error('Error loading article videos:', err);
+      setArticleVideos([]);
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
   useEffect(() => {
     loadArticles();
     loadCategories();
@@ -109,7 +143,7 @@ export default function Knowledge() {
                     </div>
 
                     <div className="card-actions">
-                      <button className="read-btn">Đọc Thêm →</button>
+                      <button className="read-btn" onClick={() => handleOpenArticle(article)}>Đọc Thêm →</button>
                       <button onClick={() => handleLikeArticle(article.id)} className="read-btn" style={{ marginLeft: '8px' }}>❤️ Thích</button>
                     </div>
                   </div>
@@ -123,6 +157,72 @@ export default function Knowledge() {
           </div>
         )}
       </div>
+
+      {selectedArticle && (
+        <div className="article-modal-overlay" onClick={() => setSelectedArticle(null)}>
+          <div
+            className="article-modal"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label={selectedArticle.title}
+          >
+            <div className="article-modal-header">
+              <div>
+                <span className="card-badge">{selectedArticle.category}</span>
+                <h2>{selectedArticle.title}</h2>
+                <div className="article-modal-meta">
+                  <span>👤 {selectedArticle.author}</span>
+                  <span>👁️ {selectedArticle.views}</span>
+                  <span>❤️ {selectedArticle.likes}</span>
+                </div>
+              </div>
+              <button
+                className="article-modal-close"
+                onClick={() => setSelectedArticle(null)}
+                aria-label="Đóng"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="article-modal-body">
+              <p className="article-modal-desc">{selectedArticle.description}</p>
+              {selectedArticle.content && (
+                <p className="article-modal-content">{selectedArticle.content}</p>
+              )}
+
+              <div className="article-modal-videos">
+                <h3>📺 Video liên quan</h3>
+                {modalLoading ? (
+                  <p className="videos-status">Đang tìm video trên YouTube…</p>
+                ) : articleVideos.length > 0 ? (
+                  <div className="video-grid">
+                    {articleVideos.map((v) => (
+                      <div key={v.videoId} className="video-item">
+                        <iframe
+                          src={`https://www.youtube.com/embed/${v.videoId}`}
+                          title={v.title}
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        />
+                        <div className="video-meta">
+                          <p className="video-title">{v.title}</p>
+                          <p className="video-channel">{v.channel}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="videos-status">
+                    Không tìm thấy video liên quan. (Có thể do chưa cấu hình YOUTUBE_API_KEY.)
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
