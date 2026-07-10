@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './Knowledge.css';
 import * as api from '../../services/api';
 
-export default function Knowledge() {
+export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearchOpen }) {
   const [selectedTopic, setSelectedTopic] = useState('all');
   const [articles, setArticles] = useState([]);
   const [categories, setCategories] = useState(['Tất Cả']);
@@ -55,6 +55,21 @@ export default function Knowledge() {
     loadArticles();
     loadCategories();
   }, [selectedTopic]);
+
+  // When a search result asks us to deep-open a specific article,
+  // find it in the loaded list and open the modal. We wait for
+  // articles to be loaded first; if the id doesn't match any row
+  // (e.g. wrong category filter) we silently consume the request so
+  // it doesn't keep firing.
+  useEffect(() => {
+    if (searchOpenKnowledgeId == null) return;
+    if (loading) return;
+    const target = articles.find((a) => a.id === searchOpenKnowledgeId);
+    if (target) {
+      handleOpenArticle(target);
+    }
+    onConsumeSearchOpen?.();
+  }, [searchOpenKnowledgeId, loading, articles]);
 
   const loadArticles = async () => {
     try {

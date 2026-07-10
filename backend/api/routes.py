@@ -15,7 +15,7 @@ from backend.services.schemas import (
     PostResponse, PostCreateRequest,
     VideoListResponse
 )
-from backend.services import games_service, music_service, knowledge_service, posts_service, dashboard_service
+from backend.services import games_service, music_service, knowledge_service, posts_service, dashboard_service, search_service
 from backend.services.auth_service import create_access_token, decode_access_token
 from backend.services.logging_service import logger
 
@@ -690,3 +690,31 @@ def get_my_recent_activity(
     + cover payload so the FE can render the list without a second
     round of GETs."""
     return dashboard_service.get_recent_activity(db, current_user['user_id'], limit=limit)
+
+
+# ==================== Global Search Endpoint ====================
+
+@router.get('/search')
+def global_search(
+    q: str = '',
+    types: str = 'knowledge,music,game',
+    limit: int = 5,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Cross-content search for the navbar SearchBar.
+
+    `types` is a comma-separated list (e.g. "knowledge,music"). The
+    route layer parses the string and hands the list to the service —
+    keeping the wire format simple and human-debuggable.
+
+    The `user` type is only included when the caller is admin; the
+    service filters it out for non-admins so a non-admin can't even
+    see whether the user type would have returned anything (it just
+    isn't in the response).
+    """
+    types_list = [t.strip() for t in types.split(',') if t.strip()]
+    is_admin = current_user.get('role') == 'admin'
+    return search_service.global_search(
+        db, query=q, types=types_list, limit_per_type=limit, is_admin=is_admin,
+    )

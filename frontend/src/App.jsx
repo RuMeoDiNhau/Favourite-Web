@@ -11,6 +11,7 @@ import Feed from './pages/Feed/Feed';
 import Home from './pages/Home';
 import PostModal from './pages/Feed/PostModal';
 import FaceSetupModal from './components/FaceSetupModal';
+import SearchBar from './components/SearchBar';
 import { readJson } from './lib/safeStorage';
 
 // Map view name <-> URL path so the navbar becomes bookmarkable and
@@ -43,6 +44,11 @@ function App() {
   const [feedKey, setFeedKey] = useState(0);
   const [showFaceSetup, setShowFaceSetup] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  // IDs the search results want to deep-open into a modal on the
+  // target page (knowledge article / game detail). Reset after the
+  // target view consumes them so a later manual nav doesn't reopen.
+  const [searchOpenKnowledgeId, setSearchOpenKnowledgeId] = useState(null);
+  const [searchOpenGameId, setSearchOpenGameId] = useState(null);
 
   // Wrap setView so clicking a nav button also updates the URL. We use
   // pushState (not replaceState) so each tab becomes a history entry
@@ -92,6 +98,33 @@ function App() {
     setUser(null);
   };
 
+  // SearchBar click → navigate to the matching view and, when the
+  // type has a detail modal (knowledge/game), request it to open
+  // the right item. The per-view "consumed" callbacks clear the
+  // pending id so navigation between manual tabs doesn't reopen.
+  const handleSearchSelect = useCallback((item, type) => {
+    if (type === 'knowledge') {
+      setSearchOpenKnowledgeId(item.id);
+      setSearchOpenGameId(null);
+      setView('knowledge');
+    } else if (type === 'music') {
+      setSearchOpenKnowledgeId(null);
+      setSearchOpenGameId(null);
+      setView('music');
+    } else if (type === 'game') {
+      setSearchOpenGameId(item.id);
+      setSearchOpenKnowledgeId(null);
+      setView('games');
+    } else if (type === 'user') {
+      setSearchOpenKnowledgeId(null);
+      setSearchOpenGameId(null);
+      setView('users');
+    }
+  }, []);
+
+  const consumeSearchOpenKnowledge = useCallback(() => setSearchOpenKnowledgeId(null), []);
+  const consumeSearchOpenGame = useCallback(() => setSearchOpenGameId(null), []);
+
   // Nếu chưa đăng nhập, chỉ hiển thị màn hình Login
   if (!user) {
     return <Login onLoginSuccess={(u) => setUser(u)} />;
@@ -129,8 +162,12 @@ function App() {
             <span className="logo-icon">🌐</span>
             <span className="logo-text">Fav Web</span>
           </div>
+          <SearchBar
+            onSelectItem={handleSearchSelect}
+            isAdmin={user.role === 'admin'}
+          />
         </div>
-        
+
         <nav className="navbar-center">
           {visibleNav.map(renderNavButton)}
         </nav>
@@ -253,9 +290,19 @@ function App() {
         {view === 'dashboard' && <Dashboard />}
         {view === 'users' && user?.role === 'admin' && <Users />}
         {view === 'logs' && user?.role === 'admin' && <Logs />}
-        {view === 'games' && <Games />}
+        {view === 'games' && (
+          <Games
+            searchOpenGameId={searchOpenGameId}
+            onConsumeSearchOpen={consumeSearchOpenGame}
+          />
+        )}
         {view === 'music' && <Music />}
-        {view === 'knowledge' && <Knowledge />}
+        {view === 'knowledge' && (
+          <Knowledge
+            searchOpenKnowledgeId={searchOpenKnowledgeId}
+            onConsumeSearchOpen={consumeSearchOpenKnowledge}
+          />
+        )}
       </main>
 
       {showPostModal && (

@@ -205,4 +205,15 @@ export const fetchRecentActivity = (limit = 10) =>
   api.get('/me/recent-activity', { params: { limit } }).then((r) => r.data || []);
 
 
+// ==================== Global Search ====================
+//
+// Single cross-content search endpoint. `types` is an array filter
+// (defaults to knowledge/music/game on the BE; user is admin-only).
+// Returns the BE's grouped payload directly — the FE merges the
+// results into the SearchBar dropdown.
+
+export const globalSearch = (q, types) =>
+  api.get('/search', { params: { q, types: types?.join(',') } }).then((r) => r.data);
+
+
 export default api;

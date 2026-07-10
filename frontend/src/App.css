@@ -53,6 +53,15 @@
   z-index: 1000;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   flex-wrap: nowrap;
+  gap: 16px;
+}
+
+.navbar-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+  min-width: 0;
 }
 
 .navbar-logo {
