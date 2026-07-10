@@ -220,10 +220,17 @@ def get_game(game_id: int, db: Session = Depends(get_db)):
     return game
 
 @router.post('/games', response_model=GameResponse, status_code=201)
-def create_game(request: GameCreateRequest, db: Session = Depends(get_db)):
-    """Create a new game post"""
+def create_game(
+    request: GameCreateRequest,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Create a new game post — requires sign-in. Bare auth check for now;
+    the Game model lacks a user_id column so we can't track authorship yet
+    (Phase 2 follow-up). The endpoint is gated so anonymous spam can't
+    happen while the schema lacks an owner field."""
     return games_service.create_game(
-        db, 
+        db,
         title=request.title,
         category=request.category,
         description=request.description,
@@ -283,8 +290,16 @@ def get_playlist_songs(playlist_id: int, db: Session = Depends(get_db)):
     return music_service.get_songs_by_playlist(db, playlist_id)
 
 @router.post('/playlists/{playlist_id}/songs/{song_id}', status_code=200)
-def add_song_to_playlist(playlist_id: int, song_id: int, db: Session = Depends(get_db)):
-    """Add a song to a playlist"""
+def add_song_to_playlist(
+    playlist_id: int,
+    song_id: int,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Add a song to a playlist — requires sign-in so users can't enqueue
+    their own songs into other people's playlists. Ownership-based
+    restriction (only the playlist owner can add songs) is a Phase 2
+    follow-up since Playlist has no user_id column yet."""
     success = music_service.add_song_to_playlist(db, playlist_id, song_id)
     if not success:
         raise HTTPException(status_code=400, detail="Không thể thêm bài hát vào danh sách phát. Hãy kiểm tra lại ID bài hát hoặc playlist.")
@@ -435,15 +450,21 @@ def get_article(article_id: int, db: Session = Depends(get_db)):
     return article
 
 @router.post('/knowledge', response_model=KnowledgeResponse, status_code=201)
-def create_article(request: KnowledgeCreateRequest, db: Session = Depends(get_db)):
-    """Create a new article"""
+def create_article(
+    request: KnowledgeCreateRequest,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Create a new article — requires sign-in. The Knowledge model
+    already has an `author` field which we set from current_user so we at
+    least know who wrote the piece, even without a user_id FK column."""
     return knowledge_service.create_article(
         db,
         title=request.title,
         category=request.category,
         description=request.description,
         content=request.content,
-        author=request.author
+        author=current_user.get('user_id') or request.author
     )
 
 @router.post('/knowledge/{article_id}/like')
@@ -469,6 +490,29 @@ async def upload_post_file(
         return {"media_url": media_url}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lỗi khi tải file: {str(e)}")
+
+
+@router.delete('/posts/upload')
+def delete_post_file(
+    url: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Best-effort orphan cleanup for files uploaded via POST /posts/upload.
+
+    Called by the FE when an upload succeeded but the subsequent create_post
+    request failed — without this, those files would sit in static/uploads
+    forever. Returns 200 even if the URL was unknown or already gone (the
+    FE swallows the call anyway); 4xx only if the URL is suspicious.
+    """
+    # Guard rails — anything we can't identify as a static uploads URL
+    # should be rejected explicitly so a misuse shows up in logs.
+    if not url or not url.startswith('/static/uploads/'):
+        raise HTTPException(
+            status_code=400,
+            detail='Chỉ chấp nhận URL dạng /static/uploads/...'
+        )
+    deleted = posts_service.delete_uploaded_file(url)
+    return {'deleted': deleted}
 
 
 @router.post('/posts', response_model=PostResponse, status_code=201)
