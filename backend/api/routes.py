@@ -13,9 +13,11 @@ from backend.services.schemas import (
     KnowledgeResponse, KnowledgeCreateRequest,
     LoginRequest, FaceLoginRequest,
     PostResponse, PostCreateRequest,
-    VideoListResponse
+    VideoListResponse,
+    CommentCreateRequest, CommentResponse, ReactionRequest, ReactionSummary,
+    NotificationResponse, NotificationList, UnreadCount,
 )
-from backend.services import games_service, music_service, knowledge_service, posts_service
+from backend.services import games_service, music_service, knowledge_service, posts_service, dashboard_service, search_service, comments_service, notification_service
 from backend.services.auth_service import create_access_token, decode_access_token
 from backend.services.logging_service import logger
 
@@ -62,6 +64,29 @@ def get_admin_user(current_user: dict = Depends(get_current_user)):
     if current_user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Bạn không có quyền thực hiện hành động này")
     return current_user
+
+
+def get_optional_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    x_auth_token: str = Header(None, alias="X-Auth-Token"),
+) -> dict:
+    """Like get_current_user but returns None when no valid token is
+    present instead of raising 401. Used for endpoints that should
+    work for both signed-in and anonymous users (e.g. view/like/play
+    bumps the global counter either way, but only the signed-in case
+    writes a per-user event for the Personal Dashboard)."""
+    token = None
+    if credentials:
+        token = credentials.credentials
+    elif x_auth_token:
+        x = x_auth_token
+        token = x.replace("Bearer ", "") if x.startswith("Bearer ") else x
+    if not token:
+        return None
+    try:
+        return decode_access_token(token)
+    except jwt.PyJWTError:
+        return None
 
 
 # ==================== Face Recognition Endpoints ====================
@@ -220,10 +245,17 @@ def get_game(game_id: int, db: Session = Depends(get_db)):
     return game
 
 @router.post('/games', response_model=GameResponse, status_code=201)
-def create_game(request: GameCreateRequest, db: Session = Depends(get_db)):
-    """Create a new game post"""
+def create_game(
+    request: GameCreateRequest,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Create a new game post — requires sign-in. Bare auth check for now;
+    the Game model lacks a user_id column so we can't track authorship yet
+    (Phase 2 follow-up). The endpoint is gated so anonymous spam can't
+    happen while the schema lacks an owner field."""
     return games_service.create_game(
-        db, 
+        db,
         title=request.title,
         category=request.category,
         description=request.description,
@@ -232,19 +264,44 @@ def create_game(request: GameCreateRequest, db: Session = Depends(get_db)):
     )
 
 @router.post('/games/{game_id}/view')
-def view_game(game_id: int, db: Session = Depends(get_db)):
-    """Increment game post views"""
+def view_game(
+    game_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_optional_user),
+):
+    """Increment game post views. If the caller is signed in, also
+    record a per-user activity event for the Personal Dashboard
+    (silent failure: a broken event log must not break the like/view
+    flow that the rest of the app depends on)."""
     game = games_service.update_game_views(db, game_id)
     if not game:
         raise HTTPException(status_code=404, detail='Game post not found')
+    if current_user:
+        try:
+            dashboard_service.record_event(
+                db, current_user['user_id'], 'game', game_id, 'view',
+            )
+        except Exception as ev_err:
+            logger.warning(f'Failed to record game view event: {ev_err}')
     return {'message': 'View count updated', 'views': game.views}
 
 @router.post('/games/{game_id}/like')
-def like_game(game_id: int, db: Session = Depends(get_db)):
-    """Increment game post likes"""
+def like_game(
+    game_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_optional_user),
+):
+    """Increment game post likes + record per-user event when signed in."""
     game = games_service.update_game_likes(db, game_id)
     if not game:
         raise HTTPException(status_code=404, detail='Game post not found')
+    if current_user:
+        try:
+            dashboard_service.record_event(
+                db, current_user['user_id'], 'game', game_id, 'like',
+            )
+        except Exception as ev_err:
+            logger.warning(f'Failed to record game like event: {ev_err}')
     return {'message': 'Like count updated', 'likes': game.likes}
 
 
@@ -283,8 +340,16 @@ def get_playlist_songs(playlist_id: int, db: Session = Depends(get_db)):
     return music_service.get_songs_by_playlist(db, playlist_id)
 
 @router.post('/playlists/{playlist_id}/songs/{song_id}', status_code=200)
-def add_song_to_playlist(playlist_id: int, song_id: int, db: Session = Depends(get_db)):
-    """Add a song to a playlist"""
+def add_song_to_playlist(
+    playlist_id: int,
+    song_id: int,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Add a song to a playlist — requires sign-in so users can't enqueue
+    their own songs into other people's playlists. Ownership-based
+    restriction (only the playlist owner can add songs) is a Phase 2
+    follow-up since Playlist has no user_id column yet."""
     success = music_service.add_song_to_playlist(db, playlist_id, song_id)
     if not success:
         raise HTTPException(status_code=400, detail="Không thể thêm bài hát vào danh sách phát. Hãy kiểm tra lại ID bài hát hoặc playlist.")
@@ -357,19 +422,41 @@ def delete_song(song_id: int, admin: dict = Depends(get_admin_user), db: Session
     return {"message": "Đã xóa bài hát thành công"}
 
 @router.post('/music/{song_id}/play')
-def play_song(song_id: int, db: Session = Depends(get_db)):
-    """Increment song plays"""
+def play_song(
+    song_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_optional_user),
+):
+    """Increment song plays + record per-user event when signed in."""
     song = music_service.update_song_plays(db, song_id)
     if not song:
         raise HTTPException(status_code=404, detail='Song not found')
+    if current_user:
+        try:
+            dashboard_service.record_event(
+                db, current_user['user_id'], 'music', song_id, 'play',
+            )
+        except Exception as ev_err:
+            logger.warning(f'Failed to record music play event: {ev_err}')
     return {'message': 'Play count updated', 'plays': song.plays}
 
 @router.post('/music/{song_id}/like')
-def like_song(song_id: int, db: Session = Depends(get_db)):
-    """Increment song likes"""
+def like_song(
+    song_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_optional_user),
+):
+    """Increment song likes + record per-user event when signed in."""
     song = music_service.update_song_likes(db, song_id)
     if not song:
         raise HTTPException(status_code=404, detail='Song not found')
+    if current_user:
+        try:
+            dashboard_service.record_event(
+                db, current_user['user_id'], 'music', song_id, 'like',
+            )
+        except Exception as ev_err:
+            logger.warning(f'Failed to record music like event: {ev_err}')
     return {'message': 'Like count updated', 'likes': song.likes}
 
 
@@ -427,31 +514,54 @@ def get_article_videos(article_id: int, db: Session = Depends(get_db)):
     return {'videos': videos}
 
 @router.get('/knowledge/{article_id}', response_model=KnowledgeResponse)
-def get_article(article_id: int, db: Session = Depends(get_db)):
-    """Get article by ID and increment views"""
-    article = knowledge_service.get_article_by_id(db, article_id)
+def get_article(
+    article_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_optional_user),
+):
+    """Get article by ID and increment views. If signed in, the
+    view also counts as a per-user activity event for the dashboard."""
+    user_id = current_user['user_id'] if current_user else None
+    article = knowledge_service.get_article_by_id(db, article_id, user_id=user_id)
     if not article:
         raise HTTPException(status_code=404, detail='Article not found')
     return article
 
 @router.post('/knowledge', response_model=KnowledgeResponse, status_code=201)
-def create_article(request: KnowledgeCreateRequest, db: Session = Depends(get_db)):
-    """Create a new article"""
+def create_article(
+    request: KnowledgeCreateRequest,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Create a new article — requires sign-in. The Knowledge model
+    already has an `author` field which we set from current_user so we at
+    least know who wrote the piece, even without a user_id FK column."""
     return knowledge_service.create_article(
         db,
         title=request.title,
         category=request.category,
         description=request.description,
         content=request.content,
-        author=request.author
+        author=current_user.get('user_id') or request.author
     )
 
 @router.post('/knowledge/{article_id}/like')
-def like_article(article_id: int, db: Session = Depends(get_db)):
-    """Increment article likes"""
+def like_article(
+    article_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_optional_user),
+):
+    """Increment article likes + record per-user event when signed in."""
     article = knowledge_service.update_article_likes(db, article_id)
     if not article:
         raise HTTPException(status_code=404, detail='Article not found')
+    if current_user:
+        try:
+            dashboard_service.record_event(
+                db, current_user['user_id'], 'knowledge', article_id, 'like',
+            )
+        except Exception as ev_err:
+            logger.warning(f'Failed to record article like event: {ev_err}')
     return {'message': 'Like count updated', 'likes': article.likes}
 
 
@@ -469,6 +579,29 @@ async def upload_post_file(
         return {"media_url": media_url}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lỗi khi tải file: {str(e)}")
+
+
+@router.delete('/posts/upload')
+def delete_post_file(
+    url: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Best-effort orphan cleanup for files uploaded via POST /posts/upload.
+
+    Called by the FE when an upload succeeded but the subsequent create_post
+    request failed — without this, those files would sit in static/uploads
+    forever. Returns 200 even if the URL was unknown or already gone (the
+    FE swallows the call anyway); 4xx only if the URL is suspicious.
+    """
+    # Guard rails — anything we can't identify as a static uploads URL
+    # should be rejected explicitly so a misuse shows up in logs.
+    if not url or not url.startswith('/static/uploads/'):
+        raise HTTPException(
+            status_code=400,
+            detail='Chỉ chấp nhận URL dạng /static/uploads/...'
+        )
+    deleted = posts_service.delete_uploaded_file(url)
+    return {'deleted': deleted}
 
 
 @router.post('/posts', response_model=PostResponse, status_code=201)
@@ -492,3 +625,266 @@ def get_posts(
         return posts_service.get_posts(db)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lỗi khi lấy danh sách bài đăng: {str(e)}")
+
+
+# ==================== Personal Dashboard Endpoints ====================
+
+class ActivityTrackRequest(BaseModel):
+    """Body for POST /activity/track — explicit Pydantic model (instead
+    of a dict) so a missing field returns a useful 422 instead of a
+    TypeError deep inside dashboard_service."""
+    content_type: str
+    content_id: int
+    event_type: str
+
+
+@router.post('/activity/track')
+def track_activity(
+    request: ActivityTrackRequest,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Record a per-user content event for the Personal Dashboard.
+
+    Distinct from the global view/like/play counters: those are
+    anonymous totals on the content table; this is the signed-in
+    user's per-event log. The two are written in parallel from the
+    view/like/play routes; this endpoint exists for events that
+    don't have a natural counter bump (e.g. opening a Knowledge
+    article from a deep-link that bypasses GET /knowledge/{id}).
+    """
+    if request.content_type not in {'knowledge', 'music', 'game', 'post'}:
+        raise HTTPException(
+            status_code=400,
+            detail=f'content_type không hợp lệ: {request.content_type!r}',
+        )
+    if request.event_type not in {'view', 'play', 'like'}:
+        raise HTTPException(
+            status_code=400,
+            detail=f'event_type không hợp lệ: {request.event_type!r}',
+        )
+    result = dashboard_service.record_event(
+        db, current_user['user_id'],
+        request.content_type, request.content_id, request.event_type,
+    )
+    return result
+
+
+@router.get('/me/insights')
+def get_my_insights(
+    days: int = 7,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Aggregated activity stats for the Personal Dashboard. Returns
+    a dict with stable keys (zeros + empty lists for new users) so
+    the FE never has to handle 404 on the empty state."""
+    return dashboard_service.get_user_insights(db, current_user['user_id'], days=days)
+
+
+@router.get('/me/recent-activity')
+def get_my_recent_activity(
+    limit: int = 10,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Most recent per-user activity events joined with a tiny title
+    + cover payload so the FE can render the list without a second
+    round of GETs."""
+    return dashboard_service.get_recent_activity(db, current_user['user_id'], limit=limit)
+
+
+# ==================== Global Search Endpoint ====================
+
+@router.get('/search')
+def global_search(
+    q: str = '',
+    types: str = 'knowledge,music,game',
+    limit: int = 5,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Cross-content search for the navbar SearchBar.
+
+    `types` is a comma-separated list (e.g. "knowledge,music"). The
+    route layer parses the string and hands the list to the service —
+    keeping the wire format simple and human-debuggable.
+
+    The `user` type is only included when the caller is admin; the
+    service filters it out for non-admins so a non-admin can't even
+    see whether the user type would have returned anything (it just
+    isn't in the response).
+    """
+    types_list = [t.strip() for t in types.split(',') if t.strip()]
+    is_admin = current_user.get('role') == 'admin'
+    return search_service.global_search(
+        db, query=q, types=types_list, limit_per_type=limit, is_admin=is_admin,
+    )
+
+
+# ==================== Comments + Reactions ====================
+#
+# Both endpoints are scoped to a (content_type, content_id) pair so
+# the same route serves Knowledge articles and Feed posts. Validation
+# lives in the service (comments_service.ALLOWED_CONTENT_TYPES,
+# ALLOWED_EMOJIS) — these routes translate exceptions into HTTP codes.
+
+@router.get('/comments')
+def list_comments(
+    content_type: str,
+    content_id: int,
+    limit: int = 50,
+    offset: int = 0,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Return the comment thread for a (content_type, content_id) target.
+    Public read — login is required (so we can include 'my' info later),
+    but anyone can see anyone else's comments."""
+    try:
+        return comments_service.list_comments(db, content_type, content_id, limit=limit, offset=offset)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post('/comments', status_code=201)
+def create_comment(
+    payload: CommentCreateRequest,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Create a comment or reply. The route enforces auth; the service
+    enforces content_type / body length / parent thread consistency."""
+    try:
+        return comments_service.create_comment(
+            db,
+            user_id=current_user['user_id'],
+            content_type=payload.content_type,
+            content_id=payload.content_id,
+            body=payload.body,
+            parent_id=payload.parent_id,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.delete('/comments/{comment_id}')
+def delete_comment(
+    comment_id: int,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Delete a comment. Owner OR admin only — service raises
+    PermissionError otherwise."""
+    is_admin = current_user.get('role') == 'admin'
+    try:
+        comments_service.delete_comment(
+            db, comment_id=comment_id,
+            user_id=current_user['user_id'], is_admin=is_admin,
+        )
+        return {'deleted': True}
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+@router.get('/reactions', response_model=ReactionSummary)
+def get_reactions(
+    content_type: str,
+    content_id: int,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Return per-emoji counts and the caller's current emoji. The
+    `my_emoji` field powers the highlight on the FE's emoji bar."""
+    try:
+        return comments_service.list_reactions(
+            db, content_type, content_id, user_id=current_user['user_id'],
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post('/reactions', response_model=ReactionSummary)
+def set_reaction(
+    payload: ReactionRequest,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Toggle or change the caller's reaction. Same emoji → toggle off;
+    different emoji → swap. Returns the updated summary so the FE
+    doesn't have to re-fetch."""
+    try:
+        return comments_service.set_reaction(
+            db,
+            user_id=current_user['user_id'],
+            content_type=payload.content_type,
+            content_id=payload.content_id,
+            emoji=payload.emoji,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+# ==================== Notifications ====================
+#
+# The bell badge polls GET /notifications/unread-count every 30s.
+# When the user clicks the bell, the FE fetches the full list and
+# the same unread_count to sync the badge. mark-as-read is
+# idempotent (re-marking a read row returns 200) so retries are safe.
+
+@router.get('/notifications', response_model=NotificationList)
+def list_notifications(
+    unread_only: bool = False,
+    limit: int = 20,
+    offset: int = 0,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return notification_service.list_notifications(
+        db, user_id=current_user['user_id'],
+        unread_only=unread_only, limit=limit, offset=offset,
+    )
+
+
+@router.get('/notifications/unread-count', response_model=UnreadCount)
+def unread_count(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Cheap count endpoint for the FE's 30s polling. Returning just
+    an integer keeps the payload tiny — the FE only needs to know
+    whether to show / update the badge."""
+    return {'count': notification_service.get_unread_count(db, current_user['user_id'])}
+
+
+@router.post('/notifications/{notification_id}/read')
+def mark_notification_read(
+    notification_id: int,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Mark one notification read. Returns 404 if the notification
+    doesn't belong to the caller — we deliberately use 404 (not 403)
+    so we don't leak the existence of other users' rows."""
+    ok = notification_service.mark_as_read(db, notification_id, current_user['user_id'])
+    if not ok:
+        raise HTTPException(status_code=404, detail='notification not found')
+    return {'read': True}
+
+
+@router.post('/notifications/read-all')
+def mark_all_notifications_read(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Mark every unread notification as read. Returns the count of
+    rows updated so the FE can clear the badge immediately without
+    re-fetching."""
+    count = notification_service.mark_all_as_read(db, current_user['user_id'])
+    return {'updated': count}

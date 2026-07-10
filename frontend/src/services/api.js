@@ -187,4 +187,71 @@ export const uploadPostFile = (file, postType, onProgress) => {
   });
 };
 
+
+// ==================== Personal Dashboard ====================
+//
+// These three endpoints power the Home tab. The view/like/play
+// endpoints above already write activity events server-side as a
+// side effect; the only place that needs an explicit track call is
+// when a user opens content from a link that bypasses the natural
+// counter endpoint (e.g. deep-link to /knowledge/{id} from Feed).
+
+export const trackActivity = (payload) => api.post('/activity/track', payload);
+
+export const fetchMyInsights = (days = 7) =>
+  api.get('/me/insights', { params: { days } }).then((r) => r.data);
+
+export const fetchRecentActivity = (limit = 10) =>
+  api.get('/me/recent-activity', { params: { limit } }).then((r) => r.data || []);
+
+
+// ==================== Global Search ====================
+//
+// Single cross-content search endpoint. `types` is an array filter
+// (defaults to knowledge/music/game on the BE; user is admin-only).
+// Returns the BE's grouped payload directly — the FE merges the
+// results into the SearchBar dropdown.
+
+export const globalSearch = (q, types) =>
+  api.get('/search', { params: { q, types: types?.join(',') } }).then((r) => r.data);
+
+
+// ==================== Comments + Reactions ====================
+//
+// Shared between Knowledge articles and Feed posts. The FE picks the
+// content_type when wiring these into a CommentSection; the BE's
+// polymorphic table handles both kinds behind one set of routes.
+
+export const fetchComments = (contentType, contentId) =>
+  api.get('/comments', { params: { content_type: contentType, content_id: contentId } }).then((r) => r.data);
+
+export const createComment = (payload) => api.post('/comments', payload).then((r) => r.data);
+
+export const deleteCommentApi = (commentId) => api.delete(`/comments/${commentId}`).then((r) => r.data);
+
+export const fetchReactions = (contentType, contentId) =>
+  api.get('/reactions', { params: { content_type: contentType, content_id: contentId } }).then((r) => r.data);
+
+export const toggleReaction = (payload) => api.post('/reactions', payload).then((r) => r.data);
+
+
+// ==================== Notifications ====================
+//
+// The bell badge polls /notifications/unread-count every 30s, and
+// the dropdown fetches /notifications lazily when the user clicks
+// the bell. Mark-one / mark-all use POST so retries are idempotent.
+
+export const fetchNotifications = (unreadOnly = false, limit = 20) =>
+  api.get('/notifications', { params: { unread_only: unreadOnly, limit } }).then((r) => r.data);
+
+export const fetchUnreadCount = () =>
+  api.get('/notifications/unread-count').then((r) => r.data?.count ?? 0);
+
+export const markNotificationRead = (id) =>
+  api.post(`/notifications/${id}/read`).then((r) => r.data);
+
+export const markAllNotificationsRead = () =>
+  api.post('/notifications/read-all').then((r) => r.data?.updated ?? 0);
+
+
 export default api;

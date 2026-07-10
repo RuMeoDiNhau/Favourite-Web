@@ -7,9 +7,25 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parents[2]
 load_dotenv(dotenv_path=BASE_DIR / ".env")
 
-# Lấy JWT_SECRET từ .env, nếu không có sẽ lấy giá trị mặc định để tránh lỗi
+# Lấy JWT_SECRET từ .env. Trong production (ENV=production) thì bắt buộc
+# phải set, không có fallback — default secret cho phép forge token.
+# Trong development cho phép default nhưng in warning mạnh để dev biết.
 JWT_SECRET = os.getenv("JWT_SECRET", "super-secret-key-change-in-production")
 JWT_ALGORITHM = "HS256"
+APP_ENV = os.getenv("APP_ENV", "development")
+
+if not os.getenv("JWT_SECRET"):
+    if APP_ENV == "production":
+        raise RuntimeError(
+            "JWT_SECRET must be set in production. "
+            "Generate one with: python -c 'import secrets; print(secrets.token_urlsafe(64))'"
+        )
+    else:
+        print(
+            "[auth_service] WARNING: JWT_SECRET not set. "
+            "Using insecure default — DO NOT run in production with this config. "
+            "Set JWT_SECRET in .env to silence this warning."
+        )
 
 def create_access_token(data: dict, expires_delta: timedelta = None) -> str:
     """

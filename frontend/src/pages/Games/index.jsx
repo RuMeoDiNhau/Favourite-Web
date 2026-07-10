@@ -3,7 +3,7 @@ import Sidebar from './Sidebar';
 import './Games.css';
 import * as api from '../../services/api';
 
-export default function Games() {
+export default function Games({ searchOpenGameId = null, onConsumeSearchOpen }) {
   const [selectedLibrary, setSelectedLibrary] = useState('all');
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -15,6 +15,20 @@ export default function Games() {
   useEffect(() => {
     loadGames();
   }, [selectedLibrary]);
+
+  // Search deep-open: when the navbar asks us to open a specific
+  // game, find it in the loaded list and open the detail modal.
+  // We wait for games to load first; ids that don't match any row
+  // (e.g. wrong category) are silently consumed.
+  useEffect(() => {
+    if (searchOpenGameId == null) return;
+    if (loading) return;
+    const target = games.find((g) => g.id === searchOpenGameId);
+    if (target) {
+      handleViewGame(target);
+    }
+    onConsumeSearchOpen?.();
+  }, [searchOpenGameId, loading, games]);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -71,6 +85,12 @@ export default function Games() {
   const handleLikeGame = async (gameId) => {
     try {
       await api.likeGame(gameId);
+      // Dashboard event — fires in parallel with the global counter
+      // bump the backend already did. Best-effort: a failed tracking
+      // call must not interrupt the UI.
+      api.trackActivity({
+        content_type: 'game', content_id: gameId, event_type: 'like',
+      }).catch(() => { /* dashboard is best-effort */ });
       // Load lại danh sách để lấy số lượt thích mới
       const response = selectedLibrary === 'all' ? await api.fetchGames() : await api.fetchGamesByCategory(selectedLibrary);
       setGames(response.data || []);

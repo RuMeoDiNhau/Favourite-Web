@@ -8,19 +8,29 @@ import Music from './pages/Music';
 import Knowledge from './pages/Knowledge';
 import Login from './pages/Login/Login';
 import Feed from './pages/Feed/Feed';
+import Home from './pages/Home';
 import PostModal from './pages/Feed/PostModal';
 import FaceSetupModal from './components/FaceSetupModal';
+import SearchBar from './components/SearchBar';
+import NotificationBell from './components/NotificationBell';
 import { readJson } from './lib/safeStorage';
 
 // Map view name <-> URL path so the navbar becomes bookmarkable and
-// back/forward works. `feed` lives at '/' (the dashboard for the
-// currently signed-in user). Admin views stay hidden until role check.
-const VIEW_PATHS = ['/', '/dashboard', '/users', '/logs', '/games', '/music', '/knowledge'];
-const VIEW_NAMES = ['feed', 'dashboard', 'users', 'logs', 'games', 'music', 'knowledge'];
+// back/forward works. `home` is the Personal Dashboard (the new
+// landing view); `feed` is the unified posts feed. Admin views stay
+// hidden until role check.
+const VIEW_PATHS = ['/home', '/feed', '/dashboard', '/users', '/logs', '/games', '/music', '/knowledge'];
+const VIEW_NAMES = ['home', 'feed', 'dashboard', 'users', 'logs', 'games', 'music', 'knowledge'];
 
 const pathToView = (pathname) => {
+  // Backwards-compat: a stale bookmark at '/' used to mean the Feed.
+  // After we added Home, the landing page became /home and the Feed
+  // moved to /feed. If someone hits '/' we still want them to land
+  // on the new Home view, not a broken empty Feed. /feed still
+  // works explicitly for those who bookmarked it.
+  if (pathname === '/') return 'home';
   const idx = VIEW_PATHS.indexOf(pathname);
-  return idx === -1 ? 'feed' : VIEW_NAMES[idx];
+  return idx === -1 ? 'home' : VIEW_NAMES[idx];
 };
 
 const viewToPath = (viewName) => {
@@ -35,6 +45,11 @@ function App() {
   const [feedKey, setFeedKey] = useState(0);
   const [showFaceSetup, setShowFaceSetup] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  // IDs the search results want to deep-open into a modal on the
+  // target page (knowledge article / game detail). Reset after the
+  // target view consumes them so a later manual nav doesn't reopen.
+  const [searchOpenKnowledgeId, setSearchOpenKnowledgeId] = useState(null);
+  const [searchOpenGameId, setSearchOpenGameId] = useState(null);
 
   // Wrap setView so clicking a nav button also updates the URL. We use
   // pushState (not replaceState) so each tab becomes a history entry
@@ -84,6 +99,53 @@ function App() {
     setUser(null);
   };
 
+  // SearchBar click → navigate to the matching view and, when the
+  // type has a detail modal (knowledge/game), request it to open
+  // the right item. The per-view "consumed" callbacks clear the
+  // pending id so navigation between manual tabs doesn't reopen.
+  const handleSearchSelect = useCallback((item, type) => {
+    if (type === 'knowledge') {
+      setSearchOpenKnowledgeId(item.id);
+      setSearchOpenGameId(null);
+      setView('knowledge');
+    } else if (type === 'music') {
+      setSearchOpenKnowledgeId(null);
+      setSearchOpenGameId(null);
+      setView('music');
+    } else if (type === 'game') {
+      setSearchOpenGameId(item.id);
+      setSearchOpenKnowledgeId(null);
+      setView('games');
+    } else if (type === 'user') {
+      setSearchOpenKnowledgeId(null);
+      setSearchOpenGameId(null);
+      setView('users');
+    }
+  }, []);
+
+  const consumeSearchOpenKnowledge = useCallback(() => setSearchOpenKnowledgeId(null), []);
+  const consumeSearchOpenGame = useCallback(() => setSearchOpenGameId(null), []);
+
+  // Notification click → navigate to the matching view. For Knowledge
+  // notifications we deep-open the article modal; for Post we open
+  // the Feed (no per-post modal exists today — Feed itself is the
+  // destination). Unknown content types land on home.
+  const handleNotificationSelect = useCallback((n) => {
+    if (n.content_type === 'knowledge' && n.content_id) {
+      setSearchOpenKnowledgeId(n.content_id);
+      setSearchOpenGameId(null);
+      setView('knowledge');
+    } else if (n.content_type === 'post') {
+      setSearchOpenKnowledgeId(null);
+      setSearchOpenGameId(null);
+      setView('feed');
+    } else {
+      setSearchOpenKnowledgeId(null);
+      setSearchOpenGameId(null);
+      setView('home');
+    }
+  }, []);
+
   // Nếu chưa đăng nhập, chỉ hiển thị màn hình Login
   if (!user) {
     return <Login onLoginSuccess={(u) => setUser(u)} />;
@@ -92,6 +154,7 @@ function App() {
   // Single source of truth for nav items so desktop <nav> and mobile drawer
   // can't drift. `adminOnly` is gated against the current user's role.
   const NAV_ITEMS = [
+    { name: 'home', label: '🏠 Trang chủ' },
     { name: 'feed', label: '📰 Bảng tin' },
     { name: 'dashboard', label: '📷 Quét khuôn mặt' },
     { name: 'users', label: '👥 Users', adminOnly: true },
@@ -120,16 +183,22 @@ function App() {
             <span className="logo-icon">🌐</span>
             <span className="logo-text">Fav Web</span>
           </div>
+          <SearchBar
+            onSelectItem={handleSearchSelect}
+            isAdmin={user.role === 'admin'}
+          />
         </div>
-        
+
         <nav className="navbar-center">
           {visibleNav.map(renderNavButton)}
         </nav>
 
         <div className="navbar-right">
+          <NotificationBell onSelectItem={handleNotificationSelect} />
+
           {/* Nút bật/tắt chế độ sáng/tối */}
-          <button 
-            className="theme-toggle-btn" 
+          <button
+            className="theme-toggle-btn"
             onClick={toggleTheme}
             title={isDarkMode ? "Chuyển sang Chế độ sáng" : "Chuyển sang Chế độ tối"}
           >
@@ -239,13 +308,25 @@ function App() {
       )}
 
       <main>
+        {view === 'home' && <Home onNavigate={setView} />}
         {view === 'feed' && <Feed key={feedKey} />}
         {view === 'dashboard' && <Dashboard />}
         {view === 'users' && user?.role === 'admin' && <Users />}
         {view === 'logs' && user?.role === 'admin' && <Logs />}
-        {view === 'games' && <Games />}
+        {view === 'games' && (
+          <Games
+            searchOpenGameId={searchOpenGameId}
+            onConsumeSearchOpen={consumeSearchOpenGame}
+          />
+        )}
         {view === 'music' && <Music />}
-        {view === 'knowledge' && <Knowledge />}
+        {view === 'knowledge' && (
+          <Knowledge
+            searchOpenKnowledgeId={searchOpenKnowledgeId}
+            onConsumeSearchOpen={consumeSearchOpenKnowledge}
+            currentUser={user}
+          />
+        )}
       </main>
 
       {showPostModal && (

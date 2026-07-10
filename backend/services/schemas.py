@@ -155,3 +155,72 @@ class VideoListResponse(BaseModel):
     modal UI stays compact — FE renders this directly inside the article view."""
     videos: List[VideoItem]
 
+
+# Comments + Reactions — both are scoped to a content_type ('knowledge'
+# or 'post'). The FE chooses the type based on where the CommentSection
+# is mounted. Keeping them as polymorphic tables (vs. one table per
+# content type) avoids duplicating the same schema 4 times.
+
+class CommentCreateRequest(BaseModel):
+    content_type: str     # 'knowledge' | 'post'
+    content_id: int
+    body: str
+    parent_id: Optional[int] = None
+
+
+class CommentResponse(BaseModel):
+    """One comment node in the thread. Top-level nodes carry their
+    replies in `replies`; reply nodes have empty `replies`. The FE
+    uses this 1-level structure to render indented replies without
+    recursion."""
+    id: int
+    user_id: str
+    user_name: Optional[str] = None
+    user_avatar_url: Optional[str] = None
+    body: str
+    parent_id: Optional[int] = None
+    created_at: datetime
+    replies: List['CommentResponse'] = []
+
+
+class ReactionRequest(BaseModel):
+    content_type: str     # 'knowledge' | 'post'
+    content_id: int
+    emoji: str            # 'like' | 'love' | 'fire' | 'laugh' | 'wow'
+
+
+class ReactionSummary(BaseModel):
+    """Returned by GET /reactions and POST /reactions. `my_emoji` is
+    the current user's reaction (or null if none) — this is what the
+    FE uses to decide which emoji button to highlight."""
+    counts: dict
+    my_emoji: Optional[str] = None
+
+
+# Notifications — the bell badge and dropdown both read from this.
+# `unread_count` on the list endpoint lets the FE sync the badge
+# alongside the dropdown content in a single roundtrip.
+
+class NotificationResponse(BaseModel):
+    id: int
+    actor_id: Optional[str] = None
+    actor_name: Optional[str] = None
+    type: str
+    content_type: Optional[str] = None
+    content_id: Optional[int] = None
+    message: str
+    read: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class NotificationList(BaseModel):
+    notifications: List[NotificationResponse]
+    unread_count: int
+
+
+class UnreadCount(BaseModel):
+    count: int
+

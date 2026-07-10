@@ -52,9 +52,9 @@ def create_post(db: Session, post_data: PostCreateRequest, user_id: str) -> Post
                     shutil.rmtree(dest_dir)
                 dest_dir.mkdir(parents=True, exist_ok=True)
                 
-                # Extract zip file
+                # Extract zip file with Zip Slip protection (see _safe_extract_zip)
                 with zipfile.ZipFile(zip_abs_path, 'r') as zip_ref:
-                    zip_ref.extractall(dest_dir)
+                    _safe_extract_zip(zip_ref, dest_dir)
                 
                 # Find index.html or another html file recursively
                 index_path = None
@@ -91,6 +91,29 @@ def create_post(db: Session, post_data: PostCreateRequest, user_id: str) -> Post
                 
     return post
 
+def _safe_extract_zip(zip_ref: zipfile.ZipFile, dest_dir: Path) -> None:
+    """Extract a zip to dest_dir while rejecting entries that try to escape
+    via path traversal (Zip Slip, CVE-2018-1002200-class). Python's
+    ZipFile.extractall has no `members=` filter that handles ../, so we
+    walk the member list ourselves, resolve each target, and refuse anything
+    that resolves outside dest_dir.
+
+    Raises ValueError if a malicious entry is detected — the caller should
+    treat this as a hard error and not commit the post."""
+    dest_real = dest_dir.resolve()
+    for member in zip_ref.namelist():
+        # Resolve the target with POSIX semantics first so '..' segments
+        # are normalized to a path we can compare against dest_real.
+        # zip paths use forward slashes regardless of host OS.
+        target = (dest_real / member).resolve()
+        if not str(target).startswith(str(dest_real) + os.sep) and target != dest_real:
+            raise ValueError(
+                f"Refusing zip entry that escapes extraction dir: {member!r}"
+            )
+    # All entries safe — now actually extract.
+    zip_ref.extractall(dest_real)
+
+
 def upload_media_file(file_bytes: bytes, filename: str, post_type: str) -> str:
     """
     Upload a media file (image, video, audio, zip).
@@ -100,7 +123,7 @@ def upload_media_file(file_bytes: bytes, filename: str, post_type: str) -> str:
     subfolder = post_type
     ext = os.path.splitext(filename)[1]
     unique_filename = f"{uuid.uuid4()}{ext}"
-    
+
     # Game zip archives MUST be processed locally, so we skip S3 upload for game zips
     # Other assets can go to S3 if configured
     if post_type != 'game' and s3_client and AWS_STORAGE_BUCKET_NAME:
@@ -119,19 +142,69 @@ def upload_media_file(file_bytes: bytes, filename: str, post_type: str) -> str:
                 content_type = "audio/mpeg"
             elif ext_lower == '.wav':
                 content_type = "audio/wav"
-                
+
             s3_key = f"uploads/{post_type}/{unique_filename}"
             s3_url = upload_file_to_s3(file_bytes, s3_key, content_type)
             return s3_url
         except Exception as s3_err:
             print(f"S3 upload failed: {s3_err}. Falling back to local storage.")
-            
+
     # Save locally
     dest_dir = STATIC_UPLOADS_DIR / subfolder
     dest_dir.mkdir(parents=True, exist_ok=True)
     file_path = dest_dir / unique_filename
-    
+
     with open(file_path, "wb") as f:
         f.write(file_bytes)
-        
+
     return f"/static/uploads/{subfolder}/{unique_filename}"
+
+
+def delete_uploaded_file(media_url: str) -> bool:
+    """
+    Best-effort cleanup for an orphan upload (e.g. when PostModal upload
+    succeeds but the subsequent create_post call fails). Mirrors the
+    upload path: S3 objects are deleted by key, local files by path.
+
+    Returns True if we definitely removed something, False if the URL
+    was unrecognised or the file didn't exist. Caller MUST treat
+    False as "nothing happened" and not raise — the FE swallows all
+    exceptions already; this function is the silent-authority version.
+    """
+    if not media_url:
+        return False
+
+    # S3: media_url is the public URL we returned from upload_file_to_s3.
+    # We don't know the exact key format without the bucket config, so
+    # only attempt local cleanup below; S3 orphans require a follow-up
+    # janitor that lists by prefix.
+    if media_url.startswith('http://') or media_url.startswith('https://'):
+        return False
+
+    # Local: media_url looks like /static/uploads/<subfolder>/<file>
+    if not media_url.startswith('/static/uploads/'):
+        return False
+
+    rel_path = media_url.lstrip('/')
+    abs_path = BASE_DIR / rel_path
+
+    # Defence-in-depth: refuse anything that resolves outside STATIC_UPLOADS_DIR.
+    try:
+        abs_resolved = abs_path.resolve()
+        uploads_resolved = STATIC_UPLOADS_DIR.resolve()
+        if not str(abs_resolved).startswith(str(uploads_resolved) + os.sep):
+            print(f"[delete_uploaded_file] Refusing path outside uploads dir: {abs_resolved}")
+            return False
+    except Exception as resolve_err:
+        print(f"[delete_uploaded_file] resolve failed for {media_url}: {resolve_err}")
+        return False
+
+    if not abs_resolved.exists():
+        return False
+
+    try:
+        os.remove(abs_resolved)
+        return True
+    except Exception as remove_err:
+        print(f"[delete_uploaded_file] os.remove failed for {abs_resolved}: {remove_err}")
+        return False
