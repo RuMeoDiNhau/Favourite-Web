@@ -15,7 +15,7 @@ from backend.services.schemas import (
     PostResponse, PostCreateRequest,
     VideoListResponse
 )
-from backend.services import games_service, music_service, knowledge_service, posts_service
+from backend.services import games_service, music_service, knowledge_service, posts_service, dashboard_service
 from backend.services.auth_service import create_access_token, decode_access_token
 from backend.services.logging_service import logger
 
@@ -62,6 +62,29 @@ def get_admin_user(current_user: dict = Depends(get_current_user)):
     if current_user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Bạn không có quyền thực hiện hành động này")
     return current_user
+
+
+def get_optional_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    x_auth_token: str = Header(None, alias="X-Auth-Token"),
+) -> dict:
+    """Like get_current_user but returns None when no valid token is
+    present instead of raising 401. Used for endpoints that should
+    work for both signed-in and anonymous users (e.g. view/like/play
+    bumps the global counter either way, but only the signed-in case
+    writes a per-user event for the Personal Dashboard)."""
+    token = None
+    if credentials:
+        token = credentials.credentials
+    elif x_auth_token:
+        x = x_auth_token
+        token = x.replace("Bearer ", "") if x.startswith("Bearer ") else x
+    if not token:
+        return None
+    try:
+        return decode_access_token(token)
+    except jwt.PyJWTError:
+        return None
 
 
 # ==================== Face Recognition Endpoints ====================
@@ -239,19 +262,44 @@ def create_game(
     )
 
 @router.post('/games/{game_id}/view')
-def view_game(game_id: int, db: Session = Depends(get_db)):
-    """Increment game post views"""
+def view_game(
+    game_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_optional_user),
+):
+    """Increment game post views. If the caller is signed in, also
+    record a per-user activity event for the Personal Dashboard
+    (silent failure: a broken event log must not break the like/view
+    flow that the rest of the app depends on)."""
     game = games_service.update_game_views(db, game_id)
     if not game:
         raise HTTPException(status_code=404, detail='Game post not found')
+    if current_user:
+        try:
+            dashboard_service.record_event(
+                db, current_user['user_id'], 'game', game_id, 'view',
+            )
+        except Exception as ev_err:
+            logger.warning(f'Failed to record game view event: {ev_err}')
     return {'message': 'View count updated', 'views': game.views}
 
 @router.post('/games/{game_id}/like')
-def like_game(game_id: int, db: Session = Depends(get_db)):
-    """Increment game post likes"""
+def like_game(
+    game_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_optional_user),
+):
+    """Increment game post likes + record per-user event when signed in."""
     game = games_service.update_game_likes(db, game_id)
     if not game:
         raise HTTPException(status_code=404, detail='Game post not found')
+    if current_user:
+        try:
+            dashboard_service.record_event(
+                db, current_user['user_id'], 'game', game_id, 'like',
+            )
+        except Exception as ev_err:
+            logger.warning(f'Failed to record game like event: {ev_err}')
     return {'message': 'Like count updated', 'likes': game.likes}
 
 
@@ -372,19 +420,41 @@ def delete_song(song_id: int, admin: dict = Depends(get_admin_user), db: Session
     return {"message": "Đã xóa bài hát thành công"}
 
 @router.post('/music/{song_id}/play')
-def play_song(song_id: int, db: Session = Depends(get_db)):
-    """Increment song plays"""
+def play_song(
+    song_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_optional_user),
+):
+    """Increment song plays + record per-user event when signed in."""
     song = music_service.update_song_plays(db, song_id)
     if not song:
         raise HTTPException(status_code=404, detail='Song not found')
+    if current_user:
+        try:
+            dashboard_service.record_event(
+                db, current_user['user_id'], 'music', song_id, 'play',
+            )
+        except Exception as ev_err:
+            logger.warning(f'Failed to record music play event: {ev_err}')
     return {'message': 'Play count updated', 'plays': song.plays}
 
 @router.post('/music/{song_id}/like')
-def like_song(song_id: int, db: Session = Depends(get_db)):
-    """Increment song likes"""
+def like_song(
+    song_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_optional_user),
+):
+    """Increment song likes + record per-user event when signed in."""
     song = music_service.update_song_likes(db, song_id)
     if not song:
         raise HTTPException(status_code=404, detail='Song not found')
+    if current_user:
+        try:
+            dashboard_service.record_event(
+                db, current_user['user_id'], 'music', song_id, 'like',
+            )
+        except Exception as ev_err:
+            logger.warning(f'Failed to record music like event: {ev_err}')
     return {'message': 'Like count updated', 'likes': song.likes}
 
 
@@ -442,9 +512,15 @@ def get_article_videos(article_id: int, db: Session = Depends(get_db)):
     return {'videos': videos}
 
 @router.get('/knowledge/{article_id}', response_model=KnowledgeResponse)
-def get_article(article_id: int, db: Session = Depends(get_db)):
-    """Get article by ID and increment views"""
-    article = knowledge_service.get_article_by_id(db, article_id)
+def get_article(
+    article_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_optional_user),
+):
+    """Get article by ID and increment views. If signed in, the
+    view also counts as a per-user activity event for the dashboard."""
+    user_id = current_user['user_id'] if current_user else None
+    article = knowledge_service.get_article_by_id(db, article_id, user_id=user_id)
     if not article:
         raise HTTPException(status_code=404, detail='Article not found')
     return article
@@ -468,11 +544,22 @@ def create_article(
     )
 
 @router.post('/knowledge/{article_id}/like')
-def like_article(article_id: int, db: Session = Depends(get_db)):
-    """Increment article likes"""
+def like_article(
+    article_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_optional_user),
+):
+    """Increment article likes + record per-user event when signed in."""
     article = knowledge_service.update_article_likes(db, article_id)
     if not article:
         raise HTTPException(status_code=404, detail='Article not found')
+    if current_user:
+        try:
+            dashboard_service.record_event(
+                db, current_user['user_id'], 'knowledge', article_id, 'like',
+            )
+        except Exception as ev_err:
+            logger.warning(f'Failed to record article like event: {ev_err}')
     return {'message': 'Like count updated', 'likes': article.likes}
 
 
@@ -536,3 +623,70 @@ def get_posts(
         return posts_service.get_posts(db)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lỗi khi lấy danh sách bài đăng: {str(e)}")
+
+
+# ==================== Personal Dashboard Endpoints ====================
+
+class ActivityTrackRequest(BaseModel):
+    """Body for POST /activity/track — explicit Pydantic model (instead
+    of a dict) so a missing field returns a useful 422 instead of a
+    TypeError deep inside dashboard_service."""
+    content_type: str
+    content_id: int
+    event_type: str
+
+
+@router.post('/activity/track')
+def track_activity(
+    request: ActivityTrackRequest,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Record a per-user content event for the Personal Dashboard.
+
+    Distinct from the global view/like/play counters: those are
+    anonymous totals on the content table; this is the signed-in
+    user's per-event log. The two are written in parallel from the
+    view/like/play routes; this endpoint exists for events that
+    don't have a natural counter bump (e.g. opening a Knowledge
+    article from a deep-link that bypasses GET /knowledge/{id}).
+    """
+    if request.content_type not in {'knowledge', 'music', 'game', 'post'}:
+        raise HTTPException(
+            status_code=400,
+            detail=f'content_type không hợp lệ: {request.content_type!r}',
+        )
+    if request.event_type not in {'view', 'play', 'like'}:
+        raise HTTPException(
+            status_code=400,
+            detail=f'event_type không hợp lệ: {request.event_type!r}',
+        )
+    result = dashboard_service.record_event(
+        db, current_user['user_id'],
+        request.content_type, request.content_id, request.event_type,
+    )
+    return result
+
+
+@router.get('/me/insights')
+def get_my_insights(
+    days: int = 7,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Aggregated activity stats for the Personal Dashboard. Returns
+    a dict with stable keys (zeros + empty lists for new users) so
+    the FE never has to handle 404 on the empty state."""
+    return dashboard_service.get_user_insights(db, current_user['user_id'], days=days)
+
+
+@router.get('/me/recent-activity')
+def get_my_recent_activity(
+    limit: int = 10,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Most recent per-user activity events joined with a tiny title
+    + cover payload so the FE can render the list without a second
+    round of GETs."""
+    return dashboard_service.get_recent_activity(db, current_user['user_id'], limit=limit)

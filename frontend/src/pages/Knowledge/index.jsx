@@ -30,6 +30,14 @@ export default function Knowledge() {
     setSelectedArticle(article);
     setArticleVideos([]);
     setModalLoading(true);
+    // Fire-and-forget the dashboard event. We bypass GET /knowledge/{id}
+    // here because the list-row data already has everything we need to
+    // render the modal — but the Personal Dashboard still wants to know
+    // the user opened this article. The 60s dedup window on the server
+    // keeps this from spamming the table if a user reopens the modal.
+    api.trackActivity({
+      content_type: 'knowledge', content_id: article.id, event_type: 'view',
+    }).catch(() => { /* dashboard is best-effort */ });
     try {
       // Fire both — fire-and-forget the article fetch since we already
       // have it; just await the videos which is the new data we need.
@@ -79,6 +87,13 @@ export default function Knowledge() {
   const handleLikeArticle = async (articleId) => {
     try {
       await api.likeArticle(articleId);
+      // Fire-and-forget the dashboard event — like endpoint already
+      // records server-side too, but tracking from FE makes the
+      // event appear in the same microtask as the visible UI bump
+      // so the dashboard count is accurate on the very next reload.
+      api.trackActivity({
+        content_type: 'knowledge', content_id: articleId, event_type: 'like',
+      }).catch(() => { /* dashboard is best-effort */ });
       loadArticles();
     } catch (err) {
       console.error('Error liking article:', err);

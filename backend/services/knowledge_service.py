@@ -109,14 +109,27 @@ def get_articles_by_category(db: Session, category: str):
     return db.query(Knowledge).filter(Knowledge.category == category).order_by(Knowledge.created_at.desc()).all()
 
 
-def get_article_by_id(db: Session, article_id: int):
-    """Get article by ID"""
+def get_article_by_id(db: Session, article_id: int, user_id: str = None):
+    """Get article by ID. Bumps the global view counter and, if a
+    user_id is provided, also records a per-user view event for the
+    Personal Dashboard. The user_id arg is optional (None = anonymous
+    request) — keeps the call site compatible with code that doesn't
+    have auth context."""
     article = db.query(Knowledge).filter(Knowledge.id == article_id).first()
     if article:
-        # Increment views when article is viewed
+        # Increment global view counter
         article.views += 1
         db.commit()
         db.refresh(article)
+        # Record per-user event when the caller is signed in. Lazy
+        # import to avoid a circular dependency: dashboard_service
+        # imports Knowledge from db_models.
+        if user_id:
+            try:
+                from backend.services.dashboard_service import record_event
+                record_event(db, user_id, 'knowledge', article_id, 'view')
+            except Exception as ev_err:
+                print(f'[knowledge_service] Failed to record view event: {ev_err}')
     return article
 
 

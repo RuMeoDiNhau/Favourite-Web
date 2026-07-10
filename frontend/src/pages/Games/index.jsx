@@ -71,6 +71,12 @@ export default function Games() {
   const handleLikeGame = async (gameId) => {
     try {
       await api.likeGame(gameId);
+      // Dashboard event — fires in parallel with the global counter
+      // bump the backend already did. Best-effort: a failed tracking
+      // call must not interrupt the UI.
+      api.trackActivity({
+        content_type: 'game', content_id: gameId, event_type: 'like',
+      }).catch(() => { /* dashboard is best-effort */ });
       // Load lại danh sách để lấy số lượt thích mới
       const response = selectedLibrary === 'all' ? await api.fetchGames() : await api.fetchGamesByCategory(selectedLibrary);
       setGames(response.data || []);

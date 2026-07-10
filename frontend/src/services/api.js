@@ -187,4 +187,22 @@ export const uploadPostFile = (file, postType, onProgress) => {
   });
 };
 
+
+// ==================== Personal Dashboard ====================
+//
+// These three endpoints power the Home tab. The view/like/play
+// endpoints above already write activity events server-side as a
+// side effect; the only place that needs an explicit track call is
+// when a user opens content from a link that bypasses the natural
+// counter endpoint (e.g. deep-link to /knowledge/{id} from Feed).
+
+export const trackActivity = (payload) => api.post('/activity/track', payload);
+
+export const fetchMyInsights = (days = 7) =>
+  api.get('/me/insights', { params: { days } }).then((r) => r.data);
+
+export const fetchRecentActivity = (limit = 10) =>
+  api.get('/me/recent-activity', { params: { limit } }).then((r) => r.data || []);
+
+
 export default api;

@@ -1,6 +1,6 @@
 from datetime import datetime
 from pathlib import Path
-from sqlalchemy import Column, Integer, String, DateTime, create_engine
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Index, create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 import os
@@ -118,6 +118,36 @@ class Post(Base):
     thumbnail = Column(String(1024), nullable=True)
     status = Column(String(50), default='public')       # 'public', 'friends', 'private'
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class UserActivity(Base):
+    """Per-user content event log for Personal Dashboard insights.
+
+    Parallel to the global counters on the content tables (Game.views,
+    Music.plays, Knowledge.likes) — those track site-wide totals. This
+    table tracks per-user totals so we can answer "BẠN đã đọc bài X
+    tuần này" instead of "tất cả mọi người đã đọc bài X tuần này".
+
+    Idempotency (the dashboard_service layer dedupes within 1 minute
+    on the same user+content+event triple) is the only thing standing
+    between a spam-click user and a 1000-row table.
+    """
+    __tablename__ = 'user_activity'
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(50), nullable=False, index=True)
+    content_type = Column(String(20), nullable=False)   # 'knowledge' | 'music' | 'game' | 'post'
+    content_id = Column(Integer, nullable=False)
+    event_type = Column(String(20), nullable=False)     # 'view' | 'play' | 'like'
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    # Composite index for the dashboard's hot path:
+    # "count events for user X in the last N days, grouped by content_type".
+    # Without this, the per-day query scans the whole user_activity table.
+    __table_args__ = (
+        Index('ix_user_activity_user_ctype_etime_ctime',
+              'user_id', 'content_type', 'event_type', 'created_at'),
+    )
 
 
 def init_db():

@@ -8,19 +8,27 @@ import Music from './pages/Music';
 import Knowledge from './pages/Knowledge';
 import Login from './pages/Login/Login';
 import Feed from './pages/Feed/Feed';
+import Home from './pages/Home';
 import PostModal from './pages/Feed/PostModal';
 import FaceSetupModal from './components/FaceSetupModal';
 import { readJson } from './lib/safeStorage';
 
 // Map view name <-> URL path so the navbar becomes bookmarkable and
-// back/forward works. `feed` lives at '/' (the dashboard for the
-// currently signed-in user). Admin views stay hidden until role check.
-const VIEW_PATHS = ['/', '/dashboard', '/users', '/logs', '/games', '/music', '/knowledge'];
-const VIEW_NAMES = ['feed', 'dashboard', 'users', 'logs', 'games', 'music', 'knowledge'];
+// back/forward works. `home` is the Personal Dashboard (the new
+// landing view); `feed` is the unified posts feed. Admin views stay
+// hidden until role check.
+const VIEW_PATHS = ['/home', '/feed', '/dashboard', '/users', '/logs', '/games', '/music', '/knowledge'];
+const VIEW_NAMES = ['home', 'feed', 'dashboard', 'users', 'logs', 'games', 'music', 'knowledge'];
 
 const pathToView = (pathname) => {
+  // Backwards-compat: a stale bookmark at '/' used to mean the Feed.
+  // After we added Home, the landing page became /home and the Feed
+  // moved to /feed. If someone hits '/' we still want them to land
+  // on the new Home view, not a broken empty Feed. /feed still
+  // works explicitly for those who bookmarked it.
+  if (pathname === '/') return 'home';
   const idx = VIEW_PATHS.indexOf(pathname);
-  return idx === -1 ? 'feed' : VIEW_NAMES[idx];
+  return idx === -1 ? 'home' : VIEW_NAMES[idx];
 };
 
 const viewToPath = (viewName) => {
@@ -92,6 +100,7 @@ function App() {
   // Single source of truth for nav items so desktop <nav> and mobile drawer
   // can't drift. `adminOnly` is gated against the current user's role.
   const NAV_ITEMS = [
+    { name: 'home', label: '🏠 Trang chủ' },
     { name: 'feed', label: '📰 Bảng tin' },
     { name: 'dashboard', label: '📷 Quét khuôn mặt' },
     { name: 'users', label: '👥 Users', adminOnly: true },
@@ -239,6 +248,7 @@ function App() {
       )}
 
       <main>
+        {view === 'home' && <Home onNavigate={setView} />}
         {view === 'feed' && <Feed key={feedKey} />}
         {view === 'dashboard' && <Dashboard />}
         {view === 'users' && user?.role === 'admin' && <Users />}
