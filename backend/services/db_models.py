@@ -206,6 +206,43 @@ class Reaction(Base):
     )
 
 
+class Notification(Base):
+    """Per-user inbox row for the notification bell.
+
+    The `recipient_id` is the user who receives the notification;
+    `actor_*` is who triggered it (None for system-generated entries
+    such as future admin announcements). `actor_name` is denormalized
+    at insert time so listing notifications doesn't need to JOIN
+    users on every read — saves a query and a small RTT.
+
+    Spam control is layered:
+      1. Triggers only call create_notification on comment events
+         (replies and top-level comments on a recipient's post).
+      2. create_notification dedupes within the last 60s for the
+         same (recipient, actor, type, content_type, content_id) so
+         a click-storm doesn't flood the inbox.
+    """
+    __tablename__ = 'notifications'
+
+    id = Column(Integer, primary_key=True, index=True)
+    recipient_id = Column(String(50), nullable=False, index=True)
+    actor_id = Column(String(50), nullable=True)
+    actor_name = Column(String(255), nullable=True)
+    type = Column(String(30), nullable=False)            # 'comment_reply' | 'comment_on_post'
+    content_type = Column(String(20), nullable=True)     # 'knowledge' | 'post'
+    content_id = Column(Integer, nullable=True)
+    message = Column(String(500), nullable=False)
+    read = Column(Boolean, default=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    # Hot path for the bell badge: "unread count for user X".
+    # Covers WHERE recipient_id = ? AND read = false.
+    __table_args__ = (
+        Index('ix_notifications_recipient_unread',
+              'recipient_id', 'read', 'created_at'),
+    )
+
+
 def init_db():
     Base.metadata.create_all(bind=engine)
 

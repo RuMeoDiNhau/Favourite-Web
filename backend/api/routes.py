@@ -15,8 +15,9 @@ from backend.services.schemas import (
     PostResponse, PostCreateRequest,
     VideoListResponse,
     CommentCreateRequest, CommentResponse, ReactionRequest, ReactionSummary,
+    NotificationResponse, NotificationList, UnreadCount,
 )
-from backend.services import games_service, music_service, knowledge_service, posts_service, dashboard_service, search_service, comments_service
+from backend.services import games_service, music_service, knowledge_service, posts_service, dashboard_service, search_service, comments_service, notification_service
 from backend.services.auth_service import create_access_token, decode_access_token
 from backend.services.logging_service import logger
 
@@ -828,3 +829,62 @@ def set_reaction(
         raise HTTPException(status_code=400, detail=str(e))
     except LookupError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+
+# ==================== Notifications ====================
+#
+# The bell badge polls GET /notifications/unread-count every 30s.
+# When the user clicks the bell, the FE fetches the full list and
+# the same unread_count to sync the badge. mark-as-read is
+# idempotent (re-marking a read row returns 200) so retries are safe.
+
+@router.get('/notifications', response_model=NotificationList)
+def list_notifications(
+    unread_only: bool = False,
+    limit: int = 20,
+    offset: int = 0,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return notification_service.list_notifications(
+        db, user_id=current_user['user_id'],
+        unread_only=unread_only, limit=limit, offset=offset,
+    )
+
+
+@router.get('/notifications/unread-count', response_model=UnreadCount)
+def unread_count(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Cheap count endpoint for the FE's 30s polling. Returning just
+    an integer keeps the payload tiny — the FE only needs to know
+    whether to show / update the badge."""
+    return {'count': notification_service.get_unread_count(db, current_user['user_id'])}
+
+
+@router.post('/notifications/{notification_id}/read')
+def mark_notification_read(
+    notification_id: int,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Mark one notification read. Returns 404 if the notification
+    doesn't belong to the caller — we deliberately use 404 (not 403)
+    so we don't leak the existence of other users' rows."""
+    ok = notification_service.mark_as_read(db, notification_id, current_user['user_id'])
+    if not ok:
+        raise HTTPException(status_code=404, detail='notification not found')
+    return {'read': True}
+
+
+@router.post('/notifications/read-all')
+def mark_all_notifications_read(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Mark every unread notification as read. Returns the count of
+    rows updated so the FE can clear the badge immediately without
+    re-fetching."""
+    count = notification_service.mark_all_as_read(db, current_user['user_id'])
+    return {'updated': count}

@@ -160,6 +160,54 @@ def create_comment(db: Session, user_id: str, content_type: str,
     # — N+1 isn't a concern here, and the join would complicate the
     # insert path.
     user = db.query(User).filter(User.user_id == user_id).first()
+
+    # Trigger a notification on the relevant recipient. We only fire
+    # ONE notification per comment (not both reply + on-post): a
+    # reply notifies the parent comment's author; a top-level
+    # comment on a Post notifies the post's owner. Knowledge articles
+    # have no "owner" column, so they don't trigger on_post — the
+    # community is anonymous on the comment side, by design.
+    # Lazy import so comments_service doesn't pull in
+    # notification_service at module-load time (it imports db_models,
+    # which would risk a cycle if notification_service ever needs
+    # comments).
+    try:
+        from backend.services import notification_service
+        actor_name = user.name if user else user_id
+        snippet = (body[:40] + '…') if len(body) > 40 else body
+        if parent_id is not None:
+            # Reply → notify the parent comment's author.
+            parent_row = db.query(Comment).filter(Comment.id == parent_id).first()
+            target_user = parent_row.user_id if parent_row else None
+            if target_user:
+                notification_service.create_notification(
+                    db,
+                    recipient_id=target_user,
+                    actor_id=user_id,
+                    type_='comment_reply',
+                    content_type=content_type,
+                    content_id=content_id,
+                    message=f'{actor_name} đã trả lời bình luận của bạn: "{snippet}"',
+                )
+        elif content_type == 'post':
+            # Top-level on a Post → notify the post's owner.
+            from backend.services.db_models import Post
+            post = db.query(Post).filter(Post.id == content_id).first()
+            if post and post.user_id:
+                notification_service.create_notification(
+                    db,
+                    recipient_id=post.user_id,
+                    actor_id=user_id,
+                    type_='comment_on_post',
+                    content_type='post',
+                    content_id=content_id,
+                    message=f'{actor_name} đã bình luận về bài "{post.title}": "{snippet}"',
+                )
+    except Exception as notif_err:
+        # Notification failures must not roll back the comment.
+        # We already committed above; logging is the best we can do.
+        print(f'[comments_service] notification trigger failed: {notif_err}')
+
     return {
         'id': c.id,
         'user_id': c.user_id,

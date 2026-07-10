@@ -196,3 +196,31 @@ class ReactionSummary(BaseModel):
     counts: dict
     my_emoji: Optional[str] = None
 
+
+# Notifications — the bell badge and dropdown both read from this.
+# `unread_count` on the list endpoint lets the FE sync the badge
+# alongside the dropdown content in a single roundtrip.
+
+class NotificationResponse(BaseModel):
+    id: int
+    actor_id: Optional[str] = None
+    actor_name: Optional[str] = None
+    type: str
+    content_type: Optional[str] = None
+    content_id: Optional[int] = None
+    message: str
+    read: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class NotificationList(BaseModel):
+    notifications: List[NotificationResponse]
+    unread_count: int
+
+
+class UnreadCount(BaseModel):
+    count: int
+

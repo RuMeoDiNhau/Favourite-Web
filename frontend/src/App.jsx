@@ -12,6 +12,7 @@ import Home from './pages/Home';
 import PostModal from './pages/Feed/PostModal';
 import FaceSetupModal from './components/FaceSetupModal';
 import SearchBar from './components/SearchBar';
+import NotificationBell from './components/NotificationBell';
 import { readJson } from './lib/safeStorage';
 
 // Map view name <-> URL path so the navbar becomes bookmarkable and
@@ -125,6 +126,26 @@ function App() {
   const consumeSearchOpenKnowledge = useCallback(() => setSearchOpenKnowledgeId(null), []);
   const consumeSearchOpenGame = useCallback(() => setSearchOpenGameId(null), []);
 
+  // Notification click → navigate to the matching view. For Knowledge
+  // notifications we deep-open the article modal; for Post we open
+  // the Feed (no per-post modal exists today — Feed itself is the
+  // destination). Unknown content types land on home.
+  const handleNotificationSelect = useCallback((n) => {
+    if (n.content_type === 'knowledge' && n.content_id) {
+      setSearchOpenKnowledgeId(n.content_id);
+      setSearchOpenGameId(null);
+      setView('knowledge');
+    } else if (n.content_type === 'post') {
+      setSearchOpenKnowledgeId(null);
+      setSearchOpenGameId(null);
+      setView('feed');
+    } else {
+      setSearchOpenKnowledgeId(null);
+      setSearchOpenGameId(null);
+      setView('home');
+    }
+  }, []);
+
   // Nếu chưa đăng nhập, chỉ hiển thị màn hình Login
   if (!user) {
     return <Login onLoginSuccess={(u) => setUser(u)} />;
@@ -173,9 +194,11 @@ function App() {
         </nav>
 
         <div className="navbar-right">
+          <NotificationBell onSelectItem={handleNotificationSelect} />
+
           {/* Nút bật/tắt chế độ sáng/tối */}
-          <button 
-            className="theme-toggle-btn" 
+          <button
+            className="theme-toggle-btn"
             onClick={toggleTheme}
             title={isDarkMode ? "Chuyển sang Chế độ sáng" : "Chuyển sang Chế độ tối"}
           >

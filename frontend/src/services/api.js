@@ -235,4 +235,23 @@ export const fetchReactions = (contentType, contentId) =>
 export const toggleReaction = (payload) => api.post('/reactions', payload).then((r) => r.data);
 
 
+// ==================== Notifications ====================
+//
+// The bell badge polls /notifications/unread-count every 30s, and
+// the dropdown fetches /notifications lazily when the user clicks
+// the bell. Mark-one / mark-all use POST so retries are idempotent.
+
+export const fetchNotifications = (unreadOnly = false, limit = 20) =>
+  api.get('/notifications', { params: { unread_only: unreadOnly, limit } }).then((r) => r.data);
+
+export const fetchUnreadCount = () =>
+  api.get('/notifications/unread-count').then((r) => r.data?.count ?? 0);
+
+export const markNotificationRead = (id) =>
+  api.post(`/notifications/${id}/read`).then((r) => r.data);
+
+export const markAllNotificationsRead = () =>
+  api.post('/notifications/read-all').then((r) => r.data?.updated ?? 0);
+
+
 export default api;
