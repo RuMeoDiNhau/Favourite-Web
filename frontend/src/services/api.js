@@ -216,4 +216,23 @@ export const globalSearch = (q, types) =>
   api.get('/search', { params: { q, types: types?.join(',') } }).then((r) => r.data);
 
 
+// ==================== Comments + Reactions ====================
+//
+// Shared between Knowledge articles and Feed posts. The FE picks the
+// content_type when wiring these into a CommentSection; the BE's
+// polymorphic table handles both kinds behind one set of routes.
+
+export const fetchComments = (contentType, contentId) =>
+  api.get('/comments', { params: { content_type: contentType, content_id: contentId } }).then((r) => r.data);
+
+export const createComment = (payload) => api.post('/comments', payload).then((r) => r.data);
+
+export const deleteCommentApi = (commentId) => api.delete(`/comments/${commentId}`).then((r) => r.data);
+
+export const fetchReactions = (contentType, contentId) =>
+  api.get('/reactions', { params: { content_type: contentType, content_id: contentId } }).then((r) => r.data);
+
+export const toggleReaction = (payload) => api.post('/reactions', payload).then((r) => r.data);
+
+
 export default api;

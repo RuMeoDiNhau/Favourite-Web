@@ -301,6 +301,7 @@ function App() {
           <Knowledge
             searchOpenKnowledgeId={searchOpenKnowledgeId}
             onConsumeSearchOpen={consumeSearchOpenKnowledge}
+            currentUser={user}
           />
         )}
       </main>

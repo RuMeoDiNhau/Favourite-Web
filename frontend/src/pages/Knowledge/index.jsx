@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import './Knowledge.css';
 import * as api from '../../services/api';
+import CommentSection from '../../components/Comments/CommentSection';
 
-export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearchOpen }) {
+export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearchOpen, currentUser }) {
   const [selectedTopic, setSelectedTopic] = useState('all');
   const [articles, setArticles] = useState([]);
   const [categories, setCategories] = useState(['Tất Cả']);
@@ -249,6 +250,12 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
                   </p>
                 )}
               </div>
+
+              <CommentSection
+                contentType="knowledge"
+                contentId={selectedArticle.id}
+                currentUser={currentUser}
+              />
             </div>
           </div>
         </div>

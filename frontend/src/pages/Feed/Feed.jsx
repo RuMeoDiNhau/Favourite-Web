@@ -2,11 +2,22 @@ import React, { useState, useEffect, useRef } from 'react';
 import './Feed.css';
 import * as api from '../../services/api';
 import CameraBox from '../../components/CameraBox';
+import CommentSection from '../../components/Comments/CommentSection';
 import { readJson } from '../../lib/safeStorage';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Legend
 } from 'recharts';
+
+// Same set as CommentSection — kept inline so the inline summary
+// doesn't need a network roundtrip to know which keys to render.
+const POST_REACTION_EMOJIS = [
+  { key: 'like',  icon: '👍' },
+  { key: 'love',  icon: '❤️' },
+  { key: 'fire',  icon: '🔥' },
+  { key: 'laugh', icon: '😂' },
+  { key: 'wow',   icon: '😮' },
+];
 
 export default function Feed() {
   const user = readJson('user');
@@ -23,6 +34,13 @@ export default function Feed() {
   const [logsData, setLogsData] = useState([]);
   const [popularSongs, setPopularSongs] = useState([]);
   const [activeTab, setActiveTab] = useState('checkin');
+
+  // Per-post reactions summary. Loaded lazily as posts scroll into
+  // view would be ideal but the FE only renders ~5–10 posts on the
+  // dashboard — one fetch per post at load time is fine and avoids
+  // a more complex intersection-observer setup.
+  const [postReactions, setPostReactions] = useState({});   // {postId: {counts, my_emoji}}
+  const [commentModalPost, setCommentModalPost] = useState(null);
 
   // 3. Category filter for Games Blog
   const [activeGameCategory, setActiveGameCategory] = useState('all');
@@ -129,7 +147,17 @@ export default function Feed() {
 
       // Fetch Feed posts (Top 3)
       const feedRes = await api.fetchPosts();
-      setPosts((feedRes.data || []).slice(0, 3));
+      const fetchedPosts = (feedRes.data || []).slice(0, 3);
+      setPosts(fetchedPosts);
+
+      // Reactions per post. Best-effort — a failed fetch on one
+      // post shouldn't blank the rest of the feed.
+      const reactionPairs = await Promise.all(
+        fetchedPosts.map((p) =>
+          api.fetchReactions('post', p.id).then((r) => [p.id, r]).catch(() => [p.id, { counts: {}, my_emoji: null }]),
+        ),
+      );
+      setPostReactions(Object.fromEntries(reactionPairs));
 
       // Fetch Knowledge posts (Top 2)
       const knowledgeRes = await api.fetchAllKnowledge();
@@ -334,16 +362,43 @@ export default function Feed() {
                     {post.post_type === 'game' && (
                       <div className="dash-media-preview game-type">
                         <button className="dash-game-play-btn" onClick={() => setActiveGameUrl({ url: post.media_url, title: post.title })}>
-                          <img 
-                            src="/game-icon.png" 
-                            alt="Game Icon" 
-                            style={{ width: '16px', height: '16px', display: 'inline-block', verticalAlign: 'middle', marginRight: '6px', borderRadius: '3px' }} 
+                          <img
+                            src="/game-icon.png"
+                            alt="Game Icon"
+                            style={{ width: '16px', height: '16px', display: 'inline-block', verticalAlign: 'middle', marginRight: '6px', borderRadius: '3px' }}
                           />
                           Chơi trực tuyến: {post.title}
                         </button>
                       </div>
                     )}
                   </div>
+
+                  {/* Reactions row + comment trigger. Counts only render
+                      for emojis with > 0 reactions, so a quiet post
+                      doesn't show five zeroes. */}
+                  {(postReactions[post.id]?.counts) && (
+                    <div className="post-reactions-row">
+                      {POST_REACTION_EMOJIS.map((r) => {
+                        const count = postReactions[post.id]?.counts?.[r.key] || 0;
+                        if (count === 0) return null;
+                        return (
+                          <span
+                            key={r.key}
+                            className={`post-reaction-chip ${postReactions[post.id].my_emoji === r.key ? 'mine' : ''}`}
+                          >
+                            {r.icon} {count}
+                          </span>
+                        );
+                      })}
+                      <button
+                        type="button"
+                        className="post-comment-btn"
+                        onClick={() => setCommentModalPost(post)}
+                      >
+                        💬 Bình luận
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))
             ) : (
@@ -603,7 +658,9 @@ export default function Feed() {
         </div>
       )}
 
-      {/* Knowledge Article Modal */}
+      {/* Knowledge Article Modal — includes comments + reactions
+           so the Feed and the dedicated Knowledge page share the
+           same engagement surface. */}
       {selectedArticle && (
         <div className="modal-overlay" onClick={() => setSelectedArticle(null)}>
           <div className="modal-container" onClick={(e) => e.stopPropagation()}>
@@ -619,9 +676,14 @@ export default function Feed() {
             </div>
             <div className="modal-body">
               <p style={{ whiteSpace: 'pre-line' }}>{selectedArticle.content || selectedArticle.description}</p>
+              <CommentSection
+                contentType="knowledge"
+                contentId={selectedArticle.id}
+                currentUser={user}
+              />
             </div>
             <div className="modal-footer">
-              <button 
+              <button
                 onClick={() => {
                   handleLikeKnowledge(selectedArticle.id);
                   setSelectedArticle(prev => ({ ...prev, likes: prev.likes + 1 }));
@@ -632,6 +694,39 @@ export default function Feed() {
                 ❤️ Thích bài viết
               </button>
               <button onClick={() => setSelectedArticle(null)} className="action-btn" style={{ maxWidth: '100px' }}>
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Post detail modal — opens when user clicks "Bình luận" on a
+           feed post. Renders the post content inline plus the same
+           CommentSection component the article modal uses. */}
+      {commentModalPost && (
+        <div className="modal-overlay" onClick={() => setCommentModalPost(null)}>
+          <div className="modal-container" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close-btn" onClick={() => setCommentModalPost(null)}>&times;</button>
+            <div className="modal-header-detail">
+              <h2>{commentModalPost.title}</h2>
+              <div className="modal-meta">
+                <span>👤 Tác giả: <strong>@{commentModalPost.user_id}</strong></span>
+                <span>📁 Loại: <strong>{commentModalPost.post_type}</strong></span>
+              </div>
+            </div>
+            <div className="modal-body">
+              {commentModalPost.description && (
+                <p style={{ whiteSpace: 'pre-line' }}>{commentModalPost.description}</p>
+              )}
+              <CommentSection
+                contentType="post"
+                contentId={commentModalPost.id}
+                currentUser={user}
+              />
+            </div>
+            <div className="modal-footer">
+              <button onClick={() => setCommentModalPost(null)} className="action-btn" style={{ maxWidth: '100px' }}>
                 Đóng
               </button>
             </div>

@@ -13,9 +13,10 @@ from backend.services.schemas import (
     KnowledgeResponse, KnowledgeCreateRequest,
     LoginRequest, FaceLoginRequest,
     PostResponse, PostCreateRequest,
-    VideoListResponse
+    VideoListResponse,
+    CommentCreateRequest, CommentResponse, ReactionRequest, ReactionSummary,
 )
-from backend.services import games_service, music_service, knowledge_service, posts_service, dashboard_service, search_service
+from backend.services import games_service, music_service, knowledge_service, posts_service, dashboard_service, search_service, comments_service
 from backend.services.auth_service import create_access_token, decode_access_token
 from backend.services.logging_service import logger
 
@@ -718,3 +719,112 @@ def global_search(
     return search_service.global_search(
         db, query=q, types=types_list, limit_per_type=limit, is_admin=is_admin,
     )
+
+
+# ==================== Comments + Reactions ====================
+#
+# Both endpoints are scoped to a (content_type, content_id) pair so
+# the same route serves Knowledge articles and Feed posts. Validation
+# lives in the service (comments_service.ALLOWED_CONTENT_TYPES,
+# ALLOWED_EMOJIS) — these routes translate exceptions into HTTP codes.
+
+@router.get('/comments')
+def list_comments(
+    content_type: str,
+    content_id: int,
+    limit: int = 50,
+    offset: int = 0,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Return the comment thread for a (content_type, content_id) target.
+    Public read — login is required (so we can include 'my' info later),
+    but anyone can see anyone else's comments."""
+    try:
+        return comments_service.list_comments(db, content_type, content_id, limit=limit, offset=offset)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post('/comments', status_code=201)
+def create_comment(
+    payload: CommentCreateRequest,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Create a comment or reply. The route enforces auth; the service
+    enforces content_type / body length / parent thread consistency."""
+    try:
+        return comments_service.create_comment(
+            db,
+            user_id=current_user['user_id'],
+            content_type=payload.content_type,
+            content_id=payload.content_id,
+            body=payload.body,
+            parent_id=payload.parent_id,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.delete('/comments/{comment_id}')
+def delete_comment(
+    comment_id: int,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Delete a comment. Owner OR admin only — service raises
+    PermissionError otherwise."""
+    is_admin = current_user.get('role') == 'admin'
+    try:
+        comments_service.delete_comment(
+            db, comment_id=comment_id,
+            user_id=current_user['user_id'], is_admin=is_admin,
+        )
+        return {'deleted': True}
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+@router.get('/reactions', response_model=ReactionSummary)
+def get_reactions(
+    content_type: str,
+    content_id: int,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Return per-emoji counts and the caller's current emoji. The
+    `my_emoji` field powers the highlight on the FE's emoji bar."""
+    try:
+        return comments_service.list_reactions(
+            db, content_type, content_id, user_id=current_user['user_id'],
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post('/reactions', response_model=ReactionSummary)
+def set_reaction(
+    payload: ReactionRequest,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Toggle or change the caller's reaction. Same emoji → toggle off;
+    different emoji → swap. Returns the updated summary so the FE
+    doesn't have to re-fetch."""
+    try:
+        return comments_service.set_reaction(
+            db,
+            user_id=current_user['user_id'],
+            content_type=payload.content_type,
+            content_id=payload.content_id,
+            emoji=payload.emoji,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))

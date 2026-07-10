@@ -1,6 +1,6 @@
 from datetime import datetime
 from pathlib import Path
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Index, create_engine
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Index, UniqueConstraint, create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 import os
@@ -147,6 +147,62 @@ class UserActivity(Base):
     __table_args__ = (
         Index('ix_user_activity_user_ctype_etime_ctime',
               'user_id', 'content_type', 'event_type', 'created_at'),
+    )
+
+
+class Comment(Base):
+    """Threaded comment on knowledge articles or feed posts.
+
+    Threading is one level deep: a top-level comment has parent_id=None;
+    a reply points at the comment it replies to. We don't model deeper
+    trees because the FE only renders one indent — anything deeper would
+    be visual noise in the article/post modal.
+
+    Indexes are split: (content_type, content_id) for the list endpoint
+    "give me all comments for this article", and (parent_id) for the
+    reply fan-out when we assemble the tree.
+    """
+    __tablename__ = 'comments'
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(50), nullable=False, index=True)
+    content_type = Column(String(20), nullable=False)   # 'knowledge' | 'post'
+    content_id = Column(Integer, nullable=False)
+    parent_id = Column(Integer, nullable=True, index=True)
+    body = Column(String(2000), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    __table_args__ = (
+        Index('ix_comments_content', 'content_type', 'content_id', 'created_at'),
+    )
+
+
+class Reaction(Base):
+    """One row per user reaction on a knowledge article or post.
+
+    A user may have at most one reaction on a given (content_type,
+    content_id) tuple — enforced by the unique constraint. To change
+    emoji the service deletes the old row and inserts a new one; to
+    toggle off (same emoji clicked again) the service deletes the row.
+
+    Keeping reactions in a separate table (vs. a counter column on
+    Knowledge/Post) lets us answer "did the current user already
+    react?" with a single SELECT, which is the FE's hot path for
+    rendering the emoji bar with the right highlight state.
+    """
+    __tablename__ = 'reactions'
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(50), nullable=False)
+    content_type = Column(String(20), nullable=False)   # 'knowledge' | 'post'
+    content_id = Column(Integer, nullable=False)
+    emoji = Column(String(10), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint('user_id', 'content_type', 'content_id',
+                         name='uq_reaction_user_content'),
+        Index('ix_reactions_content', 'content_type', 'content_id'),
     )
 
 
