@@ -3,22 +3,17 @@ import axios from 'axios';
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1',
   timeout: 15000,
+  // Send the fw_auth httpOnly cookie on every same-origin request.
+  // Without this the browser drops the cookie on cross-origin XHR.
+  withCredentials: true,
 });
 
-// Auto attach JWT Authorization header if logged in
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers['Authorization'] = `Bearer ${token}`;
-    // Fallback for clients that cannot set Authorization (e.g. <img>/<audio>).
-    // Renamed from the misleading `X-User-Id` to `X-Auth-Token` so the header
-    // name reflects its actual payload (a JWT, not a numeric user id).
-    config.headers['X-Auth-Token'] = token;
-  }
-  return config;
-}, (error) => {
-  return Promise.reject(error);
-});
+// No more Authorization / X-Auth-Token injection from JS — the
+// server sets the cookie on /auth/login and the browser auto-attaches
+// it. JS code (including any injected XSS payload) cannot read the
+// cookie because it is HttpOnly, so the XSS-token-theft path is
+// closed. We keep the localStorage 'token' clear-on-401 below for
+// any leftover keys from the old flow.
 
 // Auto-logout on 401 (expired/invalid token). A hard reload is the simplest
 // way to clear the cached `user` state in App.jsx — the entire UI is gated on
@@ -31,14 +26,15 @@ api.interceptors.response.use(
     if (status === 401 && !isHandling401) {
       isHandling401 = true;
       try {
+        // Clean up any legacy keys left from the old flow. Cookie
+        // clearing is the BE's job (it's HttpOnly so JS can't touch
+        // it); a hard reload to / drops out of any authed state.
         localStorage.removeItem('token');
         localStorage.removeItem('user');
       } catch (err) {
         console.warn('[auth] Failed to clear localStorage on 401', err);
       } finally {
         window.location.href = '/';
-        // Reset the flag after the reload completes; in practice this branch
-        // never runs because window.location.href triggers a full reload.
         isHandling401 = false;
       }
     }
@@ -57,11 +53,21 @@ export const enrollUser = (payload) => api.post('/users', payload);
 
 
 // ==================== Authentication ====================
-export const loginWithPassword = (usernameOrEmail, password) => 
+//
+// Login now relies on the BE setting the fw_auth httpOnly cookie.
+// The FE never sees the JWT, so an XSS payload can't read it out.
+// /auth/me rebuilds the user object on page reload (replacing the
+// old localStorage 'user' read).
+
+export const loginWithPassword = (usernameOrEmail, password) =>
   api.post('/auth/login', { username_or_email: usernameOrEmail, password });
 
-export const loginWithFace = (imageBase64) => 
+export const loginWithFace = (imageBase64) =>
   api.post('/auth/login-face', { image_base64: imageBase64 });
+
+export const logout = () => api.post('/auth/logout');
+
+export const fetchMe = () => api.get('/auth/me').then((r) => r.data);
 
 export const registerFace = (imagesBase64) =>
   api.post('/users/me/register-face', { images_base64: imagesBase64 });

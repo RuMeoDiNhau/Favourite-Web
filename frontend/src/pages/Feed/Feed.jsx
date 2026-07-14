@@ -3,7 +3,6 @@ import './Feed.css';
 import * as api from '../../services/api';
 import CameraBox from '../../components/CameraBox';
 import CommentSection from '../../components/Comments/CommentSection';
-import { readJson } from '../../lib/safeStorage';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Legend
@@ -19,8 +18,7 @@ const POST_REACTION_EMOJIS = [
   { key: 'wow',   icon: '😮' },
 ];
 
-export default function Feed() {
-  const user = readJson('user');
+export default function Feed({ currentUser }) {
 
   // 1. Loading & error states
   const [loading, setLoading] = useState(true);
@@ -636,9 +634,10 @@ export default function Feed() {
                   return (
                     <div style={{ padding: '24px', color: '#ff6b6b' }}>
                       ⚠️ Không thể mở game từ nguồn không đáng tin cậy: {fullUrl}
-                      {/* TODO(security): move JWT from localStorage to httpOnly cookie so
-                          the iframe can keep `allow-same-origin` without exposing the
-                          token to framed scripts. */}
+                      {/* Cookie migration done: the JWT now lives in an
+                          httpOnly cookie the iframe can't read, so this
+                          URL guard is the only remaining defense for
+                          cross-origin game embeds. */}
                     </div>
                   );
                 }

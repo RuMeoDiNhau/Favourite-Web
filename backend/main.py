@@ -23,10 +23,24 @@ def on_shutdown():
     logger.info("FastAPI Web Application shutting down...")
 
 
-# Configure CORS to allow access from any origin (e.g. S3 static site)
+# CORS: cookie-based auth requires `allow_credentials=True`, which
+# forbids a wildcard origin (browsers reject the combination). List
+# dev FE origins explicitly so the cookie flows with
+# `withCredentials`. Add production origins when deployed.
+DEV_ORIGINS = [
+    'http://localhost:5173',   # Vite default
+    'http://127.0.0.1:5173',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://localhost:8080',
+    'http://127.0.0.1:8080',
+]
+PROD_ORIGINS: list[str] = []   # set when the FE is deployed
+ALLOWED_ORIGINS = DEV_ORIGINS + PROD_ORIGINS
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

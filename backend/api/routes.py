@@ -1,6 +1,7 @@
 import jwt
+import os
 from pydantic import BaseModel
-from fastapi import APIRouter, HTTPException, Depends, Header, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, Depends, Header, UploadFile, File, Form, Request, Response
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from backend.services.face_service import recognize_face
@@ -23,6 +24,44 @@ from backend.services.logging_service import logger
 
 router = APIRouter(prefix='/api/v1')
 
+
+# Cookie name used to carry the JWT. Stays in one constant so we
+# don't drift between login (set), auth deps (read), and logout
+# (clear). The browser sends this on every same-site request so
+# the FE never has to handle the token in JS.
+AUTH_COOKIE_NAME = 'fw_auth'
+
+# Cookie attributes. The two flags that actually matter for XSS
+# hardening:
+#   HttpOnly: blocks `document.cookie` reads, so a script-injected
+#             attacker can't grab the JWT.
+#   SameSite=Lax: stops the cookie from being attached on
+#             cross-site POSTs (CSRF surface). We don't use Strict
+#             because the FE needs to navigate cross-origin in dev
+#             (Vite on 5173, backend on 8000) and Strict would block
+#             the auth cookie on first-load.
+# Secure is only honored over HTTPS (the browser drops the cookie
+# otherwise). We detect "secure eligible" via APP_ENV=production so
+# local dev (http://localhost) doesn't lose its cookie.
+def _is_secure_cookie() -> bool:
+    return os.getenv('APP_ENV', 'development') == 'production'
+
+
+def _set_auth_cookie(response: Response, token: str) -> None:
+    response.set_cookie(
+        key=AUTH_COOKIE_NAME,
+        value=token,
+        httponly=True,
+        secure=_is_secure_cookie(),
+        samesite='lax',
+        path='/',
+        max_age=7 * 24 * 60 * 60,  # 7 days, matches token expiry
+    )
+
+
+def _clear_auth_cookie(response: Response) -> None:
+    response.delete_cookie(key=AUTH_COOKIE_NAME, path='/')
+
 def get_db():
     db = SessionLocal()
     try:
@@ -31,23 +70,48 @@ def get_db():
         db.close()
 
 # JWT Token extraction and authentication dependencies
+#
+# Two sources of truth for the token, ordered:
+#   1. The fw_auth httpOnly cookie (the primary channel now — set
+#      by /auth/login, cleared by /auth/logout).
+#   2. The Authorization: Bearer header (kept for tools like curl,
+#      Swagger UI, and direct API calls). The FE never sets this.
+#
+# We still accept the legacy X-Auth-Token header for backward
+# compat with the in-flight <img>/<audio> tags that the FE adds
+# when the media URL is on a separate origin / behind a CDN that
+# strips Authorization. New code should set the cookie at login
+# instead.
+
 security = HTTPBearer(auto_error=False)
 
-def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    x_auth_token: str = Header(None, alias="X-Auth-Token")
-):
-    token = None
+
+def _extract_token(
+    request_cookies,
+    credentials: HTTPAuthorizationCredentials | None,
+    x_auth_token: str | None,
+) -> str | None:
+    # 1. Cookie is preferred because it's set by the server and the
+    #    browser auto-attaches it on same-site requests.
+    if request_cookies and request_cookies.get(AUTH_COOKIE_NAME):
+        return request_cookies.get(AUTH_COOKIE_NAME)
+    # 2. Authorization: Bearer <token>.
     if credentials:
-        token = credentials.credentials
-    elif x_auth_token:
-        # Fallback header token for clients that cannot set Authorization
-        # (e.g. <img>/<audio>). Renamed from X-User-Id → X-Auth-Token so the
-        # header name reflects its actual payload (a JWT, not a numeric id).
+        return credentials.credentials
+    # 3. Legacy X-Auth-Token (kept for asset tags that can't set headers).
+    if x_auth_token:
         if x_auth_token.startswith("Bearer "):
-            token = x_auth_token.replace("Bearer ", "")
-        else:
-            token = x_auth_token
+            return x_auth_token.replace("Bearer ", "")
+        return x_auth_token
+    return None
+
+
+def get_current_user(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    x_auth_token: str = Header(None, alias="X-Auth-Token"),
+):
+    token = _extract_token(request.cookies, credentials, x_auth_token)
 
     if not token:
         raise HTTPException(status_code=401, detail="Vui lòng đăng nhập")
@@ -67,6 +131,7 @@ def get_admin_user(current_user: dict = Depends(get_current_user)):
 
 
 def get_optional_user(
+    request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(security),
     x_auth_token: str = Header(None, alias="X-Auth-Token"),
 ) -> dict:
@@ -75,12 +140,7 @@ def get_optional_user(
     work for both signed-in and anonymous users (e.g. view/like/play
     bumps the global counter either way, but only the signed-in case
     writes a per-user event for the Personal Dashboard)."""
-    token = None
-    if credentials:
-        token = credentials.credentials
-    elif x_auth_token:
-        x = x_auth_token
-        token = x.replace("Bearer ", "") if x.startswith("Bearer ") else x
+    token = _extract_token(request.cookies, credentials, x_auth_token)
     if not token:
         return None
     try:
@@ -133,18 +193,19 @@ def get_user_avatar_url(user_id: str) -> str:
 # ==================== Authentication Endpoints ====================
 
 @router.post('/auth/login')
-def login(request: LoginRequest):
+def login(request: LoginRequest, response: Response):
     user = verify_user_credentials(request.username_or_email, request.password)
     if not user:
         logger.warning(f"Failed password login attempt for: {request.username_or_email}")
         raise HTTPException(status_code=401, detail='Tài khoản hoặc mật khẩu không chính xác')
-    
-    # Tạo JWT token mã hóa user_id và role
+
+    # Tạo JWT token mã hóa user_id và role, set vào httpOnly cookie.
+    # Token KHÔNG còn trong response body — FE không cần biết nó là gì.
     token = create_access_token(data={"user_id": user.user_id, "role": user.role})
+    _set_auth_cookie(response, token)
     logger.info(f"User logged in successfully via password: {user.user_id} (Role: {user.role})")
     return {
         'status': 'success',
-        'token': token,
         'user': {
             'user_id': user.user_id,
             'name': user.name,
@@ -156,19 +217,18 @@ def login(request: LoginRequest):
     }
 
 @router.post('/auth/login-face')
-def login_face(request: FaceLoginRequest):
+def login_face(request: FaceLoginRequest, response: Response):
     try:
         result = recognize_face(request.image_base64)
         if result['status'] == 'success':
             user_id = result['data']['user_id']
             user = get_user_by_user_id(user_id)
             if user:
-                # Tạo JWT token mã hóa user_id và role
                 token = create_access_token(data={"user_id": user.user_id, "role": user.role})
+                _set_auth_cookie(response, token)
                 logger.info(f"User logged in successfully via Face ID: {user.user_id} (Confidence: {result['data'].get('confidence', 'N/A')})")
                 return {
                     'status': 'success',
-                    'token': token,
                     'user': {
                         'user_id': user.user_id,
                         'name': user.name,
@@ -182,6 +242,36 @@ def login_face(request: FaceLoginRequest):
         logger.error(f"Error during Face ID login execution: {e}")
     logger.warning("Failed Face ID login attempt (unrecognized face or stranger).")
     raise HTTPException(status_code=401, detail='Không nhận diện được khuôn mặt hoặc người lạ')
+
+
+@router.post('/auth/logout')
+def logout(response: Response):
+    """Clear the auth cookie. Idempotent — calling when there's no
+    cookie still returns 200. No auth required: a user with an
+    expired/garbage cookie should be able to log out cleanly."""
+    _clear_auth_cookie(response)
+    return {'status': 'success'}
+
+
+@router.get('/auth/me')
+def me(current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Return the current user. Used by the FE on page reload to
+    rebuild the user state without keeping it in localStorage.
+
+    Replaces the old FE pattern of reading 'user' from localStorage —
+    localStorage was the second half of the XSS-stealable credential
+    pair (token + user object), and the cookie makes both moot."""
+    user = get_user_by_user_id(current_user['user_id'])
+    if not user:
+        raise HTTPException(status_code=404, detail='user not found')
+    return {
+        'user_id': user.user_id,
+        'name': user.name,
+        'email': user.email,
+        'role': user.role,
+        'registered_images': user.registered_images,
+        'avatar_url': get_user_avatar_url(user.user_id),
+    }
 
 
 class RegisterFaceRequest(BaseModel):

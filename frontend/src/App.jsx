@@ -13,7 +13,7 @@ import PostModal from './pages/Feed/PostModal';
 import FaceSetupModal from './components/FaceSetupModal';
 import SearchBar from './components/SearchBar';
 import NotificationBell from './components/NotificationBell';
-import { readJson } from './lib/safeStorage';
+import * as api from './services/api';
 
 // Map view name <-> URL path so the navbar becomes bookmarkable and
 // back/forward works. `home` is the Personal Dashboard (the new
@@ -39,7 +39,12 @@ const viewToPath = (viewName) => {
 };
 
 function App() {
-  const [user, setUser] = useState(() => readJson('user'));
+  // `user` lives in React state only (not localStorage). The BE
+  // sets the auth cookie; on page reload we rebuild this object
+  // via /auth/me. The old localStorage pattern was a second
+  // XSS-stealable piece of data — now gone.
+  const [user, setUser] = useState(null);
+  const [authChecked, setAuthChecked] = useState(false);
   const [view, setViewRaw] = useState(() => pathToView(window.location.pathname));
   const [showPostModal, setShowPostModal] = useState(false);
   const [feedKey, setFeedKey] = useState(0);
@@ -50,6 +55,24 @@ function App() {
   // target view consumes them so a later manual nav doesn't reopen.
   const [searchOpenKnowledgeId, setSearchOpenKnowledgeId] = useState(null);
   const [searchOpenGameId, setSearchOpenGameId] = useState(null);
+
+  // On first mount, ask the BE "who am I?". The fw_auth cookie (if
+  // present) makes this succeed; if not, we render Login.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const me = await api.fetchMe();
+        if (!cancelled) setUser(me);
+      } catch {
+        // 401 etc. — no session.
+        if (!cancelled) setUser(null);
+      } finally {
+        if (!cancelled) setAuthChecked(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   // Wrap setView so clicking a nav button also updates the URL. We use
   // pushState (not replaceState) so each tab becomes a history entry
@@ -93,9 +116,22 @@ function App() {
     return `${base}${url}`;
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
+  const handleLogout = async () => {
+    // Tell the BE to clear the cookie. Even if the request fails
+    // (offline), we still drop the local user state — the cookie
+    // will expire on its own within 7 days.
+    try {
+      await api.logout();
+    } catch (err) {
+      console.warn('[auth] logout request failed', err);
+    }
+    // Drop any leftover legacy keys from the old localStorage flow.
+    try {
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+    } catch (err) {
+      console.warn('[auth] failed to clear localStorage', err);
+    }
     setUser(null);
   };
 
@@ -147,6 +183,12 @@ function App() {
   }, []);
 
   // Nếu chưa đăng nhập, chỉ hiển thị màn hình Login
+  if (!authChecked) {
+    // Brief moment while /auth/me is in flight. Render nothing
+    // rather than flash the Login screen — that's a small UX win
+    // for users on slow connections.
+    return null;
+  }
   if (!user) {
     return <Login onLoginSuccess={(u) => setUser(u)} />;
   }
@@ -309,7 +351,7 @@ function App() {
 
       <main>
         {view === 'home' && <Home onNavigate={setView} />}
-        {view === 'feed' && <Feed key={feedKey} />}
+        {view === 'feed' && <Feed key={feedKey} currentUser={user} />}
         {view === 'dashboard' && <Dashboard />}
         {view === 'users' && user?.role === 'admin' && <Users />}
         {view === 'logs' && user?.role === 'admin' && <Logs />}
