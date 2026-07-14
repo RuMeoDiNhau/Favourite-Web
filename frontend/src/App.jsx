@@ -13,14 +13,16 @@ import PostModal from './pages/Feed/PostModal';
 import FaceSetupModal from './components/FaceSetupModal';
 import SearchBar from './components/SearchBar';
 import NotificationBell from './components/NotificationBell';
+import Bookmarks from './pages/Bookmarks';
+import { BookmarksProvider } from './lib/BookmarksContext';
 import * as api from './services/api';
 
 // Map view name <-> URL path so the navbar becomes bookmarkable and
 // back/forward works. `home` is the Personal Dashboard (the new
 // landing view); `feed` is the unified posts feed. Admin views stay
 // hidden until role check.
-const VIEW_PATHS = ['/home', '/feed', '/dashboard', '/users', '/logs', '/games', '/music', '/knowledge'];
-const VIEW_NAMES = ['home', 'feed', 'dashboard', 'users', 'logs', 'games', 'music', 'knowledge'];
+const VIEW_PATHS = ['/home', '/feed', '/bookmarks', '/dashboard', '/users', '/logs', '/games', '/music', '/knowledge'];
+const VIEW_NAMES = ['home', 'feed', 'bookmarks', 'dashboard', 'users', 'logs', 'games', 'music', 'knowledge'];
 
 const pathToView = (pathname) => {
   // Backwards-compat: a stale bookmark at '/' used to mean the Feed.
@@ -198,6 +200,7 @@ function App() {
   const NAV_ITEMS = [
     { name: 'home', label: '🏠 Trang chủ' },
     { name: 'feed', label: '📰 Bảng tin' },
+    { name: 'bookmarks', label: '🔖 Đã lưu' },
     { name: 'dashboard', label: '📷 Quét khuôn mặt' },
     { name: 'users', label: '👥 Users', adminOnly: true },
     { name: 'logs', label: '📋 Logs', adminOnly: true },
@@ -218,7 +221,8 @@ function App() {
   );
 
   return (
-    <div className={`App ${isDarkMode ? 'dark-theme' : ''}`}>
+    <BookmarksProvider>
+      <div className={`App ${isDarkMode ? 'dark-theme' : ''}`}>
       <header className="main-navbar">
         <div className="navbar-left">
           <div className="navbar-logo">
@@ -352,6 +356,7 @@ function App() {
       <main>
         {view === 'home' && <Home onNavigate={setView} />}
         {view === 'feed' && <Feed key={feedKey} currentUser={user} />}
+        {view === 'bookmarks' && <Bookmarks onNavigate={setView} />}
         {view === 'dashboard' && <Dashboard />}
         {view === 'users' && user?.role === 'admin' && <Users />}
         {view === 'logs' && user?.role === 'admin' && <Logs />}
@@ -390,7 +395,8 @@ function App() {
           }}
         />
       )}
-    </div>
+      </div>
+    </BookmarksProvider>
   );
 }
 

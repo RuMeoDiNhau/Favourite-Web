@@ -3,6 +3,7 @@ import './Feed.css';
 import * as api from '../../services/api';
 import CameraBox from '../../components/CameraBox';
 import CommentSection from '../../components/Comments/CommentSection';
+import { useBookmarks } from '../../lib/BookmarksContext';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Legend
@@ -19,6 +20,8 @@ const POST_REACTION_EMOJIS = [
 ];
 
 export default function Feed({ currentUser }) {
+  const { isBookmarked: isBmPost, toggle: toggleBmPost } = useBookmarks();
+
 
   // 1. Loading & error states
   const [loading, setLoading] = useState(true);
@@ -394,6 +397,15 @@ export default function Feed({ currentUser }) {
                         onClick={() => setCommentModalPost(post)}
                       >
                         💬 Bình luận
+                      </button>
+                      <button
+                        type="button"
+                        className={`post-bookmark-btn ${isBmPost('post', post.id) ? 'filled' : ''}`}
+                        onClick={() => toggleBmPost('post', post.id)}
+                        title={isBmPost('post', post.id) ? 'Bỏ lưu' : 'Lưu bài đăng'}
+                        aria-label={isBmPost('post', post.id) ? 'Bỏ lưu' : 'Lưu bài đăng'}
+                      >
+                        {isBmPost('post', post.id) ? '🔖' : '⚪ Lưu'}
                       </button>
                     </div>
                   )}

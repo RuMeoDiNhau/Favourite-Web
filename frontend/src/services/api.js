@@ -260,4 +260,24 @@ export const markAllNotificationsRead = () =>
   api.post('/notifications/read-all').then((r) => r.data?.updated ?? 0);
 
 
+// ==================== Bookmarks ====================
+//
+// Toggle is optimistic-friendly: returns the new state so the FE can
+// flip the 🔖 icon without a follow-up read. `fetchBookmarkIds` is
+// called once on app mount to seed the in-memory "is this bookmarked?"
+// set used by Knowledge and Feed cards.
+
+export const toggleBookmark = (contentType, contentId) =>
+  api.post('/bookmarks/toggle', { content_type: contentType, content_id: contentId }).then((r) => r.data);
+
+export const fetchBookmarks = (contentType = null, limit = 100) =>
+  api.get('/bookmarks', { params: { content_type: contentType, limit } }).then((r) => r.data);
+
+export const fetchBookmarkIds = (contentType = null) =>
+  api.get('/bookmarks/ids', { params: { content_type: contentType } }).then((r) => r.data?.items ?? []);
+
+export const removeBookmark = (contentType, contentId) =>
+  api.delete('/bookmarks', { params: { content_type: contentType, content_id: contentId } }).then((r) => r.data);
+
+
 export default api;

@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import './Knowledge.css';
 import * as api from '../../services/api';
 import CommentSection from '../../components/Comments/CommentSection';
+import { useBookmarks } from '../../lib/BookmarksContext';
 
 export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearchOpen, currentUser }) {
+  const { isBookmarked: isBmKnowledge, toggle: toggleBm } = useBookmarks();
   const [selectedTopic, setSelectedTopic] = useState('all');
   const [articles, setArticles] = useState([]);
   const [categories, setCategories] = useState(['Tất Cả']);
@@ -71,6 +73,22 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
     }
     onConsumeSearchOpen?.();
   }, [searchOpenKnowledgeId, loading, articles]);
+
+  // Listen for cross-view deep opens from the Bookmarks page.
+  // Pattern matches App.jsx's search-deeplink: stash id via state
+  // event, then re-enter the same handler above. We piggyback on
+  // a custom event so the Bookmarks page doesn't need a callback
+  // prop drilled down through App.
+  useEffect(() => {
+    const handler = (e) => {
+      const detail = e.detail;
+      if (!detail || detail.content_type !== 'knowledge') return;
+      const target = articles.find((a) => a.id === detail.content_id);
+      if (target) handleOpenArticle(target);
+    };
+    window.addEventListener('bookmarks-open', handler);
+    return () => window.removeEventListener('bookmarks-open', handler);
+  }, [articles]);
 
   const loadArticles = async () => {
     try {
@@ -208,6 +226,14 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
                   <span>❤️ {selectedArticle.likes}</span>
                 </div>
               </div>
+              <button
+                className={`article-modal-bookmark ${isBmKnowledge('knowledge', selectedArticle.id) ? 'filled' : ''}`}
+                onClick={() => toggleBm('knowledge', selectedArticle.id)}
+                aria-label={isBmKnowledge('knowledge', selectedArticle.id) ? 'Bỏ lưu' : 'Lưu bài viết'}
+                title={isBmKnowledge('knowledge', selectedArticle.id) ? 'Bỏ lưu' : 'Lưu bài viết'}
+              >
+                {isBmKnowledge('knowledge', selectedArticle.id) ? '🔖' : '⚪'}
+              </button>
               <button
                 className="article-modal-close"
                 onClick={() => setSelectedArticle(null)}

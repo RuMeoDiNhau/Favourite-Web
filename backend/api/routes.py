@@ -18,7 +18,7 @@ from backend.services.schemas import (
     CommentCreateRequest, CommentResponse, ReactionRequest, ReactionSummary,
     NotificationResponse, NotificationList, UnreadCount,
 )
-from backend.services import games_service, music_service, knowledge_service, posts_service, dashboard_service, search_service, comments_service, notification_service
+from backend.services import games_service, music_service, knowledge_service, posts_service, dashboard_service, search_service, comments_service, notification_service, bookmarks_service
 from backend.services.auth_service import create_access_token, decode_access_token
 from backend.services.logging_service import logger
 
@@ -971,3 +971,97 @@ def mark_all_notifications_read(
     re-fetching."""
     count = notification_service.mark_all_as_read(db, current_user['user_id'])
     return {'updated': count}
+
+
+# ==================== Bookmarks ====================
+
+@router.post('/bookmarks/toggle')
+def toggle_bookmark(
+    payload: dict,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Toggle the bookmark for (content_type, content_id) on the
+    current user. Returns the new state. Optimistic-update friendly:
+    the FE flips its 🔖 icon based on the response and doesn't need a
+    second round-trip to verify."""
+    content_type = payload.get('content_type')
+    content_id = payload.get('content_id')
+    if not content_type or content_id is None:
+        raise HTTPException(status_code=400, detail='content_type and content_id required')
+    try:
+        return bookmarks_service.toggle_bookmark(
+            db,
+            user_id=current_user['user_id'],
+            content_type=content_type,
+            content_id=int(content_id),
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.get('/bookmarks')
+def list_bookmarks(
+    content_type: str | None = None,
+    limit: int = 100,
+    offset: int = 0,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Return the user's bookmarks with denormalized title/snippet for
+    each entry. Optional `content_type` filter restricts to one type.
+    """
+    try:
+        return bookmarks_service.list_bookmarks(
+            db,
+            user_id=current_user['user_id'],
+            content_type=content_type,
+            limit=min(limit, 200),
+            offset=offset,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get('/bookmarks/ids')
+def list_bookmark_ids(
+    content_type: str | None = None,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Lightweight (content_type, content_id) tuple list for the FE to
+    know which items to render in bookmarked state. Called once on app
+    mount; subsequent toggles refresh this in-memory set."""
+    try:
+        return {
+            'items': bookmarks_service.list_bookmark_ids(
+                db,
+                user_id=current_user['user_id'],
+                content_type=content_type,
+            )
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.delete('/bookmarks')
+def remove_bookmark(
+    content_type: str,
+    content_id: int,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Idempotent removal — silently no-ops if the bookmark didn't
+    exist, so a double-click on the FE side can't surface a 404."""
+    try:
+        bookmarks_service.remove_bookmark(
+            db,
+            user_id=current_user['user_id'],
+            content_type=content_type,
+            content_id=content_id,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {'deleted': True}

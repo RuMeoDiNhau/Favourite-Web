@@ -318,6 +318,29 @@
   transition: background 0.15s;
 }
 
+.article-modal-bookmark {
+  background: #f1f5f9;
+  border: none;
+  color: #475569;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+  margin-right: 8px;
+}
+
+.article-modal-bookmark:hover {
+  background: #e2e8f0;
+}
+
+.article-modal-bookmark.filled {
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  color: white;
+}
+
 .article-modal-close:hover {
   background: #e2e8f0;
   color: #0f172a;

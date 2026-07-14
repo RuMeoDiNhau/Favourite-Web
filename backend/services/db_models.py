@@ -250,6 +250,37 @@ class Notification(Base):
     )
 
 
+class Bookmark(Base):
+    """Per-user save on a content item. One row per (user, content_type,
+    content_id) — enforced by the unique constraint. Toggle semantics are
+    handled in the service: add if missing, delete if present, then return
+    the new state.
+
+    Bookmarks are intentionally separate from reactions/comments —
+    bookmarking is a private personal list, not public signal. We don't
+    bump any global counter on the target row because the count of
+    saves is private to the saver.
+    """
+    __tablename__ = 'bookmarks'
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(50), nullable=False)
+    content_type = Column(String(20), nullable=False)   # 'knowledge' | 'post' (MVP)
+    content_id = Column(Integer, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    # A user can only have one bookmark per (content_type, content_id).
+    # The unique constraint gives us the toggle primitive: try INSERT,
+    # catch IntegrityError → delete the existing row.
+    __table_args__ = (
+        UniqueConstraint('user_id', 'content_type', 'content_id',
+                         name='uq_bookmark_user_content'),
+        # Hot path: "is this content bookmarked by user X?" — used by
+        # the FE to render the correct filled/unfilled 🔖 state.
+        Index('ix_bookmarks_user_ctype_cid', 'user_id', 'content_type', 'content_id'),
+    )
+
+
 def init_db():
     Base.metadata.create_all(bind=engine)
 
