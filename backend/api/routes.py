@@ -72,16 +72,18 @@ def get_db():
 # JWT Token extraction and authentication dependencies
 #
 # Two sources of truth for the token, ordered:
-#   1. The fw_auth httpOnly cookie (the primary channel now — set
-#      by /auth/login, cleared by /auth/logout).
-#   2. The Authorization: Bearer header (kept for tools like curl,
-#      Swagger UI, and direct API calls). The FE never sets this.
+#   1. The fw_auth httpOnly cookie (primary). Set by /auth/login,
+#      cleared by /auth/logout, attached by the browser on every
+#      same-site request. The FE doesn't read it — JS can't, by design.
+#   2. The Authorization: Bearer header. Kept for direct API callers
+#      (curl, Swagger, scripts) — the FE never sets it.
 #
-# We still accept the legacy X-Auth-Token header for backward
-# compat with the in-flight <img>/<audio> tags that the FE adds
-# when the media URL is on a separate origin / behind a CDN that
-# strips Authorization. New code should set the cookie at login
-# instead.
+# The previous X-Auth-Token fallback was added to support <img>/<audio>
+# tags whose src URLs pointed at authed endpoints. After Commit A,
+# all media URLs go through public paths (/static/uploads/* mounted
+# as StaticFiles, or S3 buckets), so the fallback has no callers.
+# Dropping it removes the only path where a JS-controllable header
+# was attached to every outgoing request from the FE.
 
 security = HTTPBearer(auto_error=False)
 
@@ -89,29 +91,21 @@ security = HTTPBearer(auto_error=False)
 def _extract_token(
     request_cookies,
     credentials: HTTPAuthorizationCredentials | None,
-    x_auth_token: str | None,
 ) -> str | None:
-    # 1. Cookie is preferred because it's set by the server and the
-    #    browser auto-attaches it on same-site requests.
+    # 1. Cookie — set by the server, browser auto-attaches.
     if request_cookies and request_cookies.get(AUTH_COOKIE_NAME):
         return request_cookies.get(AUTH_COOKIE_NAME)
-    # 2. Authorization: Bearer <token>.
+    # 2. Authorization header — only ever set by curl/Swagger/etc.
     if credentials:
         return credentials.credentials
-    # 3. Legacy X-Auth-Token (kept for asset tags that can't set headers).
-    if x_auth_token:
-        if x_auth_token.startswith("Bearer "):
-            return x_auth_token.replace("Bearer ", "")
-        return x_auth_token
     return None
 
 
 def get_current_user(
     request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    x_auth_token: str = Header(None, alias="X-Auth-Token"),
 ):
-    token = _extract_token(request.cookies, credentials, x_auth_token)
+    token = _extract_token(request.cookies, credentials)
 
     if not token:
         raise HTTPException(status_code=401, detail="Vui lòng đăng nhập")
@@ -133,14 +127,13 @@ def get_admin_user(current_user: dict = Depends(get_current_user)):
 def get_optional_user(
     request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    x_auth_token: str = Header(None, alias="X-Auth-Token"),
-) -> dict:
+):
     """Like get_current_user but returns None when no valid token is
     present instead of raising 401. Used for endpoints that should
     work for both signed-in and anonymous users (e.g. view/like/play
     bumps the global counter either way, but only the signed-in case
     writes a per-user event for the Personal Dashboard)."""
-    token = _extract_token(request.cookies, credentials, x_auth_token)
+    token = _extract_token(request.cookies, credentials)
     if not token:
         return None
     try:
