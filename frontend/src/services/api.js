@@ -15,28 +15,37 @@ const api = axios.create({
 // closed. We keep the localStorage 'token' clear-on-401 below for
 // any leftover keys from the old flow.
 
-// Auto-logout on 401 (expired/invalid token). A hard reload is the simplest
-// way to clear the cached `user` state in App.jsx — the entire UI is gated on
-// `user` (App.jsx renders Login when user is null).
-let isHandling401 = false;
+// Auto-logout on 401 (expired/invalid token). The previous version
+// did `window.location.href = '/'` to force-clear the in-memory user
+// state — but that creates a reload loop: the freshly-reloaded App
+// calls /auth/me again, gets 401 again, reloads again. Now we just
+// clear legacy keys and let App.jsx's own render gate (it renders
+// <Login/> when user is null) handle the transition without a
+// navigation.
+//
+// We also gate on a one-shot `handled` flag so multiple concurrent
+// 401s (e.g. Knowledge + Feed + Bookmarks fetch all firing at once
+// on app mount) don't race on the same handler. App.jsx's
+// `setUser(null)` from fetchMe() is the source of truth for the
+// auth state transition.
+let handled401 = false;
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     const status = error?.response?.status;
-    if (status === 401 && !isHandling401) {
-      isHandling401 = true;
+    if (status === 401 && !handled401) {
+      handled401 = true;
       try {
-        // Clean up any legacy keys left from the old flow. Cookie
-        // clearing is the BE's job (it's HttpOnly so JS can't touch
-        // it); a hard reload to / drops out of any authed state.
         localStorage.removeItem('token');
         localStorage.removeItem('user');
       } catch (err) {
         console.warn('[auth] Failed to clear localStorage on 401', err);
-      } finally {
-        window.location.href = '/';
-        isHandling401 = false;
       }
+      // Reset the flag on the next tick so a future legitimate
+      // session-expiry 401 (after a real login) can still trigger
+      // cleanup. Without this the flag would stick for the life of
+      // the page and silently swallow real expiry events.
+      setTimeout(() => { handled401 = false; }, 1000);
     }
     return Promise.reject(error);
   }
