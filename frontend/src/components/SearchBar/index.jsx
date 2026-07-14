@@ -46,6 +46,13 @@ export default function SearchBar({ onSelectItem, isAdmin = false }) {
   // a newer one (race when typing fast on a slow connection).
   const reqIdRef = useRef(0);
   const wrapperRef = useRef(null);
+  // Held in a ref so handleSelect can blur the <input> after the
+  // dropdown closes. Without this, the input keeps DOM focus and the
+  // :focus-within ring stays lit — and any keystroke the user intended
+  // for the page that just opened (e.g. typing into a modal filter,
+  // hitting Esc to close a modal) lands in the now-empty search box
+  // instead.
+  const inputRef = useRef(null);
 
   // Click-outside closes the dropdown. Use mousedown so a click that
   // starts outside but ends inside (drag-select) doesn't reopen it.
@@ -127,6 +134,11 @@ export default function SearchBar({ onSelectItem, isAdmin = false }) {
     setOpen(false);
     setQuery('');
     setResults(null);
+    // Drop DOM focus from the input so the :focus-within ring on the
+    // input wrap turns off and any subsequent keystroke lands in the
+    // page that just opened (modal / list view) — not the now-empty
+    // search box. setQuery('') alone wouldn't do this.
+    inputRef.current?.blur();
     onSelectItem?.(item, type);
   }, [query, onSelectItem]);
 
@@ -152,6 +164,7 @@ export default function SearchBar({ onSelectItem, isAdmin = false }) {
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => setOpen(true)}
           onKeyDown={handleKeyDown}
+          ref={inputRef}
           aria-label="Tìm kiếm"
         />
         {query && (
