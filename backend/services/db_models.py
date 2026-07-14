@@ -101,6 +101,13 @@ class Knowledge(Base):
     description = Column(String(1024), nullable=False)
     content = Column(String(5000), nullable=True)
     author = Column(String(255), nullable=False)
+    # The User.user_id of whoever owns this article — used so the
+    # comment service can notify them when someone else comments.
+    # Nullable: legacy rows from before this column existed never had
+    # an owner, and we don't have a reliable way to retroactively
+    # match them to a User. New rows should always set this via the
+    # /knowledge POST endpoint.
+    author_user_id = Column(String(50), nullable=True, index=True)
     views = Column(Integer, default=0)
     likes = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -245,6 +252,21 @@ class Notification(Base):
 
 def init_db():
     Base.metadata.create_all(bind=engine)
+
+    # SQLite-only micro-migrations for columns added after the table
+    # already exists. create_all() above only creates *missing* tables;
+    # it never ALTERs. We use the inspector to detect what's already
+    # there and add new columns idempotently. New columns must be
+    # nullable (existing rows need a default), and we don't backfill —
+    # any backfill is the caller's responsibility in their service.
+    if DATABASE_URL.startswith('sqlite'):
+        from sqlalchemy import inspect, text
+        inspector = inspect(engine)
+        with engine.begin() as conn:
+            knowledge_cols = {c['name'] for c in inspector.get_columns('knowledge')} if inspector.has_table('knowledge') else set()
+            if 'author_user_id' not in knowledge_cols:
+                conn.execute(text('ALTER TABLE knowledge ADD COLUMN author_user_id VARCHAR(50)'))
+                conn.execute(text('CREATE INDEX IF NOT EXISTS ix_knowledge_author_user_id ON knowledge (author_user_id)'))
 
     # Seed default admin if no admin user exists. Idempotent: safe to run
     # on every startup. Password hash is generated once and pinned here so

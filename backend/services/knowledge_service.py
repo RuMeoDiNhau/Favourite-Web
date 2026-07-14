@@ -134,8 +134,21 @@ def get_article_by_id(db: Session, article_id: int, user_id: str = None):
 
 
 def create_article(db: Session, title: str, category: str, description: str, content: str, author: str):
-    """Create a new article"""
-    article = Knowledge(title=title, category=category, description=description, content=content, author=author)
+    """Create a new article. Sets author_user_id to `author` when it
+    looks like a User.user_id (alphanumeric, ≤50 chars) — that's the
+    signal the route layer passes current_user.user_id; legacy callers
+    pass a display name like "Bùi Văn H" which we leave as the legacy
+    `author` field and skip author_user_id. The comment notification
+    uses author_user_id to find the recipient."""
+    author_user_id = author if (author and len(author) <= 50 and author.replace('_', '').isalnum()) else None
+    article = Knowledge(
+        title=title,
+        category=category,
+        description=description,
+        content=content,
+        author=author,
+        author_user_id=author_user_id,
+    )
     db.add(article)
     db.commit()
     db.refresh(article)

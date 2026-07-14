@@ -164,9 +164,14 @@ def create_comment(db: Session, user_id: str, content_type: str,
     # Trigger a notification on the relevant recipient. We only fire
     # ONE notification per comment (not both reply + on-post): a
     # reply notifies the parent comment's author; a top-level
-    # comment on a Post notifies the post's owner. Knowledge articles
-    # have no "owner" column, so they don't trigger on_post — the
-    # community is anonymous on the comment side, by design.
+    # comment notifies the content's owner (Post.user_id for posts,
+    # Knowledge.author_user_id for articles). Knowledge rows created
+    # before Commit D don't have author_user_id set — in that case we
+    # silently skip rather than notify a random legacy owner.
+    #
+    # Self-comments never notify (you don't need a ping to know you
+    # just commented on your own thing).
+    #
     # Lazy import so comments_service doesn't pull in
     # notification_service at module-load time (it imports db_models,
     # which would risk a cycle if notification_service ever needs
@@ -179,7 +184,7 @@ def create_comment(db: Session, user_id: str, content_type: str,
             # Reply → notify the parent comment's author.
             parent_row = db.query(Comment).filter(Comment.id == parent_id).first()
             target_user = parent_row.user_id if parent_row else None
-            if target_user:
+            if target_user and target_user != user_id:
                 notification_service.create_notification(
                     db,
                     recipient_id=target_user,
@@ -193,7 +198,7 @@ def create_comment(db: Session, user_id: str, content_type: str,
             # Top-level on a Post → notify the post's owner.
             from backend.services.db_models import Post
             post = db.query(Post).filter(Post.id == content_id).first()
-            if post and post.user_id:
+            if post and post.user_id and post.user_id != user_id:
                 notification_service.create_notification(
                     db,
                     recipient_id=post.user_id,
@@ -202,6 +207,24 @@ def create_comment(db: Session, user_id: str, content_type: str,
                     content_type='post',
                     content_id=content_id,
                     message=f'{actor_name} đã bình luận về bài "{post.title}": "{snippet}"',
+                )
+        elif content_type == 'knowledge':
+            # Top-level on a Knowledge article → notify the article's
+            # author. Reuse the comment_on_post type so the FE doesn't
+            # need a new icon — the bell just shows the same comment
+            # bubble, with the message text disambiguating ("bài viết
+            # X" vs "bài viết Y").
+            from backend.services.db_models import Knowledge
+            article = db.query(Knowledge).filter(Knowledge.id == content_id).first()
+            if article and article.author_user_id and article.author_user_id != user_id:
+                notification_service.create_notification(
+                    db,
+                    recipient_id=article.author_user_id,
+                    actor_id=user_id,
+                    type_='comment_on_post',
+                    content_type='knowledge',
+                    content_id=content_id,
+                    message=f'{actor_name} đã bình luận về bài "{article.title}": "{snippet}"',
                 )
     except Exception as notif_err:
         # Notification failures must not roll back the comment.
