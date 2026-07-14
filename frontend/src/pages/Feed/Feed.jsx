@@ -173,7 +173,7 @@ export default function Feed({ currentUser }) {
       }
       setGames((gamesRes.data || []).slice(0, 2));
 
-      if (user && user.role === 'admin') {
+      if (currentUser && currentUser.role === 'admin') {
         try {
           const [usersRes, logsRes, songsRes] = await Promise.all([
             api.fetchUsers(1, 4),
@@ -520,7 +520,7 @@ export default function Feed({ currentUser }) {
         </section>
 
         {/* THỐNG KÊ NGƯỜI DÙNG (CHỈ DÀNH CHO ADMIN) */}
-        {user && user.role === 'admin' && (
+        {currentUser && currentUser.role === 'admin' && (
           <section className="dashboard-card statistics-card-section">
             <div className="card-title-header">
               <h3>Thống Kê Người Dùng</h3>
@@ -690,7 +690,7 @@ export default function Feed({ currentUser }) {
               <CommentSection
                 contentType="knowledge"
                 contentId={selectedArticle.id}
-                currentUser={user}
+                currentUser={currentUser}
               />
             </div>
             <div className="modal-footer">
@@ -733,7 +733,7 @@ export default function Feed({ currentUser }) {
               <CommentSection
                 contentType="post"
                 contentId={commentModalPost.id}
-                currentUser={user}
+                currentUser={currentUser}
               />
             </div>
             <div className="modal-footer">
