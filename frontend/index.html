@@ -8,6 +8,12 @@
       Notes:
         - `style-src 'unsafe-inline'` is required because the codebase uses many
           inline styles; refactoring those to CSS classes is a follow-up.
+        - `script-src 'self' 'unsafe-inline'` — `'unsafe-inline'` is needed
+          because Vite dev mode injects an inline <script> for React Fast
+          Refresh (the @react-refresh preamble). Without it, HMR doesn't
+          boot and the page renders blank. For production via `vite build`
+          the inline script isn't emitted, so a stricter CSP could drop
+          this — but leaving it on is the simpler trade.
         - `frame-src http://localhost:8000 https:` lets the in-app game iframe
           overlay load game files served from the backend or any HTTPS origin.
           For production, replace `http://localhost:8000` with the real backend
@@ -17,7 +23,7 @@
         - `connect-src 'self' http://localhost:8000` matches the axios baseURL.
     -->
     <meta http-equiv="Content-Security-Policy"
-          content="default-src 'self'; img-src 'self' data: https:; script-src 'self'; style-src 'self' 'unsafe-inline'; frame-src http://localhost:8000 https:; frame-ancestors 'none'; connect-src 'self' http://localhost:8000;" />
+          content="default-src 'self'; img-src 'self' data: https:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; frame-src http://localhost:8000 https:; frame-ancestors 'none'; connect-src 'self' http://localhost:8000;" />
     <title>Fav Web Face Recognition</title>
   </head>
   <body>
