@@ -900,3 +900,30 @@
   border-color: transparent;
   color: white;
 }
+
+.friends-activity-item {
+  border-left: 3px solid #6366f1;
+  background: rgba(99, 102, 241, 0.04);
+}
+
+.friends-activity-item .post-username {
+  cursor: pointer;
+}
+
+.friends-activity-item .post-username:hover {
+  color: #4f46e5;
+}
+
+.friends-activity-item .post-avatar {
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.friends-activity-item .post-avatar:hover {
+  transform: scale(1.05);
+}
+
+.friends-activity-title {
+  color: var(--text-title);
+  font-weight: 600;
+}

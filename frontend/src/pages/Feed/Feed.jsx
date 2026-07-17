@@ -35,6 +35,10 @@ export default function Feed({ currentUser, onNavigate }) {
   const [logsData, setLogsData] = useState([]);
   const [popularSongs, setPopularSongs] = useState([]);
   const [activeTab, setActiveTab] = useState('checkin');
+  // Tier 3 N: latest activity events from users the current viewer
+  // follows. Lazily loaded with the rest of the feed payload so we
+  // don't add a second mount-time round-trip.
+  const [friendsActivity, setFriendsActivity] = useState([]);
 
   // Per-post reactions summary. Loaded lazily as posts scroll into
   // view would be ideal but the FE only renders ~5–10 posts on the
@@ -150,6 +154,21 @@ export default function Feed({ currentUser, onNavigate }) {
       const feedRes = await api.fetchPosts();
       const fetchedPosts = (feedRes.data || []).slice(0, 3);
       setPosts(fetchedPosts);
+
+      // Tier 3 N: latest activity from followed users. Best-effort
+      // — the FE renders an empty state if the call fails (e.g.
+      // user not logged in, follows nobody). We don't gate the
+      // rest of the feed on this single call.
+      if (currentUser) {
+        try {
+          const friends = await api.fetchFriendsActivity(20);
+          setFriendsActivity(friends || []);
+        } catch (err) {
+          setFriendsActivity([]);
+        }
+      } else {
+        setFriendsActivity([]);
+      }
 
       // Reactions per post. Best-effort — a failed fetch on one
       // post shouldn't blank the rest of the feed.
@@ -450,6 +469,76 @@ export default function Feed({ currentUser, onNavigate }) {
             )}
           </div>
         </section>
+
+        {/* Tier 3 N: latest activity from users the current viewer
+            follows. Hidden for non-authenticated viewers since the
+            BE endpoint requires login. */}
+        {currentUser && (
+          <section className="dashboard-card feed-card-section">
+            <div className="card-title-header">
+              <h3>👥 Hoạt động bạn bè</h3>
+            </div>
+            <div className="dashboard-posts-list">
+              {friendsActivity.length > 0 ? (
+                friendsActivity.map((ev) => {
+                  // Friendly action verb per (content_type, event_type).
+                  // Keeping this mapping local avoids loading a
+                  // shared constants module just for three strings.
+                  const verb = ({
+                    'knowledge|view': 'đã đọc',
+                    'knowledge|like': 'đã thích',
+                    'music|play': 'đã nghe',
+                    'music|like': 'đã thích',
+                    'game|view': 'đã xem',
+                    'game|like': 'đã thích',
+                    'post|like': 'đã thích',
+                    'post|view': 'đã xem',
+                  })[`${ev.content_type}|${ev.event_type}`] || ev.event_type;
+                  const icon = ({
+                    'knowledge': '📚',
+                    'music': '🎵',
+                    'game': '🎮',
+                    'post': '📰',
+                  })[ev.content_type] || '✨';
+                  return (
+                    <div key={ev.id} className="dash-post-item friends-activity-item">
+                      <div className="post-item-meta">
+                        <div
+                          className="post-avatar"
+                          onClick={() => onNavigate?.('userProfile', { userId: ev.actor_id })}
+                          role="button"
+                          tabIndex={0}
+                        >
+                          {(ev.actor_name || ev.actor_id || '?').substring(0, 2).toUpperCase()}
+                        </div>
+                        <div className="post-author-time">
+                          <span
+                            className="post-username"
+                            onClick={() => onNavigate?.('userProfile', { userId: ev.actor_id })}
+                            role="button"
+                            tabIndex={0}
+                          >
+                            @{ev.actor_id}
+                          </span>
+                          <span className="post-time">{formatDate(ev.created_at)}</span>
+                        </div>
+                        <span className="post-badge-type">{icon}</span>
+                      </div>
+                      <div className="post-item-content">
+                        <p className="post-desc">
+                          <strong>{ev.actor_name || ev.actor_id}</strong> {verb}{' '}
+                          <span className="friends-activity-title">{ev.title || `#${ev.content_id}`}</span>
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="no-data-text">Bạn chưa theo dõi ai, hoặc bạn bè chưa có hoạt động nào gần đây.</p>
+              )}
+            </div>
+          </section>
+        )}
 
       </div>
 

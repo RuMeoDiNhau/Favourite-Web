@@ -1274,6 +1274,26 @@ def get_my_recent_activity(
     return dashboard_service.get_recent_activity(db, current_user['user_id'], limit=limit)
 
 
+@router.get('/feed/friends')
+def get_friends_activity(
+    limit: int = 20,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Tier 3 N: latest activity events from users the current user
+    follows. Backed by the Follow table (Tier 3 J) and the
+    UserActivity log (Tier 2 commit 1).
+
+    The result is empty when the user follows nobody — the FE
+    shows an invite-to-follow empty state instead of treating
+    empty as an error."""
+    return {
+        'items': dashboard_service.get_friends_activity(
+            db, current_user['user_id'], limit=limit,
+        ),
+    }
+
+
 # ==================== Global Search Endpoint ====================
 
 @router.get('/search')

@@ -338,6 +338,11 @@ export const exportMyInsights = async (days = 7, fmt = 'csv') => {
 export const fetchRecentActivity = (limit = 10) =>
   api.get('/me/recent-activity', { params: { limit } }).then((r) => r.data || []);
 
+// Tier 3 N: latest activity events from users the current viewer
+// follows. Returns {items: [...]} on the BE; the FE extracts items.
+export const fetchFriendsActivity = (limit = 20) =>
+  api.get('/feed/friends', { params: { limit } }).then((r) => r.data?.items || []);
+
 
 // ==================== Global Search ====================
 //

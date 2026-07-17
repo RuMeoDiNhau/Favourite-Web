@@ -16,7 +16,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from backend.services.db_models import (
-    Knowledge, Music, Game, Post, UserActivity,
+    Knowledge, Music, Game, Post, UserActivity, Follow, User,
 )
 
 
@@ -247,6 +247,110 @@ def get_recent_activity(db: Session, user_id: str, limit: int = 10) -> list[dict
         }
         for r in rows
     ]
+
+
+def get_friends_activity(db: Session, viewer_id: str, limit: int = 20) -> list[dict]:
+    """Return the latest `limit` content events performed by users
+    that `viewer_id` follows.
+
+    Tier 3 N: this is the "friends activity feed" — uses the Follow
+    table from Tier 3 J. We pull the set of followed users in one
+    query (no offset/pagination — the set is small in practice),
+    then SELECT their activity events with a single IN-filter, then
+    batch-fetch the content rows for title/cover in 3 follow-up
+    queries.
+
+    We dedupe so the same (user, content, event) doesn't appear
+    twice in a row (the FE would look broken showing two consecutive
+    "X đã xem bài Y" cards). Dedup keeps the most recent row per
+    triplet.
+
+    Returns an empty list if the user follows nobody — the FE
+    renders an invite-to-follow state instead of an error.
+    """
+    if limit < 1 or limit > 100:
+        limit = 20
+
+    followed_ids = [
+        row[0] for row in
+        db.query(Follow.target_id).filter(Follow.follower_id == viewer_id).all()
+    ]
+    if not followed_ids:
+        return []
+
+    # Pull a wider window than `limit` so dedupe-by-triplet has
+    # enough candidates. 5x is enough in practice — duplicates are
+    # rare because the activity table itself dedupes click storms
+    # at 60s intervals.
+    raw_limit = limit * 5
+    rows = (
+        db.query(UserActivity)
+        .filter(UserActivity.user_id.in_(followed_ids))
+        .order_by(UserActivity.created_at.desc())
+        .limit(raw_limit)
+        .all()
+    )
+    if not rows:
+        return []
+
+    # Dedupe by (user_id, content_type, content_id, event_type).
+    # Keep the most recent occurrence (rows already sorted desc).
+    seen = set()
+    deduped: list[UserActivity] = []
+    for r in rows:
+        key = (r.user_id, r.content_type, r.content_id, r.event_type)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(r)
+        if len(deduped) >= limit:
+            break
+
+    # Bulk-fetch actor names + content metadata. We need actor names
+    # to render "X đã xem Y" cards; the FE links each row to the
+    # actor's profile, so the user_id alone isn't enough.
+    actor_rows = db.query(User).filter(User.user_id.in_(followed_ids)).all()
+    actor_by_id = {u.user_id: u for u in actor_rows}
+
+    by_type: dict[str, list[int]] = defaultdict(list)
+    for r in deduped:
+        by_type[r.content_type].append(r.content_id)
+
+    title_by_key: dict[tuple[str, int], str | None] = {}
+    cover_by_key: dict[tuple[str, int], str | None] = {}
+    if 'knowledge' in by_type:
+        for a in db.query(Knowledge).filter(Knowledge.id.in_(by_type['knowledge'])).all():
+            title_by_key[('knowledge', a.id)] = a.title
+            cover_by_key[('knowledge', a.id)] = None
+    if 'music' in by_type:
+        for m in db.query(Music).filter(Music.id.in_(by_type['music'])).all():
+            title_by_key[('music', m.id)] = m.title
+            cover_by_key[('music', m.id)] = None
+    if 'game' in by_type:
+        for g in db.query(Game).filter(Game.id.in_(by_type['game'])).all():
+            title_by_key[('game', g.id)] = g.title
+            cover_by_key[('game', g.id)] = g.image_url
+    if 'post' in by_type:
+        for p in db.query(Post).filter(Post.id.in_(by_type['post'])).all():
+            title_by_key[('post', p.id)] = p.title
+            cover_by_key[('post', p.id)] = p.thumbnail
+
+    out = []
+    for r in deduped:
+        actor = actor_by_id.get(r.user_id)
+        out.append({
+            'id': r.id,
+            'content_type': r.content_type,
+            'content_id': r.content_id,
+            'event_type': r.event_type,
+            'title': title_by_key.get((r.content_type, r.content_id)),
+            'cover_url': cover_by_key.get((r.content_type, r.content_id)),
+            'created_at': r.created_at,
+            # Actor metadata for the FE's "X đã Y" rendering.
+            'actor_id': r.user_id,
+            'actor_name': actor.name if actor else r.user_id,
+        })
+    return out
 
 
 def export_insights(db: Session, user_id: str, days: int, fmt: str) -> tuple[bytes, str, str]:
