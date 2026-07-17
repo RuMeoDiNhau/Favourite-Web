@@ -8,17 +8,16 @@ import { useBookmarks } from '../../lib/BookmarksContext';
 export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearchOpen, currentUser, onNavigate }) {
   const { isBookmarked: isBmKnowledge, toggle: toggleBm } = useBookmarks();
   // Multi-select category filter. Empty array = "All categories"
+  // (no filter). Selecting multiple is an OR match — show articles
+  // that belong to any of the selected categories. This lets a user
+  // who wants "Lập Trình OR AI" do it with two clicks instead of
+  // having to switch back and forth.
   const [selectedCategories, setSelectedCategories] = useState([]);
   // Multi-select tag filter (Tier 3 L). OR match: an article is in
   // view if it has at least one of the selected tags. Tags live on
   // the article (denormalized in the list response); the FE builds
   // the suggestion list from the union across loaded articles.
   const [selectedTags, setSelectedTags] = useState([]);
-  // (no filter). Selecting multiple is an OR match — show articles
-  // that belong to any of the selected categories. This lets a user
-  // who wants "Lập Trình OR AI" do it with two clicks instead of
-  // having to switch back and forth.
-  const [selectedCategories, setSelectedCategories] = useState([]);
   // `allArticles` is the unfiltered list we got from the API.
   // `articles` is the filtered view derived from `allArticles` +
   // `selectedCategories`. We keep both because filtering on every
@@ -28,6 +27,26 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Tier 3 M: "Bài viết của tôi" tab shows the current user's
+  // drafts and scheduled rows alongside their published ones. We
+  // lazy-load on first toggle and re-fetch after a successful create.
+  const [showMyArticles, setShowMyArticles] = useState(false);
+  const [myArticles, setMyArticles] = useState([]);
+  const [myArticlesLoading, setMyArticlesLoading] = useState(false);
+  // Create-article modal state. `mode` is one of 'published' |
+  // 'draft' | 'scheduled' — selected by the three action buttons.
+  // `scheduledAt` is a `datetime-local` string (HTML5).
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createMode, setCreateMode] = useState('published');
+  const [createTitle, setCreateTitle] = useState('');
+  const [createCategory, setCreateCategory] = useState('');
+  const [createDescription, setCreateDescription] = useState('');
+  const [createContent, setCreateContent] = useState('');
+  const [createTags, setCreateTags] = useState('');
+  const [createScheduledAt, setCreateScheduledAt] = useState('');
+  const [createSubmitting, setCreateSubmitting] = useState(false);
+  const [createError, setCreateError] = useState(null);
 
   // Modal state: which article is open, the videos fetched for it, and
   // whether the videos request is still in flight.
@@ -84,7 +103,12 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
   // then AND-combined: an article must satisfy both filters to
   // appear. Empty selection on either side = no constraint from
   // that filter.
-  const articles = allArticles.filter((a) => {
+  //
+  // Tier 3 M: when the "Bài viết của tôi" tab is active we source
+  // from `myArticles` (which includes drafts + scheduled rows)
+  // instead of `allArticles` (published-only).
+  const sourceList = showMyArticles ? myArticles : allArticles;
+  const articles = sourceList.filter((a) => {
     const okCat = selectedCategories.length === 0 || selectedCategories.includes(a.category);
     const articleTags = (a.tags || []).map((t) => t.name);
     const okTag = selectedTags.length === 0 || selectedTags.some((t) => articleTags.includes(t));
@@ -93,10 +117,13 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
 
   // Union of all tags across loaded articles — drives the chip
   // suggestion row. We sort alphabetically so the chip order is
-  // stable across renders.
+  // stable across renders. When the "Bài viết của tôi" tab is
+  // active, suggestions are scoped to that subset so the chip
+  // list doesn't bloat with tags from articles the viewer can't
+  // see.
   const tagSuggestions = (() => {
     const set = new Set();
-    for (const a of allArticles) {
+    for (const a of sourceList) {
       for (const t of a.tags || []) {
         if (t?.name) set.add(t.name);
       }
@@ -169,6 +196,85 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
     }
   };
 
+  // Tier 3 M: lazy-load the user's own articles when they toggle
+  // the tab. Re-fetches after each successful create so the new
+  // row appears immediately.
+  const loadMyArticles = async () => {
+    if (!currentUser) return;
+    setMyArticlesLoading(true);
+    try {
+      const data = await api.fetchMyKnowledge();
+      setMyArticles(data || []);
+    } catch (err) {
+      console.error('[Knowledge] loadMyArticles failed', err);
+    } finally {
+      setMyArticlesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (showMyArticles && currentUser) {
+      loadMyArticles();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showMyArticles]);
+
+  const handleOpenCreate = (mode) => {
+    setCreateMode(mode);
+    setCreateError(null);
+    setShowCreateModal(true);
+  };
+
+  const handleSubmitCreate = async (e) => {
+    e.preventDefault();
+    if (createSubmitting) return;
+    if (!createTitle.trim() || !createCategory.trim()) {
+      setCreateError('Tiêu đề và thể loại là bắt buộc.');
+      return;
+    }
+    setCreateSubmitting(true);
+    setCreateError(null);
+    try {
+      const tagNames = createTags
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean);
+      const payload = {
+        title: createTitle.trim(),
+        category: createCategory.trim(),
+        description: createDescription.trim(),
+        content: createContent,
+        tags: tagNames,
+        status: createMode,
+      };
+      if (createMode === 'scheduled') {
+        if (!createScheduledAt) {
+          setCreateError('Vui lòng chọn thời điểm đăng.');
+          setCreateSubmitting(false);
+          return;
+        }
+        payload.scheduled_at = new Date(createScheduledAt).toISOString();
+      }
+      await api.createArticleWithStatus(payload);
+      // Reset form + close modal.
+      setShowCreateModal(false);
+      setCreateTitle('');
+      setCreateCategory('');
+      setCreateDescription('');
+      setCreateContent('');
+      setCreateTags('');
+      setCreateScheduledAt('');
+      // Re-sync both lists so the new row shows up immediately.
+      loadArticles();
+      if (showMyArticles) loadMyArticles();
+    } catch (err) {
+      const detail = err?.response?.data?.detail;
+      setCreateError(detail || 'Không thể tạo bài viết.');
+    } finally {
+      setCreateSubmitting(false);
+    }
+  };
+
   // Toggle a category in/out of the selection. Treats "click the
   // active chip again" as deselect — common chip-UI convention.
   const toggleCategory = (cat) => {
@@ -205,18 +311,34 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
           Chia Sẻ Kiến Thức Học Tập & Làm Việc
         </h1>
         <p>Cộng đồng chia sẻ kiến thức, kỹ năng và kinh nghiệm</p>
-        <button className="create-btn">✍️ Viết Bài Mới</button>
+        <div className="knowledge-create-buttons">
+          <button className="create-btn" onClick={() => handleOpenCreate('published')}>✍️ Viết Bài Mới</button>
+          {currentUser && (
+            <>
+              <button className="create-btn create-btn-secondary" onClick={() => handleOpenCreate('draft')}>📝 Lưu nháp</button>
+              <button className="create-btn create-btn-secondary" onClick={() => handleOpenCreate('scheduled')}>⏰ Hẹn giờ</button>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="knowledge-main">
         <div className="filter-bar">
           <div className="filter-buttons">
             <button
-              className={`filter-btn ${selectedCategories.length === 0 ? 'active' : ''}`}
-              onClick={() => setSelectedCategories([])}
+              className={`filter-btn ${!showMyArticles ? 'active' : ''}`}
+              onClick={() => setShowMyArticles(false)}
             >
-              Tất Cả
+              📚 Tất Cả Bài Viết
             </button>
+            {currentUser && (
+              <button
+                className={`filter-btn ${showMyArticles ? 'active' : ''}`}
+                onClick={() => setShowMyArticles(true)}
+              >
+                👤 Bài viết của tôi
+              </button>
+            )}
             {categories.map((cat) => {
               const active = selectedCategories.includes(cat);
               return (
@@ -279,6 +401,11 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
                   <div className="card-header">
                     <div className="card-image">📝</div>
                     <div className="card-badge">{article.category}</div>
+                    {article.status && article.status !== 'published' && (
+                      <div className={`card-status card-status-${article.status}`}>
+                        {article.status === 'draft' ? '📝 Nháp' : '⏰ Đã hẹn giờ'}
+                      </div>
+                    )}
                   </div>
 
                   <div className="card-content">
@@ -407,6 +534,100 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
                 onNavigate={onNavigate}
               />
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tier 3 M: create-article modal. The action buttons in the
+          header (Đăng ngay / Lưu nháp / Hẹn giờ) call into here with
+          a different `mode` so the submit handler knows which
+          `status` to send to the BE. */}
+      {showCreateModal && currentUser && (
+        <div className="knowledge-create-overlay" onClick={() => setShowCreateModal(false)}>
+          <div className="knowledge-create-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="knowledge-create-close" onClick={() => setShowCreateModal(false)} type="button">×</button>
+            <h2>
+              {createMode === 'draft' ? '📝 Lưu bản nháp'
+                : createMode === 'scheduled' ? '⏰ Hẹn giờ đăng bài'
+                : '✍️ Đăng bài mới'}
+            </h2>
+            <form onSubmit={handleSubmitCreate} className="knowledge-create-form">
+              <label>
+                Tiêu đề *
+                <input
+                  type="text"
+                  value={createTitle}
+                  onChange={(e) => setCreateTitle(e.target.value)}
+                  required
+                  maxLength={255}
+                  placeholder="Ví dụ: Học React Hooks nâng cao"
+                />
+              </label>
+              <label>
+                Thể loại *
+                <input
+                  type="text"
+                  value={createCategory}
+                  onChange={(e) => setCreateCategory(e.target.value)}
+                  required
+                  maxLength={100}
+                  list="knowledge-category-suggestions"
+                  placeholder="Ví dụ: Lập Trình"
+                />
+                <datalist id="knowledge-category-suggestions">
+                  {categories.map((c) => <option key={c} value={c} />)}
+                </datalist>
+              </label>
+              <label>
+                Mô tả ngắn
+                <textarea
+                  value={createDescription}
+                  onChange={(e) => setCreateDescription(e.target.value)}
+                  maxLength={1024}
+                  rows={2}
+                />
+              </label>
+              <label>
+                Nội dung
+                <textarea
+                  value={createContent}
+                  onChange={(e) => setCreateContent(e.target.value)}
+                  rows={6}
+                />
+              </label>
+              <label>
+                Tags (phân cách bằng dấu phẩy)
+                <input
+                  type="text"
+                  value={createTags}
+                  onChange={(e) => setCreateTags(e.target.value)}
+                  placeholder="react, frontend, hooks"
+                />
+              </label>
+              {createMode === 'scheduled' && (
+                <label>
+                  Thời điểm đăng *
+                  <input
+                    type="datetime-local"
+                    value={createScheduledAt}
+                    onChange={(e) => setCreateScheduledAt(e.target.value)}
+                    required
+                  />
+                </label>
+              )}
+              {createError && <div className="knowledge-create-error">{createError}</div>}
+              <div className="knowledge-create-actions">
+                <button type="submit" className="knowledge-create-submit" disabled={createSubmitting}>
+                  {createSubmitting ? 'Đang lưu...'
+                    : createMode === 'draft' ? '📝 Lưu nháp'
+                    : createMode === 'scheduled' ? '⏰ Hẹn giờ'
+                    : '🚀 Đăng ngay'}
+                </button>
+                <button type="button" className="knowledge-create-cancel" onClick={() => setShowCreateModal(false)}>
+                  Huỷ
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

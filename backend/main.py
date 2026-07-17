@@ -6,6 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from backend.api.routes import router
 from backend.services.db_models import init_db
 from backend.services.s3_service import download_all_embeddings
+from backend.services.publish_service import start_publisher, stop_publisher
 from backend.services.logging_service import logger
 from backend.middleware.rate_limit import rate_limit_middleware
 from backend.middleware.csp import csp_middleware
@@ -18,10 +19,16 @@ app = FastAPI(title='Fav Web Face Recognition')
 @app.on_event("startup")
 def on_startup():
     logger.info("FastAPI Web Application starting up...")
+    # Tier 3 M: kick off the scheduled-publish background loop. The
+    # thread is a daemon so a missing stop on shutdown doesn't block
+    # process exit — worst case is one extra cycle of "promote due
+    # articles" during shutdown.
+    start_publisher()
 
 @app.on_event("shutdown")
 def on_shutdown():
     logger.info("FastAPI Web Application shutting down...")
+    stop_publisher()
 
 
 # CORS: cookie-based auth requires `allow_credentials=True`, which

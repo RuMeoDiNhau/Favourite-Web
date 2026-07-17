@@ -1,5 +1,6 @@
 import jwt
 import os
+from datetime import datetime
 from pydantic import BaseModel
 from fastapi import APIRouter, HTTPException, Depends, Header, UploadFile, File, Form, Request, Response
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -20,7 +21,7 @@ from backend.services.schemas import (
     NotificationResponse, NotificationList, UnreadCount,
     CollectionCreateRequest, CollectionUpdateRequest, CollectionItemRequest,
 )
-from backend.services import games_service, music_service, knowledge_service, posts_service, dashboard_service, search_service, comments_service, notification_service, bookmarks_service, follow_service, collections_service, tags_service
+from backend.services import games_service, music_service, knowledge_service, posts_service, dashboard_service, search_service, comments_service, notification_service, bookmarks_service, follow_service, collections_service, tags_service, publish_service
 from backend.services.auth_service import create_access_token, decode_access_token
 from backend.services.logging_service import logger
 
@@ -832,11 +833,12 @@ def like_song(
 
 def _enrich_knowledge(article, db: Session) -> dict:
     """Build a JSON-friendly dict for one Knowledge row. Adds the
-    article's tags so the FE can render tag chips without a second
-    round-trip. We avoid the Pydantic response_model here because
-    adding `tags` to KnowledgeResponse would force every caller
-    (including internal services) to compute the tag list — the
-    denormalization is only relevant to the public-facing routes."""
+    article's tags + Tier 3 M publish state so the FE can render
+    tag chips and "Đã hẹn giờ" / "Đã lưu nháp" hints without a
+    second round-trip. We avoid the Pydantic response_model here
+    because adding these fields would force every caller (including
+    internal services) to compute them — the denormalization is only
+    relevant to the public-facing routes."""
     return {
         'id': article.id,
         'title': article.title,
@@ -849,6 +851,9 @@ def _enrich_knowledge(article, db: Session) -> dict:
         'likes': article.likes,
         'created_at': article.created_at.isoformat() if article.created_at else None,
         'tags': tags_service.tags_for_content(db, 'knowledge', article.id),
+        'status': article.status or 'published',
+        'scheduled_at': article.scheduled_at.isoformat() if article.scheduled_at else None,
+        'published_at': article.published_at.isoformat() if article.published_at else None,
     }
 
 
@@ -880,14 +885,23 @@ def _parse_tags_param(raw: str | None) -> list[str]:
 @router.get('/knowledge', response_model=None)
 def get_all_knowledge(
     tags: str | None = None,
+    mine: bool = False,
     limit: int = 100,
     db: Session = Depends(get_db),
+    current_user: dict | None = Depends(get_optional_user),
 ):
-    """List articles. Optional `?tags=a,b,c` filters by tag (OR match)
-    — same UX as the category chip filter. Returns dict rows (not
-    Pydantic) so we can include the tags array inline."""
+    """List articles. By default only published rows are returned.
+
+    Tier 3 M: `?mine=true` returns the current user's own articles,
+    including drafts and scheduled-but-not-yet-published. Requires
+    auth — anon viewers can never see someone else's drafts."""
     knowledge_service.init_articles(db)
-    rows = knowledge_service.get_all_articles(db, limit=limit)
+    if mine:
+        if not current_user:
+            raise HTTPException(status_code=401, detail='login required for ?mine=true')
+        rows = knowledge_service.get_my_articles(db, current_user['user_id'], limit=limit)
+    else:
+        rows = knowledge_service.get_all_articles(db, limit=limit)
     tag_names = _parse_tags_param(tags)
     if tag_names:
         matching_ids = tags_service.filter_content_ids(db, 'knowledge', tag_names)
@@ -946,17 +960,23 @@ def get_article(
     current_user: dict = Depends(get_optional_user),
 ):
     """Get article by ID and increment views. If signed in, the
-    view also counts as a per-user activity event for the dashboard."""
+    view also counts as a per-user activity event for the dashboard.
+
+    Tier 3 M: drafts / scheduled-but-not-yet-published articles
+    return 404 to anyone except the owner. The check uses
+    author_user_id (not author) — the legacy `author` field is a
+    free-text display name and isn't a reliable owner signal."""
     user_id = current_user['user_id'] if current_user else None
     article = knowledge_service.get_article_by_id(db, article_id, user_id=user_id)
     if not article:
+        raise HTTPException(status_code=404, detail='Article not found')
+    if article.status in ('draft', 'scheduled') and article.author_user_id != user_id:
         raise HTTPException(status_code=404, detail='Article not found')
     return _enrich_knowledge(article, db)
 
 @router.post('/knowledge', response_model=None, status_code=201)
 def create_article(
     request: KnowledgeCreateRequest,
-    tags: list[str] | None = None,  # accepted as form/JSON body field
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -967,21 +987,38 @@ def create_article(
     Tier 3 L: accepts an optional `tags` array (list of tag names).
     Names are normalized + deduped server-side; unknown names
     auto-create new Tag rows. We don't fail the create if a tag is
-    bogus — the route treats `tags` as best-effort metadata."""
+    bogus — the route treats `tags` as best-effort metadata.
+
+    Tier 3 M: accepts an optional `status` ('draft' | 'scheduled' |
+    'published'). For 'scheduled', `scheduled_at` is required and
+    must be in the future; the publisher loop promotes the row
+    when the time comes. Defaults to 'published' for backwards
+    compatibility with existing callers that don't send the field."""
+    status = (request.status or 'published').lower()
+    if status not in {'published', 'draft', 'scheduled'}:
+        raise HTTPException(status_code=400, detail=f'invalid status: {status!r}')
+    scheduled_at = None
+    if status == 'scheduled':
+        if not request.scheduled_at:
+            raise HTTPException(status_code=400, detail='scheduled_at required when status=scheduled')
+        scheduled_at = request.scheduled_at
+        if scheduled_at <= datetime.utcnow():
+            raise HTTPException(status_code=400, detail='scheduled_at must be in the future')
+
     article = knowledge_service.create_article(
         db,
         title=request.title,
         category=request.category,
         description=request.description,
         content=request.content,
-        author=current_user.get('user_id') or request.author
+        author=current_user.get('user_id') or request.author,
+        status=status,
+        scheduled_at=scheduled_at,
     )
-    if tags:
+    if request.tags:
         try:
-            tags_service.attach(db, 'knowledge', article.id, tags)
+            tags_service.attach(db, 'knowledge', article.id, request.tags)
         except ValueError:
-            # Drop the over-long tag silently — the article still
-            # gets created, the user can re-tag from the detail page.
             pass
     return _enrich_knowledge(article, db)
 

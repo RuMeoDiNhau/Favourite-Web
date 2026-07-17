@@ -111,6 +111,14 @@ class Knowledge(Base):
     views = Column(Integer, default=0)
     likes = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
+    # Tier 3 M: draft + scheduled-publish state. `status` is
+    # 'published' | 'draft' | 'scheduled'. `scheduled_at` only set
+    # when status='scheduled'. `published_at` is the moment the
+    # article went live — set on create for 'published' rows, set
+    # later by the publisher loop for 'scheduled' rows.
+    status = Column(String(20), default='published', index=True)
+    scheduled_at = Column(DateTime, nullable=True)
+    published_at = Column(DateTime, nullable=True)
 
 
 class Post(Base):
@@ -423,6 +431,28 @@ def init_db():
             if 'author_user_id' not in knowledge_cols:
                 conn.execute(text('ALTER TABLE knowledge ADD COLUMN author_user_id VARCHAR(50)'))
                 conn.execute(text('CREATE INDEX IF NOT EXISTS ix_knowledge_author_user_id ON knowledge (author_user_id)'))
+            # Tier 3 M: draft + scheduled publish state. `published_at`
+            # records when the article went live (whether immediately
+            # on create or later when the scheduled background loop
+            # promoted it). `scheduled_at` is the publish trigger
+            # time, set only when status='scheduled'.
+            if 'status' not in knowledge_cols:
+                conn.execute(text("ALTER TABLE knowledge ADD COLUMN status VARCHAR(20) DEFAULT 'published'"))
+                # Backfill: rows that pre-date this column must look
+                # 'published' so the list endpoint keeps returning
+                # them. We backfill published_at = created_at so the
+                # publishing timeline reads sensibly.
+                conn.execute(text("UPDATE knowledge SET status = 'published' WHERE status IS NULL"))
+                conn.execute(text('UPDATE knowledge SET published_at = created_at WHERE published_at IS NULL'))
+            if 'scheduled_at' not in knowledge_cols:
+                conn.execute(text('ALTER TABLE knowledge ADD COLUMN scheduled_at DATETIME'))
+            if 'published_at' not in knowledge_cols:
+                conn.execute(text('ALTER TABLE knowledge ADD COLUMN published_at DATETIME'))
+                conn.execute(text('UPDATE knowledge SET published_at = created_at WHERE published_at IS NULL'))
+            # Index for the publisher loop's hot path: "give me
+            # scheduled rows whose scheduled_at <= now". Without the
+            # index the loop becomes O(N) over the whole table.
+            conn.execute(text('CREATE INDEX IF NOT EXISTS ix_knowledge_status_scheduled ON knowledge (status, scheduled_at)'))
 
             comments_cols = {c['name'] for c in inspector.get_columns('comments')} if inspector.has_table('comments') else set()
             if 'updated_at' not in comments_cols:

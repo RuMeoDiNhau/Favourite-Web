@@ -109,6 +109,12 @@ class KnowledgeCreateRequest(BaseModel):
     # tags. We don't validate length here — the service rejects
     # over-100-char names with a 400.
     tags: Optional[List[str]] = None
+    # Tier 3 M: draft + scheduled publish. `status` defaults to
+    # 'published' on the BE so existing callers (no body field)
+    # behave the same. Use 'draft' to save an unpublished article,
+    # 'scheduled' with `scheduled_at` (ISO 8601) to defer publish.
+    status: Optional[str] = 'published'
+    scheduled_at: Optional[datetime] = None
 
 
 # Authentication Schemas

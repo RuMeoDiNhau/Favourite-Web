@@ -134,6 +134,20 @@ export const detachTag = (contentType, contentId, name) =>
   api.post(`/tags/detach`, null, { params: { content_type: contentType, content_id: contentId, name } })
     .then((r) => r.data);
 
+
+// ==================== Knowledge Drafts / Scheduled ====================
+//
+// Tier 3 M: the knowledge create endpoint accepts `status` and an
+// optional `scheduled_at` ISO string. The list endpoint accepts
+// `mine=true` to return the current user's drafts + scheduled rows
+// in addition to published ones.
+
+export const fetchMyKnowledge = (limit = 100) =>
+  api.get('/knowledge', { params: { mine: true, limit } }).then((r) => r.data || []);
+
+export const createArticleWithStatus = (payload) =>
+  api.post('/knowledge', payload).then((r) => r.data);
+
 export const fetchLogs = () => api.get('/logs');
 
 export const recognizeFace = (imageBase64) => api.post('/recognize', { image_base64: imageBase64 });
