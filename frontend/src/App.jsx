@@ -248,6 +248,7 @@ function App() {
           <SearchBar
             onSelectItem={handleSearchSelect}
             isAdmin={user.role === 'admin'}
+            userId={user.user_id}
           />
         </div>
 
