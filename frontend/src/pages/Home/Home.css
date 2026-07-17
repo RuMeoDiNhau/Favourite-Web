@@ -58,6 +58,34 @@
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
+.home-export-actions {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.home-export-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.home-export-btn:hover:not(:disabled) {
+  background: var(--primary, #6366f1);
+  border-color: var(--primary, #6366f1);
+  color: white;
+}
+
+.home-export-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .home-error {
   background: rgba(239, 68, 68, 0.1);
   border: 1px solid rgba(239, 68, 68, 0.3);

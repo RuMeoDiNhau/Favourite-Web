@@ -225,6 +225,31 @@ export const trackActivity = (payload) => api.post('/activity/track', payload);
 export const fetchMyInsights = (days = 7) =>
   api.get('/me/insights', { params: { days } }).then((r) => r.data);
 
+// Download the user's insights as a file. The BE sets
+// Content-Disposition so the browser pops a save dialog; we
+// forward the same filename from the response header so the
+// default name in that dialog matches what we'd compute.
+export const exportMyInsights = async (days = 7, fmt = 'csv') => {
+  const res = await api.get('/me/insights/export', {
+    params: { days, fmt },
+    responseType: 'blob',
+  });
+  // Content-Disposition: attachment; filename="..." → grab the
+  // quoted filename, fall back to a generic name if the header
+  // is missing (e.g. when the BE was patched and forgot it).
+  const disp = res.headers?.['content-disposition'] || '';
+  const match = /filename="([^"]+)"/.exec(disp);
+  const filename = match ? match[1] : `favweb-insights-${days}d.${fmt}`;
+  const url = URL.createObjectURL(res.data);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
 export const fetchRecentActivity = (limit = 10) =>
   api.get('/me/recent-activity', { params: { limit } }).then((r) => r.data || []);
 

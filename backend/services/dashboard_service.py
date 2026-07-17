@@ -6,6 +6,9 @@ is a dict (not a Pydantic model) because the shape is FE-specific and
 changes more often than the wire model — keeping it loose here means we
 can add fields without churn.
 """
+import csv
+import io
+import json
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta
 
@@ -244,3 +247,40 @@ def get_recent_activity(db: Session, user_id: str, limit: int = 10) -> list[dict
         }
         for r in rows
     ]
+
+
+def export_insights(db: Session, user_id: str, days: int, fmt: str) -> tuple[bytes, str, str]:
+    """Serialize the user's insights to a downloadable blob.
+
+    Returns (body_bytes, content_type, filename). The route sets those
+    on the Response so the browser triggers a file save dialog
+    instead of rendering inline.
+
+    Two formats are supported:
+      - 'json' — the same dict get_user_insights returns, pretty-printed.
+      - 'csv'  — a flat per-day breakdown, one row per (date,
+                 content_type). The daily matrix is the most useful
+                 shape for spreadsheet pivots and charts.
+
+    We rebuild insights from scratch (don't pass the existing dict
+    in) so the export is always in sync with whatever schema
+    get_user_insights emits. The cost is one extra dashboard query
+    per export — acceptable because exports are infrequent.
+    """
+    insights = get_user_insights(db, user_id, days=days)
+    if fmt == 'json':
+        # datetime objects aren't JSON-serializable; isoformat them.
+        body = json.dumps(insights, indent=2, ensure_ascii=False, default=str).encode('utf-8')
+        filename = f'favweb-insights-{user_id}-{days}d.json'
+        return body, 'application/json; charset=utf-8', filename
+    if fmt == 'csv':
+        buf = io.StringIO()
+        writer = csv.writer(buf)
+        writer.writerow(['date', 'content_type', 'count'])
+        for row in insights['daily']:
+            for ctype in ('knowledge', 'music', 'game', 'post'):
+                writer.writerow([row['date'], ctype, row.get(ctype, 0)])
+        body = buf.getvalue().encode('utf-8')
+        filename = f'favweb-insights-{user_id}-{days}d.csv'
+        return body, 'text/csv; charset=utf-8', filename
+    raise ValueError(f"unsupported format: {fmt}")

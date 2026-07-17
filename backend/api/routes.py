@@ -817,6 +817,29 @@ def get_my_insights(
     return dashboard_service.get_user_insights(db, current_user['user_id'], days=days)
 
 
+@router.get('/me/insights/export')
+def export_my_insights(
+    days: int = 7,
+    fmt: str = 'csv',
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Download the dashboard insights as JSON or CSV. The response
+    uses Content-Disposition: attachment so the browser pops a save
+    dialog. Content-Type is set per-format."""
+    fmt = (fmt or '').lower()
+    if fmt not in ('csv', 'json'):
+        raise HTTPException(status_code=400, detail="fmt must be 'csv' or 'json'")
+    body, content_type, filename = dashboard_service.export_insights(
+        db, current_user['user_id'], days=days, fmt=fmt,
+    )
+    return Response(
+        content=body,
+        media_type=content_type,
+        headers={'Content-Disposition': f'attachment; filename="{filename}"'},
+    )
+
+
 @router.get('/me/recent-activity')
 def get_my_recent_activity(
     limit: int = 10,

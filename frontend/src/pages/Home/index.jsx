@@ -47,6 +47,7 @@ function Home({ onNavigate }) {
   const [recent, setRecent] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -74,6 +75,23 @@ function Home({ onNavigate }) {
     load();
     return () => { cancelled = true; };
   }, [days]);
+
+  // Trigger a file download for the user's insights in `fmt`
+  // ('csv' or 'json'). We disable both export buttons while in
+  // flight so a double-click doesn't fire two downloads. The BE
+  // sets Content-Disposition so the browser saves straight to disk;
+  // we just unwrap the blob and click a synthesized <a>.
+  const onExport = async (fmt) => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      await api.exportMyInsights(days, fmt);
+    } catch (err) {
+      console.warn('[Home] export failed', err);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   // Daily chart data — the BE already zero-fills missing days, so
   // the only transform needed is shortening the date label for the
@@ -117,6 +135,26 @@ function Home({ onNavigate }) {
               {d} ngày
             </button>
           ))}
+        </div>
+        <div className="home-export-actions">
+          <button
+            type="button"
+            className="home-export-btn"
+            onClick={() => onExport('csv')}
+            disabled={exporting}
+            title="Tải file CSV"
+          >
+            ⬇️ CSV
+          </button>
+          <button
+            type="button"
+            className="home-export-btn"
+            onClick={() => onExport('json')}
+            disabled={exporting}
+            title="Tải file JSON"
+          >
+            ⬇️ JSON
+          </button>
         </div>
       </header>
 
