@@ -63,6 +63,26 @@ export const fetchUsers = (page = 1, limit = 10) => api.get('/users', { params: 
 export const fetchUserProfile = (userId) =>
   api.get(`/users/${userId}/profile`).then((r) => r.data);
 
+// ==================== Follow ====================
+//
+// Mirrors the toggle pattern used by bookmarks: POST turns the edge
+// on (idempotent — re-following returns the same payload as a fresh
+// follow), DELETE turns it off. The response includes `is_following`
+// plus the new follower/following counts so the FE can update both
+// the button label and the count display in a single round-trip.
+
+export const followUser = (userId) =>
+  api.post(`/users/${userId}/follow`).then((r) => r.data);
+
+export const unfollowUser = (userId) =>
+  api.delete(`/users/${userId}/follow`).then((r) => r.data);
+
+export const fetchFollowers = (userId, limit = 50, offset = 0) =>
+  api.get(`/users/${userId}/followers`, { params: { limit, offset } }).then((r) => r.data);
+
+export const fetchFollowing = (userId, limit = 50, offset = 0) =>
+  api.get(`/users/${userId}/following`, { params: { limit, offset } }).then((r) => r.data);
+
 export const fetchLogs = () => api.get('/logs');
 
 export const recognizeFace = (imageBase64) => api.post('/recognize', { image_base64: imageBase64 });

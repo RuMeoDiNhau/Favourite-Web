@@ -19,7 +19,7 @@ from backend.services.schemas import (
     CommentCreateRequest, CommentUpdateRequest, CommentResponse, ReactionRequest, ReactionSummary,
     NotificationResponse, NotificationList, UnreadCount,
 )
-from backend.services import games_service, music_service, knowledge_service, posts_service, dashboard_service, search_service, comments_service, notification_service, bookmarks_service
+from backend.services import games_service, music_service, knowledge_service, posts_service, dashboard_service, search_service, comments_service, notification_service, bookmarks_service, follow_service
 from backend.services.auth_service import create_access_token, decode_access_token
 from backend.services.logging_service import logger
 
@@ -174,6 +174,7 @@ def list_users(page: int = 1, limit: int = 10, admin: dict = Depends(get_admin_u
 def get_user_profile(
     user_id: str,
     db: Session = Depends(get_db),
+    current_user: dict | None = Depends(get_optional_user),
 ):
     """Public read-only profile for any user. Returns the user's
     display fields plus a small stats block (articles owned, posts
@@ -217,6 +218,93 @@ def get_user_profile(
             'comments_written': comments_written,
             'total_likes': int(total_likes),
         },
+        # Follow counts — kept on the profile payload so the FE doesn't
+        # need a second round-trip to render "12 người theo dõi". The
+        # current viewer's perspective is added by the route below so
+        # we know which button to show ("Theo dõi" vs "Đang theo dõi").
+        'follow': follow_service.follow_counts(db, user_id),
+        # `is_following` is only meaningful for an authenticated viewer
+        # who isn't viewing their own profile. Anonymous viewers get
+        # False (the FE will hide the button); self-viewers also get
+        # False (you don't follow yourself).
+        'is_following': (
+            follow_service.is_following(db, current_user['user_id'], user_id)
+            if current_user and current_user['user_id'] != user_id
+            else False
+        ),
+    }
+
+
+@router.post('/users/{user_id}/follow')
+def follow_user(
+    user_id: str,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Toggle-on follow. Authenticated only — you can't follow as a
+    guest. Self-follow and unknown-target both surface as 400 via
+    FollowError. Idempotent: re-following returns 200 with the same
+    payload as a fresh follow."""
+    try:
+        follow_service.follow(db, current_user['user_id'], user_id)
+    except follow_service.FollowError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    counts = follow_service.follow_counts(db, user_id)
+    return {
+        'user_id': user_id,
+        'is_following': True,
+        'followers': counts['followers'],
+        'following': counts['following'],
+    }
+
+
+@router.delete('/users/{user_id}/follow')
+def unfollow_user(
+    user_id: str,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Toggle-off follow. Symmetric to follow_user — same response
+    shape, is_following flips to False. Idempotent."""
+    follow_service.unfollow(db, current_user['user_id'], user_id)
+    counts = follow_service.follow_counts(db, user_id)
+    return {
+        'user_id': user_id,
+        'is_following': False,
+        'followers': counts['followers'],
+        'following': counts['following'],
+    }
+
+
+@router.get('/users/{user_id}/followers')
+def get_followers(
+    user_id: str,
+    db: Session = Depends(get_db),
+    limit: int = 50,
+    offset: int = 0,
+):
+    """Public list of users following `user_id`. Capped at 200 by the
+    service to keep the wire payload bounded."""
+    limit = min(max(limit, 1), 200)
+    return {
+        'user_id': user_id,
+        'followers': follow_service.list_followers(db, user_id, limit, offset),
+    }
+
+
+@router.get('/users/{user_id}/following')
+def get_following(
+    user_id: str,
+    db: Session = Depends(get_db),
+    limit: int = 50,
+    offset: int = 0,
+):
+    """Public list of users that `user_id` follows. Mirror of
+    /followers."""
+    limit = min(max(limit, 1), 200)
+    return {
+        'user_id': user_id,
+        'following': follow_service.list_following(db, user_id, limit, offset),
     }
 
 

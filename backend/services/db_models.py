@@ -256,6 +256,40 @@ class Notification(Base):
     )
 
 
+class Follow(Base):
+    """Directed follow edge between two users.
+
+    `follower_id` is the user who clicked "follow"; `target_id` is
+    the user being followed. Uniqueness on (follower_id, target_id)
+    means a user can follow another user at most once — same toggle
+    pattern as bookmarks: try INSERT, catch IntegrityError → DELETE.
+
+    We model follows as directed (not symmetric friendship) because
+    Tier 3 N's "friends activity feed" wants the explicit list of
+    people I chose to follow, not the union of who follows me.
+
+    Self-follow is rejected at the service layer (you can't follow
+    yourself) — there's no DB constraint because SQLite's CHECK
+    support is fiddly and the service is the only caller.
+
+    The composite index covers the two hot paths:
+      - "am I following user X?" — (follower_id, target_id) lookup.
+      - "who does user X follow?" — (follower_id, created_at) range.
+    """
+    __tablename__ = 'follows'
+
+    id = Column(Integer, primary_key=True, index=True)
+    follower_id = Column(String(50), nullable=False)
+    target_id = Column(String(50), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    __table_args__ = (
+        UniqueConstraint('follower_id', 'target_id', name='uq_follow_pair'),
+        Index('ix_follows_follower_ctime', 'follower_id', 'created_at'),
+        Index('ix_follows_target_ctime', 'target_id', 'created_at'),
+    )
+
+
 class Bookmark(Base):
     """Per-user save on a content item. One row per (user, content_type,
     content_id) — enforced by the unique constraint. Toggle semantics are
