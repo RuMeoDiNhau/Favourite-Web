@@ -4,9 +4,11 @@ import './Music.css';
 import * as api from '../../services/api';
 import { readJson } from '../../lib/safeStorage';
 import { getLikedSongIds, toggleLikedSong, isLikedSong } from '../../lib/likedSongs';
+import { useBookmarks } from '../../lib/BookmarksContext';
 
 export default function Music() {
   const user = readJson('user');
+  const { isBookmarked: isBm, toggle: toggleBm } = useBookmarks();
 
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [playlists, setPlaylists] = useState([]);
@@ -592,6 +594,15 @@ const handleFileChange = (e) => {
                         </button>
                         <button onClick={() => handleLikeSong(song.id)} className="play-btn" style={{ marginLeft: '8px' }}>
                           ❤️
+                        </button>
+                        <button
+                          onClick={() => toggleBm('music', song.id)}
+                          className={`play-btn ${isBm('music', song.id) ? 'bookmark-active' : ''}`}
+                          style={{ marginLeft: '8px' }}
+                          title={isBm('music', song.id) ? 'Bỏ lưu' : 'Lưu bài hát'}
+                          aria-label={isBm('music', song.id) ? 'Bỏ lưu' : 'Lưu bài hát'}
+                        >
+                          {isBm('music', song.id) ? '🔖' : '⚪'}
                         </button>
                         
                         {user && (

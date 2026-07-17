@@ -1,7 +1,7 @@
-"""Bookmarks: per-user saves on content items (Knowledge articles, Posts
-for the MVP). Lighter than comments_service because there's no tree,
-no reactions bar, and no notification cascade — just a flat per-user
-list of saved items.
+"""Bookmarks: per-user saves on content items (Knowledge articles, Posts,
+Games, Music tracks). Lighter than comments_service because there's no
+tree, no reactions bar, and no notification cascade — just a flat
+per-user list of saved items.
 
 The toggle operation is the interesting one: the FE uses an
 optimistic-update pattern, so the service must return the new
@@ -12,14 +12,13 @@ INSERT window.
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
-from backend.services.db_models import Bookmark, Knowledge, Post
+from backend.services.db_models import Bookmark, Knowledge, Post, Game, Music
 
 
-# MVP: only Knowledge articles and Feed posts. Games and Music tracks
-# don't have deeplink surfaces in the FE (their cards open a modal but
-# no bookmarkable detail page yet). Adding more is a service-layer
-# allowlist change + a route validation step.
-ALLOWED_CONTENT_TYPES = {'knowledge', 'post'}
+# All four content types. The FE wires the same 🔖 button on
+# Knowledge cards, Post cards, Game cards, and Music cards; the
+# allowlist just gates which content_types the BE will accept.
+ALLOWED_CONTENT_TYPES = {'knowledge', 'post', 'music', 'game'}
 
 # Cap per user. 200 is enough for an MVP — at that scale the user
 # should be using a real read-later service. We don't want a hostile
@@ -40,6 +39,10 @@ def _content_exists(db: Session, content_type: str, content_id: int) -> bool:
         return db.query(Knowledge.id).filter(Knowledge.id == content_id).first() is not None
     if content_type == 'post':
         return db.query(Post.id).filter(Post.id == content_id).first() is not None
+    if content_type == 'music':
+        return db.query(Music.id).filter(Music.id == content_id).first() is not None
+    if content_type == 'game':
+        return db.query(Game.id).filter(Game.id == content_id).first() is not None
     return False
 
 
@@ -126,6 +129,8 @@ def list_bookmarks(db: Session, user_id: str,
     # Bulk-load referenced content rows (one query per type, not N+1).
     knowledge_ids = [r.content_id for r in page if r.content_type == 'knowledge']
     post_ids = [r.content_id for r in page if r.content_type == 'post']
+    music_ids = [r.content_id for r in page if r.content_type == 'music']
+    game_ids = [r.content_id for r in page if r.content_type == 'game']
 
     knowledge_map = {}
     if knowledge_ids:
@@ -135,6 +140,14 @@ def list_bookmarks(db: Session, user_id: str,
     if post_ids:
         for p in db.query(Post).filter(Post.id.in_(post_ids)).all():
             post_map[p.id] = p
+    music_map = {}
+    if music_ids:
+        for m in db.query(Music).filter(Music.id.in_(music_ids)).all():
+            music_map[m.id] = m
+    game_map = {}
+    if game_ids:
+        for g in db.query(Game).filter(Game.id.in_(game_ids)).all():
+            game_map[g.id] = g
 
     out = []
     for r in page:
@@ -161,6 +174,22 @@ def list_bookmarks(db: Session, user_id: str,
                 'media_url': p.media_url,
                 'post_type': p.post_type,
                 'user_id': p.user_id,
+            })
+        elif r.content_type == 'music' and r.content_id in music_map:
+            m = music_map[r.content_id]
+            item.update({
+                'title': m.title,
+                'artist': m.artist,
+                'snippet': (m.genre or '')[:120],
+                'duration': m.duration,
+            })
+        elif r.content_type == 'game' and r.content_id in game_map:
+            g = game_map[r.content_id]
+            item.update({
+                'title': g.title,
+                'snippet': (g.description or '')[:120],
+                'category': g.category,
+                'image_url': g.image_url,
             })
         out.append(item)
     return out

@@ -20,10 +20,10 @@ export default function Bookmarks({ onNavigate }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  // 'all' | 'knowledge' | 'post' — controls which rows are shown.
-  // The BE list is unfiltered when content_type is null; for the
-  // FE-side tab filter we just slice client-side (the per-tab
-  // dataset is small, <200 items by the cap).
+  // 'all' | 'knowledge' | 'post' | 'music' | 'game' — controls which
+  // rows are shown. The BE list is unfiltered when content_type is
+  // null; for the FE-side tab filter we just slice client-side
+  // (the per-tab dataset is small, <200 items by the cap).
   const [filter, setFilter] = useState('all');
 
   const load = useCallback(async () => {
@@ -51,6 +51,10 @@ export default function Bookmarks({ onNavigate }) {
     } else if (item.content_type === 'post') {
       window.dispatchEvent(new CustomEvent('bookmarks-open', { detail: item }));
       onNavigate?.('feed');
+    } else if (item.content_type === 'music') {
+      onNavigate?.('music');
+    } else if (item.content_type === 'game') {
+      onNavigate?.('games');
     }
   };
 
@@ -71,6 +75,8 @@ export default function Bookmarks({ onNavigate }) {
     all: items.length,
     knowledge: items.filter((i) => i.content_type === 'knowledge').length,
     post: items.filter((i) => i.content_type === 'post').length,
+    music: items.filter((i) => i.content_type === 'music').length,
+    game: items.filter((i) => i.content_type === 'game').length,
   };
 
   return (
@@ -89,6 +95,12 @@ export default function Bookmarks({ onNavigate }) {
         </button>
         <button className={`bookmarks-filter ${filter === 'post' ? 'active' : ''}`} onClick={() => setFilter('post')}>
           📰 Bài đăng ({counts.post})
+        </button>
+        <button className={`bookmarks-filter ${filter === 'music' ? 'active' : ''}`} onClick={() => setFilter('music')}>
+          🎵 Bài hát ({counts.music})
+        </button>
+        <button className={`bookmarks-filter ${filter === 'game' ? 'active' : ''}`} onClick={() => setFilter('game')}>
+          🎮 Trò chơi ({counts.game})
         </button>
       </div>
 
@@ -126,20 +138,25 @@ export default function Bookmarks({ onNavigate }) {
                 onKeyDown={(e) => { if (e.key === 'Enter') handleOpen(item); }}
               >
                 <div className="bookmarks-card-thumb">
-                  {item.thumbnail ? (
-                    <img src={item.thumbnail} alt="" />
+                  {item.thumbnail || item.image_url ? (
+                    <img src={item.thumbnail || item.image_url} alt="" />
                   ) : (
                     <div className="bookmarks-thumb-placeholder">
-                      {item.content_type === 'knowledge' ? '📚' : '📰'}
+                      {item.content_type === 'knowledge' ? '📚' :
+                       item.content_type === 'post' ? '📰' :
+                       item.content_type === 'music' ? '🎵' : '🎮'}
                     </div>
                   )}
                 </div>
                 <div className="bookmarks-card-body">
                   <div className="bookmarks-card-meta">
                     <span className="bookmarks-card-type">
-                      {item.content_type === 'knowledge' ? '📚 Bài viết' : '📰 Bài đăng'}
+                      {item.content_type === 'knowledge' ? '📚 Bài viết' :
+                       item.content_type === 'post' ? '📰 Bài đăng' :
+                       item.content_type === 'music' ? '🎵 Bài hát' : '🎮 Trò chơi'}
                     </span>
                     {item.category && <span className="bookmarks-card-cat">{item.category}</span>}
+                    {item.artist && <span className="bookmarks-card-cat">{item.artist}</span>}
                   </div>
                   <h3 className="bookmarks-card-title">{item.title}</h3>
                   {item.snippet && <p className="bookmarks-card-snippet">{snippet(item.snippet)}</p>}
