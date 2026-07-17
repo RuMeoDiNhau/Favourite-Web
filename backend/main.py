@@ -8,6 +8,7 @@ from backend.services.db_models import init_db
 from backend.services.s3_service import download_all_embeddings
 from backend.services.logging_service import logger
 from backend.middleware.rate_limit import rate_limit_middleware
+from backend.middleware.csp import csp_middleware
 
 init_db()
 download_all_embeddings()
@@ -49,6 +50,12 @@ app.add_middleware(
 # Rate limiter MUST be added after CORS so 429 responses also carry the
 # right CORS headers (otherwise browsers swallow them as a CORS error).
 app.middleware("http")(rate_limit_middleware)
+
+# CSP middleware adds the `Content-Security-Policy` response header on
+# every request — critical because `frame-ancestors` only works via
+# HTTP header (browsers ignore it in <meta http-equiv>). See
+# backend/middleware/csp.py for the policy itself.
+app.middleware("http")(csp_middleware)
 
 app.include_router(router)
 
