@@ -18,8 +18,9 @@ from backend.services.schemas import (
     VideoListResponse,
     CommentCreateRequest, CommentUpdateRequest, CommentResponse, ReactionRequest, ReactionSummary,
     NotificationResponse, NotificationList, UnreadCount,
+    CollectionCreateRequest, CollectionUpdateRequest, CollectionItemRequest,
 )
-from backend.services import games_service, music_service, knowledge_service, posts_service, dashboard_service, search_service, comments_service, notification_service, bookmarks_service, follow_service
+from backend.services import games_service, music_service, knowledge_service, posts_service, dashboard_service, search_service, comments_service, notification_service, bookmarks_service, follow_service, collections_service
 from backend.services.auth_service import create_access_token, decode_access_token
 from backend.services.logging_service import logger
 
@@ -306,6 +307,150 @@ def get_following(
         'user_id': user_id,
         'following': follow_service.list_following(db, user_id, limit, offset),
     }
+
+
+# ==================== Collections ====================
+#
+# Private per-user reading lists of knowledge articles. The CRUD
+# endpoints are auth-required; the detail endpoint enforces ownership
+# inside the service (cross-user reads collapse to 404).
+#
+# Why auth-required (not optional)? Collections are private — a
+# guest has no way to attach a user_id. There's no "view another
+# user's collection" use case in the current UX.
+
+
+@router.get('/collections')
+def list_my_collections(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+    limit: int = 50,
+    offset: int = 0,
+):
+    """List the current user's collections, newest first, with item
+    counts denormalized so the FE can render badges without a second
+    round-trip per row."""
+    limit = min(max(limit, 1), 200)
+    items = collections_service.list_collections(
+        db, current_user['user_id'], limit, offset,
+    )
+    return {'items': items}
+
+
+@router.post('/collections')
+def create_collection(
+    request: CollectionCreateRequest,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Create a new collection. Empty name or oversized name surfaces
+    as 400 via ValueError; everything else falls through to a 201 with
+    the new row."""
+    try:
+        return collections_service.create_collection(
+            db, current_user['user_id'],
+            name=request.name,
+            description=request.description,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get('/collections/{collection_id}')
+def get_collection_detail(
+    collection_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Returns the collection plus its items (knowledge title +
+    category). 404 covers both not-found and not-yours — we don't
+    leak existence."""
+    try:
+        return collections_service.get_collection(
+            db, collection_id, current_user['user_id'],
+        )
+    except collections_service.CollectionNotFound as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.patch('/collections/{collection_id}')
+def update_collection(
+    collection_id: int,
+    request: CollectionUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    try:
+        return collections_service.update_collection(
+            db, collection_id, current_user['user_id'],
+            name=request.name,
+            description=request.description,
+        )
+    except collections_service.CollectionNotFound as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.delete('/collections/{collection_id}')
+def delete_collection(
+    collection_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    try:
+        collections_service.delete_collection(
+            db, collection_id, current_user['user_id'],
+        )
+    except collections_service.CollectionNotFound as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    return {'deleted': True}
+
+
+@router.post('/collections/{collection_id}/items')
+def add_collection_item(
+    collection_id: int,
+    request: CollectionItemRequest,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Add an article to a collection. Idempotent: re-adding returns
+    the same 201 with the new item_count. 400 covers unsupported
+    content_type; 404 covers unknown article / not-your-collection."""
+    try:
+        added = collections_service.add_item(
+            db, collection_id, current_user['user_id'],
+            request.content_type, request.content_id,
+        )
+    except collections_service.CollectionNotFound as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except collections_service.ArticleNotFound as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    # Re-fetch item count for the response — saves the FE a second
+    # GET and keeps the payload stable.
+    return {
+        'added': added,
+        'collection_id': collection_id,
+    }
+
+
+@router.delete('/collections/{collection_id}/items')
+def remove_collection_item(
+    collection_id: int,
+    request: CollectionItemRequest,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    try:
+        collections_service.remove_item(
+            db, collection_id, current_user['user_id'],
+            request.content_type, request.content_id,
+        )
+    except collections_service.CollectionNotFound as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    return {'removed': True}
 
 
 @router.get('/logs')

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './Knowledge.css';
 import * as api from '../../services/api';
 import CommentSection from '../../components/Comments/CommentSection';
+import AddToCollectionButton from '../Collections/AddToCollectionButton';
 import { useBookmarks } from '../../lib/BookmarksContext';
 
 export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearchOpen, currentUser, onNavigate }) {
@@ -284,6 +285,7 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
               >
                 {isBmKnowledge('knowledge', selectedArticle.id) ? '🔖' : '⚪'}
               </button>
+              <AddToCollectionButton contentType="knowledge" contentId={selectedArticle.id} />
               <button
                 className="article-modal-close"
                 onClick={() => setSelectedArticle(null)}

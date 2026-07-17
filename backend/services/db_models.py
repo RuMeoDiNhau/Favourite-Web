@@ -290,6 +290,46 @@ class Follow(Base):
     )
 
 
+class Collection(Base):
+    """User-curated grouping of knowledge articles.
+
+    Collections are private — there's no `is_public` flag because the
+    current UX is "my reading list", not "shared with the org". If
+    sharing gets added later, the public/private distinction should
+    become a single Boolean column here rather than a new table.
+    """
+    __tablename__ = 'collections'
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(50), nullable=False, index=True)
+    name = Column(String(255), nullable=False)
+    description = Column(String(1024), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+class CollectionItem(Base):
+    """Article in a collection. Polymorphic on (content_type,
+    content_id) so we could add posts / games / music to collections
+    later without a schema change — but the MVP only adds Knowledge
+    items (matches the plan's "reading list" framing).
+
+    Uniqueness on (collection_id, content_type, content_id) lets the
+    service use the same toggle primitive as bookmarks: try INSERT,
+    catch IntegrityError → DELETE."""
+    __tablename__ = 'collection_items'
+
+    id = Column(Integer, primary_key=True, index=True)
+    collection_id = Column(Integer, nullable=False, index=True)
+    content_type = Column(String(20), nullable=False)   # 'knowledge' (MVP)
+    content_id = Column(Integer, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint('collection_id', 'content_type', 'content_id',
+                         name='uq_collection_item_unique'),
+    )
+
+
 class Bookmark(Base):
     """Per-user save on a content item. One row per (user, content_type,
     content_id) — enforced by the unique constraint. Toggle semantics are

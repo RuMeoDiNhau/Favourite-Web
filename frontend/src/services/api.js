@@ -83,6 +83,36 @@ export const fetchFollowers = (userId, limit = 50, offset = 0) =>
 export const fetchFollowing = (userId, limit = 50, offset = 0) =>
   api.get(`/users/${userId}/following`, { params: { limit, offset } }).then((r) => r.data);
 
+
+// ==================== Collections ====================
+//
+// User-curated reading lists of knowledge articles. All endpoints are
+// auth-required (collections are private). The FE loads the list page
+// on demand and the detail page on /collections/:id.
+
+export const fetchMyCollections = () =>
+  api.get('/collections').then((r) => r.data?.items || []);
+
+export const createCollectionApi = (payload) =>
+  api.post('/collections', payload).then((r) => r.data);
+
+export const fetchCollectionDetail = (collectionId) =>
+  api.get(`/collections/${collectionId}`).then((r) => r.data);
+
+export const updateCollectionApi = (collectionId, payload) =>
+  api.patch(`/collections/${collectionId}`, payload).then((r) => r.data);
+
+export const deleteCollectionApi = (collectionId) =>
+  api.delete(`/collections/${collectionId}`).then((r) => r.data);
+
+export const addItemToCollection = (collectionId, contentType, contentId) =>
+  api.post(`/collections/${collectionId}/items`, { content_type: contentType, content_id: contentId })
+    .then((r) => r.data);
+
+export const removeItemFromCollection = (collectionId, contentType, contentId) =>
+  api.delete(`/collections/${collectionId}/items`, { data: { content_type: contentType, content_id: contentId } })
+    .then((r) => r.data);
+
 export const fetchLogs = () => api.get('/logs');
 
 export const recognizeFace = (imageBase64) => api.post('/recognize', { image_base64: imageBase64 });

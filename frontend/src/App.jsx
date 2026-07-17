@@ -15,6 +15,8 @@ import SearchBar from './components/SearchBar';
 import NotificationBell from './components/NotificationBell';
 import Bookmarks from './pages/Bookmarks';
 import UserProfile from './pages/UserProfile';
+import Collections from './pages/Collections/Collections';
+import CollectionDetail from './pages/Collections/CollectionDetail';
 import { BookmarksProvider } from './lib/BookmarksContext';
 import * as api from './services/api';
 
@@ -22,8 +24,8 @@ import * as api from './services/api';
 // back/forward works. `home` is the Personal Dashboard (the new
 // landing view); `feed` is the unified posts feed. Admin views stay
 // hidden until role check.
-const VIEW_PATHS = ['/home', '/feed', '/bookmarks', '/dashboard', '/users', '/logs', '/games', '/music', '/knowledge'];
-const VIEW_NAMES = ['home', 'feed', 'bookmarks', 'dashboard', 'users', 'logs', 'games', 'music', 'knowledge'];
+const VIEW_PATHS = ['/home', '/feed', '/bookmarks', '/collections', '/dashboard', '/users', '/logs', '/games', '/music', '/knowledge'];
+const VIEW_NAMES = ['home', 'feed', 'bookmarks', 'collections', 'dashboard', 'users', 'logs', 'games', 'music', 'knowledge'];
 
 // Detail routes are nested under a top-level view, e.g.
 // '/users/<id>' renders the same shell as '/users' but with the
@@ -31,6 +33,9 @@ const VIEW_NAMES = ['home', 'feed', 'bookmarks', 'dashboard', 'users', 'logs', '
 // the detail id in the URL (not React state) means a profile link
 // can be shared / bookmarked.
 const DETAIL_PATTERN = /^\/users\/([A-Za-z0-9._-]+)$/;
+// Collection detail uses /collections/<id> — same pattern as the
+// user profile. The id is an integer; we capture it directly.
+const COLLECTION_DETAIL_PATTERN = /^\/collections\/(\d+)$/;
 
 const pathToView = (pathname) => {
   // Backwards-compat: a stale bookmark at '/' used to mean the Feed.
@@ -40,12 +45,14 @@ const pathToView = (pathname) => {
   // works explicitly for those who bookmarked it.
   if (pathname === '/') return 'home';
   if (DETAIL_PATTERN.test(pathname)) return 'userProfile';
+  if (COLLECTION_DETAIL_PATTERN.test(pathname)) return 'collectionDetail';
   const idx = VIEW_PATHS.indexOf(pathname);
   return idx === -1 ? 'home' : VIEW_NAMES[idx];
 };
 
-const viewToPath = (viewName, detailUserId) => {
-  if (viewName === 'userProfile' && detailUserId) return `/users/${detailUserId}`;
+const viewToPath = (viewName, detail) => {
+  if (viewName === 'userProfile' && detail?.userId) return `/users/${detail.userId}`;
+  if (viewName === 'collectionDetail' && detail?.id) return `/collections/${detail.id}`;
   const idx = VIEW_NAMES.indexOf(viewName);
   return idx === -1 ? '/' : VIEW_PATHS[idx];
 };
@@ -67,11 +74,16 @@ function App() {
   // target view consumes them so a later manual nav doesn't reopen.
   const [searchOpenKnowledgeId, setSearchOpenKnowledgeId] = useState(null);
   const [searchOpenGameId, setSearchOpenGameId] = useState(null);
-  // Detail-route payload. Right now only UserProfile uses it
-  // (view === 'userProfile' needs the user_id from the URL).
+  // Detail-route payload. UserProfile uses the user_id, CollectionDetail
+  // uses the collection id. Both are pulled from the URL on first
+  // render and updated on popstate so back/forward keeps them in sync.
   const [profileUserId, setProfileUserId] = useState(() => {
     const m = DETAIL_PATTERN.exec(window.location.pathname);
     return m ? decodeURIComponent(m[1]) : null;
+  });
+  const [collectionId, setCollectionId] = useState(() => {
+    const m = COLLECTION_DETAIL_PATTERN.exec(window.location.pathname);
+    return m ? Number(m[1]) : null;
   });
 
   // On first mount, ask the BE "who am I?". The fw_auth cookie (if
@@ -114,32 +126,43 @@ function App() {
   //
   // The `detail` optional argument carries per-view payload:
   //   { userId } for 'userProfile'
+  //   { id }     for 'collectionDetail'
   // Passing nothing falls back to the existing detail state, so
-  // navigating to 'userProfile' without a userId is treated as a
-  // request to revisit the previously-shown profile.
+  // navigating to a detail view without an id is treated as a
+  // request to revisit the previously-shown record.
   const setView = useCallback((next, detail) => {
     setViewRaw(next);
     if (next === 'userProfile') {
       const nextId = detail?.userId ?? profileUserId;
       if (nextId) setProfileUserId(nextId);
+    } else if (next === 'collectionDetail') {
+      const nextId = detail?.id ?? collectionId;
+      if (nextId) setCollectionId(nextId);
     }
-    const nextPath = viewToPath(next, next === 'userProfile' ? (detail?.userId ?? profileUserId) : undefined);
+    const payload = next === 'userProfile'
+      ? (detail?.userId ?? profileUserId)
+      : next === 'collectionDetail'
+        ? (detail?.id ?? collectionId)
+        : undefined;
+    const nextPath = viewToPath(next, payload ? { userId: next === 'userProfile' ? payload : undefined, id: next === 'collectionDetail' ? payload : undefined } : undefined);
     if (window.location.pathname !== nextPath) {
       window.history.pushState(null, '', nextPath);
     }
     setMobileMenuOpen(false);
-  }, [profileUserId]);
+  }, [profileUserId, collectionId]);
 
   // Browser back/forward: popstate fires with the new location. Sync state
   // without re-pushing (we already navigated). When the path now
-  // points at a profile detail, refresh profileUserId so the page
-  // shows the right person.
+  // points at a detail view, refresh the detail id so the page shows
+  // the right record.
   useEffect(() => {
     const onPop = () => {
       const p = window.location.pathname;
       setViewRaw(pathToView(p));
       const m = DETAIL_PATTERN.exec(p);
       if (m) setProfileUserId(decodeURIComponent(m[1]));
+      const cm = COLLECTION_DETAIL_PATTERN.exec(p);
+      if (cm) setCollectionId(Number(cm[1]));
     };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
@@ -250,6 +273,7 @@ function App() {
     { name: 'home', label: '🏠 Trang chủ' },
     { name: 'feed', label: '📰 Bảng tin' },
     { name: 'bookmarks', label: '🔖 Đã lưu' },
+    { name: 'collections', label: '📂 Bộ sưu tập' },
     { name: 'dashboard', label: '📷 Quét khuôn mặt' },
     { name: 'users', label: '👥 Users', adminOnly: true },
     { name: 'logs', label: '📋 Logs', adminOnly: true },
@@ -407,6 +431,10 @@ function App() {
         {view === 'home' && <Home onNavigate={setView} />}
         {view === 'feed' && <Feed key={feedKey} currentUser={user} onNavigate={setView} />}
         {view === 'bookmarks' && <Bookmarks onNavigate={setView} />}
+        {view === 'collections' && <Collections onNavigate={setView} />}
+        {view === 'collectionDetail' && collectionId && (
+          <CollectionDetail collectionId={collectionId} onNavigate={setView} />
+        )}
         {view === 'dashboard' && <Dashboard />}
         {view === 'users' && user?.role === 'admin' && <Users />}
         {view === 'logs' && user?.role === 'admin' && <Logs />}

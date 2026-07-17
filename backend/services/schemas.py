@@ -236,3 +236,19 @@ class NotificationList(BaseModel):
 class UnreadCount(BaseModel):
     count: int
 
+
+# Collection Schemas
+class CollectionCreateRequest(BaseModel):
+    name: str
+    description: Optional[str] = None
+
+
+class CollectionUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+
+
+class CollectionItemRequest(BaseModel):
+    content_type: str
+    content_id: int
+
