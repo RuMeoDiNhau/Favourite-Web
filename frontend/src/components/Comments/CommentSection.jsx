@@ -16,7 +16,7 @@ const REACTION_EMOJIS = [
 
 const MAX_BODY = 2000;
 
-export default function CommentSection({ contentType, contentId, currentUser }) {
+export default function CommentSection({ contentType, contentId, currentUser, onNavigate }) {
   const [comments, setComments] = useState([]);
   const [reactions, setReactions] = useState({ counts: {}, my_emoji: null });
   const [newBody, setNewBody] = useState('');
@@ -182,6 +182,14 @@ export default function CommentSection({ contentType, contentId, currentUser }) 
     });
   };
 
+  // Click on a username inside a comment → ask the host page to
+  // navigate to the user's profile. We do this via the page's
+  // setView (passed as onNavigate) so the URL updates to a real
+  // /users/<id> path the user can share / bookmark.
+  const onProfileUser = (userId) => {
+    if (onNavigate) onNavigate('userProfile', { userId });
+  };
+
   const handleReaction = async (emoji) => {
     // Optimistic: flip my_emoji and bump the matching count locally.
     // The server response replaces this on the next paint.
@@ -293,6 +301,7 @@ export default function CommentSection({ contentType, contentId, currentUser }) 
               onReply={(target) => setReplyTo({ id: target.id, name: target.user_name || target.user_id })}
               onDelete={handleDelete}
               onUpdate={handleUpdate}
+              onProfile={onProfileUser}
             />
           ))}
         </ul>
@@ -301,7 +310,7 @@ export default function CommentSection({ contentType, contentId, currentUser }) 
   );
 }
 
-function CommentNode({ comment, currentUser, onReply, onDelete, onUpdate }) {
+function CommentNode({ comment, currentUser, onReply, onDelete, onUpdate, onProfile }) {
   const canModify = currentUser && currentUser.user_id === comment.user_id;
   const canDelete = canModify || (currentUser && currentUser.role === 'admin');
   const isPending = typeof comment.id === 'string';
@@ -352,7 +361,15 @@ function CommentNode({ comment, currentUser, onReply, onDelete, onUpdate }) {
       </div>
       <div className="comment-body">
         <div className="comment-meta">
-          <span className="comment-author">{comment.user_name || comment.user_id}</span>
+          <span
+            className="comment-author comment-author-link"
+            role="button"
+            tabIndex={0}
+            onClick={() => onProfile(comment.user_id)}
+            onKeyDown={(e) => { if (e.key === 'Enter') onProfile(comment.user_id); }}
+          >
+            {comment.user_name || comment.user_id}
+          </span>
           <span className="comment-time">{formatRelative(comment.created_at)}</span>
           {comment.updated_at && <span className="comment-edited" title={`Đã chỉnh sửa ${formatRelative(comment.updated_at)}`}>(đã chỉnh sửa)</span>}
           {isPending && <span className="comment-pending">đang gửi…</span>}
@@ -418,6 +435,7 @@ function CommentNode({ comment, currentUser, onReply, onDelete, onUpdate }) {
               onReply={onReply}
               onDelete={onDelete}
               onUpdate={onUpdate}
+              onProfile={onProfile}
             />
           ))}
         </ul>

@@ -60,6 +60,9 @@ api.interceptors.response.use(
 // ==================== Face Recognition ====================
 export const fetchUsers = (page = 1, limit = 10) => api.get('/users', { params: { page, limit } });
 
+export const fetchUserProfile = (userId) =>
+  api.get(`/users/${userId}/profile`).then((r) => r.data);
+
 export const fetchLogs = () => api.get('/logs');
 
 export const recognizeFace = (imageBase64) => api.post('/recognize', { image_base64: imageBase64 });

@@ -19,7 +19,7 @@ const POST_REACTION_EMOJIS = [
   { key: 'wow',   icon: '😮' },
 ];
 
-export default function Feed({ currentUser }) {
+export default function Feed({ currentUser, onNavigate }) {
   const { isBookmarked: isBmPost, toggle: toggleBmPost } = useBookmarks();
 
 
@@ -691,6 +691,7 @@ export default function Feed({ currentUser }) {
                 contentType="knowledge"
                 contentId={selectedArticle.id}
                 currentUser={currentUser}
+                onNavigate={onNavigate}
               />
             </div>
             <div className="modal-footer">
@@ -734,6 +735,7 @@ export default function Feed({ currentUser }) {
                 contentType="post"
                 contentId={commentModalPost.id}
                 currentUser={currentUser}
+                onNavigate={onNavigate}
               />
             </div>
             <div className="modal-footer">

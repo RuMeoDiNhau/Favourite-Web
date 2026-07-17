@@ -4,7 +4,7 @@ import * as api from '../../services/api';
 import CommentSection from '../../components/Comments/CommentSection';
 import { useBookmarks } from '../../lib/BookmarksContext';
 
-export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearchOpen, currentUser }) {
+export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearchOpen, currentUser, onNavigate }) {
   const { isBookmarked: isBmKnowledge, toggle: toggleBm } = useBookmarks();
   // Multi-select category filter. Empty array = "All categories"
   // (no filter). Selecting multiple is an OR match — show articles
@@ -331,6 +331,7 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
                 contentType="knowledge"
                 contentId={selectedArticle.id}
                 currentUser={currentUser}
+                onNavigate={onNavigate}
               />
             </div>
           </div>

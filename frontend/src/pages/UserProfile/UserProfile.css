@@ -1,0 +1,147 @@
+.userprofile-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+.userprofile-back {
+  background: transparent;
+  border: 1px solid var(--border-color, #e2e8f0);
+  color: var(--text-main, #1b263b);
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 16px;
+  transition: all 0.15s ease;
+}
+
+.userprofile-back:hover {
+  background: var(--bg-item, #f1f5f9);
+}
+
+.userprofile-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 24px;
+  background: var(--bg-card, #ffffff);
+  border-radius: 16px;
+  box-shadow: var(--shadow-card, 0 4px 20px rgba(15, 23, 42, 0.03));
+  border: 1px solid var(--border-card, #e2e8f0);
+}
+
+.userprofile-avatar {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+}
+
+.userprofile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.userprofile-avatar-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  font-weight: 700;
+  color: white;
+}
+
+.userprofile-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.userprofile-name {
+  margin: 0 0 8px;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-title, #0f172a);
+  word-wrap: break-word;
+}
+
+.userprofile-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 14px;
+  color: var(--text-muted, #64748b);
+}
+
+.userprofile-badge {
+  background: rgba(99, 102, 241, 0.12);
+  color: #4f46e5;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.userprofile-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.userprofile-stat {
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-card, #e2e8f0);
+  border-radius: 12px;
+  padding: 18px 16px;
+  text-align: center;
+  box-shadow: var(--shadow-card, 0 4px 20px rgba(15, 23, 42, 0.03));
+}
+
+.userprofile-stat-value {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--text-title, #0f172a);
+  line-height: 1.2;
+}
+
+.userprofile-stat-label {
+  font-size: 13px;
+  color: var(--text-muted, #64748b);
+  margin-top: 4px;
+}
+
+.userprofile-status {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-muted, #94a3b8);
+}
+
+.userprofile-error {
+  color: #b91c1c;
+}
+
+.userprofile-self-hint {
+  margin-top: 16px;
+  text-align: center;
+  color: var(--text-muted, #64748b);
+  font-size: 14px;
+  font-style: italic;
+}
+
+/* Dark-theme overlay — page background is inherited from
+   .App.dark-theme, but the avatar fallback gradient stays the same
+   so the profile card doesn't blend in. */
+.dark-theme .userprofile-name {
+  color: #f1f5f9;
+}
+
+.dark-theme .userprofile-stat-value {
+  color: #f1f5f9;
+}

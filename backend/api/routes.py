@@ -3,6 +3,7 @@ import os
 from pydantic import BaseModel
 from fastapi import APIRouter, HTTPException, Depends, Header, UploadFile, File, Form, Request, Response
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from backend.services.face_service import recognize_face
 from backend.services.db_service import create_user, get_users, get_logs, verify_user_credentials, get_user_by_user_id, add_face_images
@@ -167,6 +168,57 @@ def enroll_user(request: EnrollmentRequest):
 @router.get('/users')
 def list_users(page: int = 1, limit: int = 10, admin: dict = Depends(get_admin_user)):
     return get_users(page=page, limit=limit)
+
+
+@router.get('/users/{user_id}/profile')
+def get_user_profile(
+    user_id: str,
+    db: Session = Depends(get_db),
+):
+    """Public read-only profile for any user. Returns the user's
+    display fields plus a small stats block (articles owned, posts
+    authored, comments written, total likes received on knowledge
+    articles). Used by the FE's UserProfile page; it also doubles as
+    the target of any 'click a username' link.
+
+    Privacy: we deliberately don't expose email or registered image
+    count. Email is admin-only via the existing /users list;
+    registered_images is internal enrollment bookkeeping."""
+    user = get_user_by_user_id(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail='user not found')
+
+    # Stats: each count is a single SELECT COUNT(*) over the relevant
+    # table. We don't cache or denormalize because the user base is
+    # small enough that a 4-query latency cost is fine and the
+    # numbers stay perfectly fresh on every page view.
+    from backend.services.db_models import Knowledge, Post, Comment
+    articles_owned = db.query(Knowledge).filter(Knowledge.author_user_id == user_id).count()
+    posts_authored = db.query(Post).filter(Post.user_id == user_id).count()
+    comments_written = db.query(Comment).filter(Comment.user_id == user_id).count()
+    # Total likes received on this user's knowledge articles. We sum
+    # Knowledge.likes for the articles they authored — single query.
+    total_likes = (
+        db.query(func.coalesce(func.sum(Knowledge.likes), 0))
+        .filter(Knowledge.author_user_id == user_id)
+        .scalar() or 0
+    )
+
+    return {
+        'user_id': user.user_id,
+        'name': user.name,
+        'department': user.department,
+        'role': user.role,
+        'avatar_url': get_user_avatar_url(user.user_id),
+        'created_at': user.created_at.isoformat() if user.created_at else None,
+        'stats': {
+            'articles_owned': articles_owned,
+            'posts_authored': posts_authored,
+            'comments_written': comments_written,
+            'total_likes': int(total_likes),
+        },
+    }
+
 
 @router.get('/logs')
 def list_logs(admin: dict = Depends(get_admin_user)):

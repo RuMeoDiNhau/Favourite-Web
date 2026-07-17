@@ -219,6 +219,16 @@
   color: var(--text-title, #0f172a);
 }
 
+.comment-author-link {
+  cursor: pointer;
+  transition: color 0.1s ease;
+}
+
+.comment-author-link:hover {
+  color: var(--primary, #6366f1);
+  text-decoration: underline;
+}
+
 .comment-time {
   color: var(--text-muted, #94a3b8);
 }

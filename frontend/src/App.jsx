@@ -14,6 +14,7 @@ import FaceSetupModal from './components/FaceSetupModal';
 import SearchBar from './components/SearchBar';
 import NotificationBell from './components/NotificationBell';
 import Bookmarks from './pages/Bookmarks';
+import UserProfile from './pages/UserProfile';
 import { BookmarksProvider } from './lib/BookmarksContext';
 import * as api from './services/api';
 
@@ -24,6 +25,13 @@ import * as api from './services/api';
 const VIEW_PATHS = ['/home', '/feed', '/bookmarks', '/dashboard', '/users', '/logs', '/games', '/music', '/knowledge'];
 const VIEW_NAMES = ['home', 'feed', 'bookmarks', 'dashboard', 'users', 'logs', 'games', 'music', 'knowledge'];
 
+// Detail routes are nested under a top-level view, e.g.
+// '/users/<id>' renders the same shell as '/users' but with the
+// detail prop set so the page knows which user to show. Keeping
+// the detail id in the URL (not React state) means a profile link
+// can be shared / bookmarked.
+const DETAIL_PATTERN = /^\/users\/([A-Za-z0-9._-]+)$/;
+
 const pathToView = (pathname) => {
   // Backwards-compat: a stale bookmark at '/' used to mean the Feed.
   // After we added Home, the landing page became /home and the Feed
@@ -31,11 +39,13 @@ const pathToView = (pathname) => {
   // on the new Home view, not a broken empty Feed. /feed still
   // works explicitly for those who bookmarked it.
   if (pathname === '/') return 'home';
+  if (DETAIL_PATTERN.test(pathname)) return 'userProfile';
   const idx = VIEW_PATHS.indexOf(pathname);
   return idx === -1 ? 'home' : VIEW_NAMES[idx];
 };
 
-const viewToPath = (viewName) => {
+const viewToPath = (viewName, detailUserId) => {
+  if (viewName === 'userProfile' && detailUserId) return `/users/${detailUserId}`;
   const idx = VIEW_NAMES.indexOf(viewName);
   return idx === -1 ? '/' : VIEW_PATHS[idx];
 };
@@ -57,6 +67,12 @@ function App() {
   // target view consumes them so a later manual nav doesn't reopen.
   const [searchOpenKnowledgeId, setSearchOpenKnowledgeId] = useState(null);
   const [searchOpenGameId, setSearchOpenGameId] = useState(null);
+  // Detail-route payload. Right now only UserProfile uses it
+  // (view === 'userProfile' needs the user_id from the URL).
+  const [profileUserId, setProfileUserId] = useState(() => {
+    const m = DETAIL_PATTERN.exec(window.location.pathname);
+    return m ? decodeURIComponent(m[1]) : null;
+  });
 
   // On first mount, ask the BE "who am I?". The fw_auth cookie (if
   // present) makes this succeed; if not, we render Login.
@@ -95,19 +111,36 @@ function App() {
   // Wrap setView so clicking a nav button also updates the URL. We use
   // pushState (not replaceState) so each tab becomes a history entry
   // and the browser back/forward buttons cycle through them.
-  const setView = useCallback((next) => {
+  //
+  // The `detail` optional argument carries per-view payload:
+  //   { userId } for 'userProfile'
+  // Passing nothing falls back to the existing detail state, so
+  // navigating to 'userProfile' without a userId is treated as a
+  // request to revisit the previously-shown profile.
+  const setView = useCallback((next, detail) => {
     setViewRaw(next);
-    const nextPath = viewToPath(next);
+    if (next === 'userProfile') {
+      const nextId = detail?.userId ?? profileUserId;
+      if (nextId) setProfileUserId(nextId);
+    }
+    const nextPath = viewToPath(next, next === 'userProfile' ? (detail?.userId ?? profileUserId) : undefined);
     if (window.location.pathname !== nextPath) {
       window.history.pushState(null, '', nextPath);
     }
     setMobileMenuOpen(false);
-  }, []);
+  }, [profileUserId]);
 
   // Browser back/forward: popstate fires with the new location. Sync state
-  // without re-pushing (we already navigated).
+  // without re-pushing (we already navigated). When the path now
+  // points at a profile detail, refresh profileUserId so the page
+  // shows the right person.
   useEffect(() => {
-    const onPop = () => setViewRaw(pathToView(window.location.pathname));
+    const onPop = () => {
+      const p = window.location.pathname;
+      setViewRaw(pathToView(p));
+      const m = DETAIL_PATTERN.exec(p);
+      if (m) setProfileUserId(decodeURIComponent(m[1]));
+    };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
   }, []);
@@ -372,7 +405,7 @@ function App() {
 
       <main>
         {view === 'home' && <Home onNavigate={setView} />}
-        {view === 'feed' && <Feed key={feedKey} currentUser={user} />}
+        {view === 'feed' && <Feed key={feedKey} currentUser={user} onNavigate={setView} />}
         {view === 'bookmarks' && <Bookmarks onNavigate={setView} />}
         {view === 'dashboard' && <Dashboard />}
         {view === 'users' && user?.role === 'admin' && <Users />}
@@ -389,6 +422,14 @@ function App() {
             searchOpenKnowledgeId={searchOpenKnowledgeId}
             onConsumeSearchOpen={consumeSearchOpenKnowledge}
             currentUser={user}
+            onNavigate={setView}
+          />
+        )}
+        {view === 'userProfile' && profileUserId && (
+          <UserProfile
+            userId={profileUserId}
+            currentUser={user}
+            onNavigate={setView}
           />
         )}
       </main>
