@@ -165,6 +165,11 @@ class Comment(Base):
     trees because the FE only renders one indent — anything deeper would
     be visual noise in the article/post modal.
 
+    `updated_at` is set only when the body is edited (PATCH /comments/
+    {id}). The FE uses it to show a "đã chỉnh sửa" hint next to the
+    timestamp when it's non-null. Nullable so old rows stay NULL =
+    "never edited".
+
     Indexes are split: (content_type, content_id) for the list endpoint
     "give me all comments for this article", and (parent_id) for the
     reply fan-out when we assemble the tree.
@@ -178,6 +183,7 @@ class Comment(Base):
     parent_id = Column(Integer, nullable=True, index=True)
     body = Column(String(2000), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    updated_at = Column(DateTime, nullable=True)
 
     __table_args__ = (
         Index('ix_comments_content', 'content_type', 'content_id', 'created_at'),
@@ -298,6 +304,10 @@ def init_db():
             if 'author_user_id' not in knowledge_cols:
                 conn.execute(text('ALTER TABLE knowledge ADD COLUMN author_user_id VARCHAR(50)'))
                 conn.execute(text('CREATE INDEX IF NOT EXISTS ix_knowledge_author_user_id ON knowledge (author_user_id)'))
+
+            comments_cols = {c['name'] for c in inspector.get_columns('comments')} if inspector.has_table('comments') else set()
+            if 'updated_at' not in comments_cols:
+                conn.execute(text('ALTER TABLE comments ADD COLUMN updated_at DATETIME'))
 
     # Seed default admin if no admin user exists. Idempotent: safe to run
     # on every startup. Password hash is generated once and pinned here so

@@ -248,6 +248,9 @@ export const fetchComments = (contentType, contentId) =>
 
 export const createComment = (payload) => api.post('/comments', payload).then((r) => r.data);
 
+export const updateComment = (commentId, body) =>
+  api.patch(`/comments/${commentId}`, { body }).then((r) => r.data);
+
 export const deleteCommentApi = (commentId) => api.delete(`/comments/${commentId}`).then((r) => r.data);
 
 export const fetchReactions = (contentType, contentId) =>

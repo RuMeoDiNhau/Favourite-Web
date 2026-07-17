@@ -15,7 +15,7 @@ from backend.services.schemas import (
     LoginRequest, FaceLoginRequest,
     PostResponse, PostCreateRequest,
     VideoListResponse,
-    CommentCreateRequest, CommentResponse, ReactionRequest, ReactionSummary,
+    CommentCreateRequest, CommentUpdateRequest, CommentResponse, ReactionRequest, ReactionSummary,
     NotificationResponse, NotificationList, UnreadCount,
 )
 from backend.services import games_service, music_service, knowledge_service, posts_service, dashboard_service, search_service, comments_service, notification_service, bookmarks_service
@@ -872,6 +872,29 @@ def delete_comment(
         raise HTTPException(status_code=404, detail=str(e))
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
+
+
+@router.patch('/comments/{comment_id}')
+def update_comment(
+    comment_id: int,
+    payload: CommentUpdateRequest,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Edit a comment's body. Owner-only. Returns the serialized
+    comment so the FE can replace the optimistic row in one round-trip
+    instead of refetching the whole thread."""
+    try:
+        return comments_service.update_comment(
+            db, comment_id=comment_id,
+            user_id=current_user['user_id'], body=payload.body,
+        )
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get('/reactions', response_model=ReactionSummary)

@@ -141,6 +141,35 @@ export default function CommentSection({ contentType, contentId, currentUser }) 
     }
   };
 
+  // Edit a comment in place. We replace the row in the tree with
+  // whatever the BE returns (carries a fresh updated_at + the
+  // trimmed body). On failure we leave the row alone and surface
+  // a banner — the textarea in CommentNode keeps the user's draft
+  // so they can retry without retyping.
+  const handleUpdate = async (comment, newBody) => {
+    const saved = await api.updateComment(comment.id, newBody);
+    setComments((prev) => replaceInTree(prev, comment.id, saved));
+    return saved;
+  };
+
+  // Same traversal as removeCommentFromTree, but for replace.
+  function replaceInTree(list, targetId, replacement) {
+    let touched = false;
+    const next = list.map((c) => {
+      if (c.id === targetId) {
+        touched = true;
+        return { ...replacement, replies: c.replies || [] };
+      }
+      if (c.replies && c.replies.length) {
+        const r = replaceInTree(c.replies, targetId, replacement);
+        if (r !== c.replies) touched = true;
+        return { ...c, replies: r };
+      }
+      return c;
+    });
+    return touched ? next : list;
+  }
+
   const removeCommentFromTree = (id) => {
     setComments((prev) => {
       // Try top-level first; if not found, scan replies.
@@ -263,6 +292,7 @@ export default function CommentSection({ contentType, contentId, currentUser }) 
               currentUser={currentUser}
               onReply={(target) => setReplyTo({ id: target.id, name: target.user_name || target.user_id })}
               onDelete={handleDelete}
+              onUpdate={handleUpdate}
             />
           ))}
         </ul>
@@ -271,9 +301,44 @@ export default function CommentSection({ contentType, contentId, currentUser }) 
   );
 }
 
-function CommentNode({ comment, currentUser, onReply, onDelete }) {
-  const canDelete = currentUser && (currentUser.user_id === comment.user_id || currentUser.role === 'admin');
+function CommentNode({ comment, currentUser, onReply, onDelete, onUpdate }) {
+  const canModify = currentUser && currentUser.user_id === comment.user_id;
+  const canDelete = canModify || (currentUser && currentUser.role === 'admin');
   const isPending = typeof comment.id === 'string';
+  // Inline edit state — only meaningful for owner comments that the
+  // server has confirmed (real numeric id). Toggling 'editing' flips
+  // the body cell into a textarea; 'editBody' holds the draft.
+  const [editing, setEditing] = useState(false);
+  const [editBody, setEditBody] = useState(comment.body);
+  const [saving, setSaving] = useState(false);
+
+  const startEdit = () => {
+    setEditBody(comment.body);
+    setEditing(true);
+  };
+
+  const cancelEdit = () => {
+    setEditBody(comment.body);
+    setEditing(false);
+  };
+
+  const saveEdit = async () => {
+    const next = editBody.trim();
+    if (!next || next === comment.body) {
+      cancelEdit();
+      return;
+    }
+    setSaving(true);
+    try {
+      await onUpdate(comment, next);
+      setEditing(false);
+    } catch (err) {
+      console.warn('[CommentSection] edit failed', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <li className="comment-item">
       <div className="comment-avatar">
@@ -289,14 +354,54 @@ function CommentNode({ comment, currentUser, onReply, onDelete }) {
         <div className="comment-meta">
           <span className="comment-author">{comment.user_name || comment.user_id}</span>
           <span className="comment-time">{formatRelative(comment.created_at)}</span>
+          {comment.updated_at && <span className="comment-edited" title={`Đã chỉnh sửa ${formatRelative(comment.updated_at)}`}>(đã chỉnh sửa)</span>}
           {isPending && <span className="comment-pending">đang gửi…</span>}
         </div>
-        <div className="comment-text">{comment.body}</div>
+        {editing ? (
+          <div className="comment-edit">
+            <textarea
+              className="comment-input"
+              value={editBody}
+              onChange={(e) => setEditBody(e.target.value.slice(0, MAX_BODY))}
+              rows={3}
+              maxLength={MAX_BODY}
+              autoFocus
+            />
+            <div className="comment-form-footer">
+              <span className="comment-charcount">{editBody.length}/{MAX_BODY}</span>
+              <div className="comment-edit-actions">
+                <button
+                  type="button"
+                  className="comment-action-btn"
+                  onClick={cancelEdit}
+                  disabled={saving}
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  className="comment-submit comment-submit-inline"
+                  onClick={saveEdit}
+                  disabled={!editBody.trim() || saving}
+                >
+                  {saving ? 'Đang lưu...' : 'Lưu'}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="comment-text">{comment.body}</div>
+        )}
         <div className="comment-actions">
           <button type="button" className="comment-action-btn" onClick={() => onReply(comment)}>
             ↩ Trả lời
           </button>
-          {canDelete && (
+          {canModify && !editing && !isPending && (
+            <button type="button" className="comment-action-btn" onClick={startEdit}>
+              ✏️ Sửa
+            </button>
+          )}
+          {canDelete && !editing && (
             <button type="button" className="comment-action-btn comment-action-delete" onClick={() => onDelete(comment)}>
               🗑 Xóa
             </button>
@@ -312,6 +417,7 @@ function CommentNode({ comment, currentUser, onReply, onDelete }) {
               currentUser={currentUser}
               onReply={onReply}
               onDelete={onDelete}
+              onUpdate={onUpdate}
             />
           ))}
         </ul>

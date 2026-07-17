@@ -11,6 +11,7 @@ FE only renders one indent — deeper nesting would be visual noise
 in the article/post modal, and tree-building SQL gets ugly.
 """
 from collections import defaultdict
+from datetime import datetime
 from typing import Iterable
 
 from sqlalchemy import func
@@ -99,6 +100,7 @@ def list_comments(db: Session, content_type: str, content_id: int,
             'body': c.body,
             'parent_id': c.parent_id,
             'created_at': c.created_at.isoformat(),
+            'updated_at': c.updated_at.isoformat() if c.updated_at else None,
             'replies': [],
         }
 
@@ -239,6 +241,45 @@ def create_comment(db: Session, user_id: str, content_type: str,
         'body': c.body,
         'parent_id': c.parent_id,
         'created_at': c.created_at.isoformat(),
+        'updated_at': c.updated_at.isoformat() if c.updated_at else None,
+        'replies': [],
+    }
+
+
+def update_comment(db: Session, comment_id: int, user_id: str,
+                   body: str) -> dict:
+    """Edit a comment's body. Owner-only (admins use delete +
+    recreate). Sets `updated_at` to utcnow so the FE can show a
+    'đã chỉnh sửa' hint.
+
+    Editing is intentionally narrow — we don't allow moving a
+    comment under a different thread, changing its owner, or
+    anything else. That's how most comment systems work and it
+    keeps the integrity simple: the parent_id of any existing
+    replies still points at the same comment id."""
+    c = db.query(Comment).filter(Comment.id == comment_id).first()
+    if not c:
+        raise LookupError("comment not found")
+    if c.user_id != user_id:
+        raise PermissionError("not your comment")
+    body = (body or '').strip()
+    if not body or len(body) > 2000:
+        raise ValueError("body must be 1..2000 characters")
+    c.body = body
+    c.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(c)
+
+    user = db.query(User).filter(User.user_id == c.user_id).first()
+    return {
+        'id': c.id,
+        'user_id': c.user_id,
+        'user_name': user.name if user else None,
+        'user_avatar_url': getattr(user, 'avatar_url', None) if user else None,
+        'body': c.body,
+        'parent_id': c.parent_id,
+        'created_at': c.created_at.isoformat(),
+        'updated_at': c.updated_at.isoformat() if c.updated_at else None,
         'replies': [],
     }
 

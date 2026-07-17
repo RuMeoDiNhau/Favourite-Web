@@ -168,11 +168,22 @@ class CommentCreateRequest(BaseModel):
     parent_id: Optional[int] = None
 
 
+class CommentUpdateRequest(BaseModel):
+    """Body-only update — content_type / content_id / parent are
+    immutable after creation. Editing your own comment doesn't move
+    it under a different thread or change who can reply to it."""
+    body: str
+
+
 class CommentResponse(BaseModel):
     """One comment node in the thread. Top-level nodes carry their
     replies in `replies`; reply nodes have empty `replies`. The FE
     uses this 1-level structure to render indented replies without
-    recursion."""
+    recursion.
+
+    `updated_at` is None for never-edited comments; the FE shows a
+    "đã chỉnh sửa" hint next to the timestamp when it's non-null.
+    """
     id: int
     user_id: str
     user_name: Optional[str] = None
@@ -180,6 +191,7 @@ class CommentResponse(BaseModel):
     body: str
     parent_id: Optional[int] = None
     created_at: datetime
+    updated_at: Optional[datetime] = None
     replies: List['CommentResponse'] = []
 
 
