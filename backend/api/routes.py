@@ -451,6 +451,12 @@ def remove_collection_item(
         )
     except collections_service.CollectionNotFound as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        # Unsupported content_type (e.g. 'post') — the collection
+        # layer only stores knowledge items in MVP; a request that
+        # tries to remove any other type gets a 400 instead of
+        # silently doing nothing.
+        raise HTTPException(status_code=400, detail=str(e))
     return {'removed': True}
 
 

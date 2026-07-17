@@ -64,7 +64,14 @@ def unfollow(db: Session, follower_id: str, target_id: str) -> bool:
         .delete()
     )
     db.commit()
-    return deleted == 0  # edge absent after = True
+    # Returns True if the edge is absent after the call — `deleted`
+    # is 1 when we removed an existing row, 0 when there was
+    # nothing to remove. The earlier version inverted this
+    # comparison (`deleted == 0`), which happened to coincide with
+    # the current call site's hardcoded `is_following: False`
+    # response but would break any future caller that branches on
+    # the return value.
+    return deleted == 1
 
 
 def is_following(db: Session, follower_id: str, target_id: str) -> bool:

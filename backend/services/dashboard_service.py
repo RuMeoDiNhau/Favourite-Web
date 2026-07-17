@@ -243,7 +243,13 @@ def get_recent_activity(db: Session, user_id: str, limit: int = 10) -> list[dict
             'event_type': r.event_type,
             'title': title_by_key.get((r.content_type, r.content_id)),
             'cover_url': cover_by_key.get((r.content_type, r.content_id)),
-            'created_at': r.created_at,
+            # ISO-format the timestamp so FastAPI's default JSON
+            # encoder doesn't choke on the datetime object. Without
+            # this the response is fine when Pydantic serializes it,
+            # but a raw `dict(...)` return in this route bypasses
+            # Pydantic and would emit a `TypeError: Object of type
+            # datetime is not JSON serializable`.
+            'created_at': r.created_at.isoformat() if r.created_at else None,
         }
         for r in rows
     ]
@@ -345,7 +351,10 @@ def get_friends_activity(db: Session, viewer_id: str, limit: int = 20) -> list[d
             'event_type': r.event_type,
             'title': title_by_key.get((r.content_type, r.content_id)),
             'cover_url': cover_by_key.get((r.content_type, r.content_id)),
-            'created_at': r.created_at,
+            # ISO-format the timestamp — see the same conversion
+            # in get_recent_activity. FastAPI's default JSON encoder
+            # doesn't natively serialize datetime objects.
+            'created_at': r.created_at.isoformat() if r.created_at else None,
             # Actor metadata for the FE's "X đã Y" rendering.
             'actor_id': r.user_id,
             'actor_name': actor.name if actor else r.user_id,

@@ -210,6 +210,14 @@ def remove_item(
     content_type: str,
     content_id: int,
 ) -> bool:
+    # Validate content_type even on the delete path. add_item
+    # already rejects unsupported types, but a stale or malformed
+    # DELETE request from the FE could still arrive with e.g.
+    # content_type='post' — without this check we'd silently no-op
+    # on the query (no row matches), which is technically OK but
+    # gives the FE a misleading 200 instead of a 400.
+    if content_type not in ALLOWED_CONTENT_TYPES:
+        raise ValueError(f'unsupported content_type: {content_type!r}')
     _get_owned(db, collection_id, user_id)
     deleted = (
         db.query(CollectionItem)
