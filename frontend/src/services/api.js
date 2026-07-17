@@ -18,16 +18,14 @@ const api = axios.create({
 // Auto-logout on 401 (expired/invalid token). The previous version
 // did `window.location.href = '/'` to force-clear the in-memory user
 // state — but that creates a reload loop: the freshly-reloaded App
-// calls /auth/me again, gets 401 again, reloads again. Now we just
-// clear legacy keys and let App.jsx's own render gate (it renders
-// <Login/> when user is null) handle the transition without a
-// navigation.
+// calls /auth/me again, gets 401 again, reloads again. The newer
+// version lets App.jsx's render gate (it renders <Login/> when
+// user is null) handle the transition by dispatching a
+// `auth:session-expired` CustomEvent that App.jsx listens to.
 //
-// We also gate on a one-shot `handled` flag so multiple concurrent
+// We gate on a one-shot `handled` flag so multiple concurrent
 // 401s (e.g. Knowledge + Feed + Bookmarks fetch all firing at once
-// on app mount) don't race on the same handler. App.jsx's
-// `setUser(null)` from fetchMe() is the source of truth for the
-// auth state transition.
+// on app mount) don't race on the same handler.
 let handled401 = false;
 api.interceptors.response.use(
   (response) => response,
@@ -40,6 +38,14 @@ api.interceptors.response.use(
         localStorage.removeItem('user');
       } catch (err) {
         console.warn('[auth] Failed to clear localStorage on 401', err);
+      }
+      // Tell the app shell that the session ended. App.jsx listens
+      // for this and calls setUser(null) + handleLogout, which
+      // re-renders the Login screen without a page reload.
+      try {
+        window.dispatchEvent(new CustomEvent('auth:session-expired'));
+      } catch (err) {
+        console.warn('[auth] Failed to dispatch session-expired event', err);
       }
       // Reset the flag on the next tick so a future legitimate
       // session-expiry 401 (after a real login) can still trigger

@@ -76,6 +76,22 @@ function App() {
     return () => { cancelled = true; };
   }, []);
 
+  // Listen for session-expiry 401s raised by the axios interceptor
+  // (api.js). On expiry the cookie is gone but App still holds the
+  // user object from /auth/me at mount, so the only way to force a
+  // re-render into <Login/> is to clear that state here. We use a
+  // CustomEvent (not a direct api.* call) so this file stays the
+  // single source of truth for auth-state transitions.
+  useEffect(() => {
+    const onExpired = () => handleLogout();
+    window.addEventListener('auth:session-expired', onExpired);
+    return () => window.removeEventListener('auth:session-expired', onExpired);
+    // handleLogout is stable for this component's lifetime — listing
+    // it in deps would cause a re-bind on every render that closes
+    // over a different `user`, which is the opposite of what we want.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Wrap setView so clicking a nav button also updates the URL. We use
   // pushState (not replaceState) so each tab becomes a history entry
   // and the browser back/forward buttons cycle through them.
