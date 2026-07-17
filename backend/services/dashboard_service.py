@@ -145,7 +145,20 @@ def get_user_insights(db: Session, user_id: str, days: int = 7) -> dict:
         (r for r in rows if r.content_type == 'knowledge'),
         key=lambda r: r.created_at, reverse=True,
     )[:3]
-    recent_article_ids = [r.content_id for r in recent_article_rows]
+    # A user might view/like the same article multiple times in a
+    # week — the activity log keeps every event so we can answer
+    # "how many times did they read it?", but recent_articles is a
+    # list of *articles*, not events. Dedupe by content_id, keeping
+    # the most recent occurrence of each (rows are already ordered
+    # by created_at desc, so first-sight wins). Without this dedupe
+    # the same article can appear twice in the response, which makes
+    # React warn "two children with the same key" on the FE.
+    seen_ids = set()
+    recent_article_ids = []
+    for r in recent_article_rows:
+        if r.content_id not in seen_ids:
+            seen_ids.add(r.content_id)
+            recent_article_ids.append(r.content_id)
     recent_articles = []
     if recent_article_ids:
         # Preserve recency order (the SQL query result is id-ordered).
