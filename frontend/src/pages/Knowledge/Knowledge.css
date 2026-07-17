@@ -180,6 +180,48 @@
   color: var(--text-muted);
 }
 
+.card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 12px;
+}
+
+.card-tag {
+  background: var(--bg-item);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.card-tag:hover {
+  background: rgba(99, 102, 241, 0.12);
+  border-color: #6366f1;
+}
+
+.card-tag.active {
+  background: #6366f1;
+  border-color: #6366f1;
+  color: white;
+}
+
+.knowledge-tag-row {
+  margin-top: 10px;
+  align-items: center;
+}
+
+.knowledge-tag-label {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-right: 6px;
+}
+
 .author {
   padding-left: 0;
 }

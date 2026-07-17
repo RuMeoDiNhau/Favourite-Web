@@ -290,6 +290,51 @@ class Follow(Base):
     )
 
 
+class Tag(Base):
+    """Flat tag vocabulary shared across content types.
+
+    Tags are global (no per-user / per-content owner). `name` is
+    unique — the service layer normalizes case + whitespace before
+    insert so "Machine Learning" and "machine learning" collide.
+
+    We don't store a usage count here — keeping the row tight and
+    letting COUNT(*) queries cover the autocomplete hot path. The
+    DB is small enough that a single GROUP BY over content_tags is
+    fine for ranking suggestions.
+    """
+    __tablename__ = 'tags'
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), unique=True, nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class ContentTag(Base):
+    """Polymorphic M2M between a Tag and a piece of content
+    (knowledge article or feed post in MVP). Uniqueness on
+    (tag_id, content_type, content_id) gives us the toggle primitive
+    used by the attach endpoint.
+
+    Index on (content_type, content_id) lets us answer "what tags
+    does this article have?" without a scan; index on tag_id is the
+    inverse query "what content uses this tag?" used by the filter
+    endpoint.
+    """
+    __tablename__ = 'content_tags'
+
+    id = Column(Integer, primary_key=True, index=True)
+    tag_id = Column(Integer, nullable=False, index=True)
+    content_type = Column(String(20), nullable=False)   # 'knowledge' | 'post' (MVP)
+    content_id = Column(Integer, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint('tag_id', 'content_type', 'content_id',
+                         name='uq_content_tag_unique'),
+        Index('ix_content_tags_content', 'content_type', 'content_id'),
+    )
+
+
 class Collection(Base):
     """User-curated grouping of knowledge articles.
 

@@ -113,6 +113,27 @@ export const removeItemFromCollection = (collectionId, contentType, contentId) =
   api.delete(`/collections/${collectionId}/items`, { data: { content_type: contentType, content_id: contentId } })
     .then((r) => r.data);
 
+
+// ==================== Tags ====================
+//
+// Shared global vocabulary across knowledge + posts. The autocomplete
+// endpoint is public; attach/detach are auth-required.
+//
+// `tags` field on Knowledge/Post response rows is the denormalized
+// list — the FE renders chips from it directly, no follow-up GET
+// needed.
+
+export const searchTags = (q, limit = 20) =>
+  api.get('/tags', { params: { q, limit } }).then((r) => r.data?.items || []);
+
+export const attachTags = (contentType, contentId, names) =>
+  api.post(`/tags/attach`, { names }, { params: { content_type: contentType, content_id: contentId } })
+    .then((r) => r.data);
+
+export const detachTag = (contentType, contentId, name) =>
+  api.post(`/tags/detach`, null, { params: { content_type: contentType, content_id: contentId, name } })
+    .then((r) => r.data);
+
 export const fetchLogs = () => api.get('/logs');
 
 export const recognizeFace = (imageBase64) => api.post('/recognize', { image_base64: imageBase64 });

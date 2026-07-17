@@ -20,7 +20,7 @@ from backend.services.schemas import (
     NotificationResponse, NotificationList, UnreadCount,
     CollectionCreateRequest, CollectionUpdateRequest, CollectionItemRequest,
 )
-from backend.services import games_service, music_service, knowledge_service, posts_service, dashboard_service, search_service, comments_service, notification_service, bookmarks_service, follow_service, collections_service
+from backend.services import games_service, music_service, knowledge_service, posts_service, dashboard_service, search_service, comments_service, notification_service, bookmarks_service, follow_service, collections_service, tags_service
 from backend.services.auth_service import create_access_token, decode_access_token
 from backend.services.logging_service import logger
 
@@ -830,11 +830,69 @@ def like_song(
 
 # ==================== Knowledge Endpoints ====================
 
-@router.get('/knowledge', response_model=list[KnowledgeResponse])
-def get_all_knowledge(db: Session = Depends(get_db)):
-    """Get all articles"""
+def _enrich_knowledge(article, db: Session) -> dict:
+    """Build a JSON-friendly dict for one Knowledge row. Adds the
+    article's tags so the FE can render tag chips without a second
+    round-trip. We avoid the Pydantic response_model here because
+    adding `tags` to KnowledgeResponse would force every caller
+    (including internal services) to compute the tag list — the
+    denormalization is only relevant to the public-facing routes."""
+    return {
+        'id': article.id,
+        'title': article.title,
+        'category': article.category,
+        'description': article.description,
+        'content': article.content,
+        'author': article.author,
+        'author_user_id': article.author_user_id,
+        'views': article.views,
+        'likes': article.likes,
+        'created_at': article.created_at.isoformat() if article.created_at else None,
+        'tags': tags_service.tags_for_content(db, 'knowledge', article.id),
+    }
+
+
+def _enrich_post(post, db: Session) -> dict:
+    return {
+        'id': post.id,
+        'user_id': post.user_id,
+        'post_type': post.post_type,
+        'title': post.title,
+        'description': post.description,
+        'media_url': post.media_url,
+        'thumbnail': post.thumbnail,
+        'status': post.status,
+        'created_at': post.created_at.isoformat() if post.created_at else None,
+        'tags': tags_service.tags_for_content(db, 'post', post.id),
+    }
+
+
+def _parse_tags_param(raw: str | None) -> list[str]:
+    """Comma-separated tag list from a query string. Empty / missing
+    returns []. We don't validate each tag here — the filter service
+    silently drops unknowns (filter_content_ids only returns ids that
+    match known tag names)."""
+    if not raw:
+        return []
+    return [t for t in raw.split(',') if t.strip()]
+
+
+@router.get('/knowledge', response_model=None)
+def get_all_knowledge(
+    tags: str | None = None,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+):
+    """List articles. Optional `?tags=a,b,c` filters by tag (OR match)
+    — same UX as the category chip filter. Returns dict rows (not
+    Pydantic) so we can include the tags array inline."""
     knowledge_service.init_articles(db)
-    return knowledge_service.get_all_articles(db)
+    rows = knowledge_service.get_all_articles(db, limit=limit)
+    tag_names = _parse_tags_param(tags)
+    if tag_names:
+        matching_ids = tags_service.filter_content_ids(db, 'knowledge', tag_names)
+        rows = [r for r in rows if r.id in matching_ids]
+    return [_enrich_knowledge(r, db) for r in rows]
 
 # Specific routes MUST come before wildcard routes
 @router.get('/knowledge/categories')
@@ -881,7 +939,7 @@ def get_article_videos(article_id: int, db: Session = Depends(get_db)):
     videos = knowledge_service.search_youtube_videos(article, max_results=3)
     return {'videos': videos}
 
-@router.get('/knowledge/{article_id}', response_model=KnowledgeResponse)
+@router.get('/knowledge/{article_id}', response_model=None)
 def get_article(
     article_id: int,
     db: Session = Depends(get_db),
@@ -893,18 +951,24 @@ def get_article(
     article = knowledge_service.get_article_by_id(db, article_id, user_id=user_id)
     if not article:
         raise HTTPException(status_code=404, detail='Article not found')
-    return article
+    return _enrich_knowledge(article, db)
 
-@router.post('/knowledge', response_model=KnowledgeResponse, status_code=201)
+@router.post('/knowledge', response_model=None, status_code=201)
 def create_article(
     request: KnowledgeCreateRequest,
+    tags: list[str] | None = None,  # accepted as form/JSON body field
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Create a new article — requires sign-in. The Knowledge model
     already has an `author` field which we set from current_user so we at
-    least know who wrote the piece, even without a user_id FK column."""
-    return knowledge_service.create_article(
+    least know who wrote the piece, even without a user_id FK column.
+
+    Tier 3 L: accepts an optional `tags` array (list of tag names).
+    Names are normalized + deduped server-side; unknown names
+    auto-create new Tag rows. We don't fail the create if a tag is
+    bogus — the route treats `tags` as best-effort metadata."""
+    article = knowledge_service.create_article(
         db,
         title=request.title,
         category=request.category,
@@ -912,6 +976,14 @@ def create_article(
         content=request.content,
         author=current_user.get('user_id') or request.author
     )
+    if tags:
+        try:
+            tags_service.attach(db, 'knowledge', article.id, tags)
+        except ValueError:
+            # Drop the over-long tag silently — the article still
+            # gets created, the user can re-tag from the detail page.
+            pass
+    return _enrich_knowledge(article, db)
 
 @router.post('/knowledge/{article_id}/like')
 def like_article(
@@ -972,27 +1044,107 @@ def delete_post_file(
     return {'deleted': deleted}
 
 
-@router.post('/posts', response_model=PostResponse, status_code=201)
+@router.post('/posts', response_model=None, status_code=201)
 def create_post(
     request: PostCreateRequest,
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     try:
-        return posts_service.create_post(db, request, current_user.get("user_id"))
+        post = posts_service.create_post(db, request, current_user.get("user_id"))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lỗi khi tạo bài đăng: {str(e)}")
+    # Tier 3 L: optional tag attach on create. Best-effort — the
+    # post is committed even if a tag name is bogus (the service
+    # silently drops invalid names).
+    if request.tags:
+        try:
+            tags_service.attach(db, 'post', post.id, request.tags)
+        except ValueError:
+            pass
+    return _enrich_post(post, db)
 
 
-@router.get('/posts', response_model=list[PostResponse])
+@router.get('/posts', response_model=None)
 def get_posts(
+    tags: str | None = None,
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     try:
-        return posts_service.get_posts(db)
+        rows = posts_service.get_posts(db)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lỗi khi lấy danh sách bài đăng: {str(e)}")
+    tag_names = _parse_tags_param(tags)
+    if tag_names:
+        matching_ids = tags_service.filter_content_ids(db, 'post', tag_names)
+        rows = [r for r in rows if r.id in matching_ids]
+    return [_enrich_post(r, db) for r in rows]
+
+
+# ==================== Tag Endpoints (Tier 3 L) ====================
+#
+# Global tag vocabulary + per-content attach/detach. The autocomplete
+# endpoint is open to anyone (signed or not) so the FE can show
+# suggestions as the user types; mutations are auth-required.
+
+@router.get('/tags')
+def list_tags(
+    q: str | None = None,
+    limit: int = 20,
+    db: Session = Depends(get_db),
+):
+    """Autocomplete for the tag input. Pass `?q=mach` to get tags
+    starting with 'mach' (case-insensitive substring), ranked by
+    usage count. Limit defaults to 20 — the FE's dropdown caps at
+    10 visible rows."""
+    if not q:
+        return {'items': []}
+    return {'items': tags_service.search_tags(db, q, limit)}
+
+
+@router.post('/tags/attach')
+def attach_tags(
+    content_type: str,
+    content_id: int,
+    request: dict,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Attach a set of tag names to a piece of content. Body shape:
+    `{content_type, content_id, names: [...]}`. The route re-reads
+    `content_type` and `content_id` from query string for ergonomic
+    reasons — the FE's batch tagger can issue many POSTs without
+    repeating the same data in each body.
+
+    Idempotent: re-attaching is a no-op. Returns the new tag list
+    attached to the content so the FE can re-render the chip strip
+    without a follow-up GET."""
+    if content_type not in {'knowledge', 'post'}:
+        raise HTTPException(status_code=400, detail='unsupported content_type')
+    names = (request or {}).get('names') or []
+    if not isinstance(names, list):
+        raise HTTPException(status_code=400, detail='names must be a list')
+    try:
+        tags_service.attach(db, content_type, content_id, names)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {'tags': tags_service.tags_for_content(db, content_type, content_id)}
+
+
+@router.post('/tags/detach')
+def detach_tag(
+    content_type: str,
+    content_id: int,
+    name: str,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Remove a single tag from a piece of content by name. Idempotent."""
+    if content_type not in {'knowledge', 'post'}:
+        raise HTTPException(status_code=400, detail='unsupported content_type')
+    tags_service.detach(db, content_type, content_id, name)
+    return {'tags': tags_service.tags_for_content(db, content_type, content_id)}
 
 
 # ==================== Personal Dashboard Endpoints ====================

@@ -8,6 +8,12 @@ import { useBookmarks } from '../../lib/BookmarksContext';
 export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearchOpen, currentUser, onNavigate }) {
   const { isBookmarked: isBmKnowledge, toggle: toggleBm } = useBookmarks();
   // Multi-select category filter. Empty array = "All categories"
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  // Multi-select tag filter (Tier 3 L). OR match: an article is in
+  // view if it has at least one of the selected tags. Tags live on
+  // the article (denormalized in the list response); the FE builds
+  // the suggestion list from the union across loaded articles.
+  const [selectedTags, setSelectedTags] = useState([]);
   // (no filter). Selecting multiple is an OR match — show articles
   // that belong to any of the selected categories. This lets a user
   // who wants "Lập Trình OR AI" do it with two clicks instead of
@@ -73,10 +79,30 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
   }, []);
 
   // Derived: visible articles after applying the multi-select
-  // category filter. Empty selection = show everything.
-  const articles = selectedCategories.length === 0
-    ? allArticles
-    : allArticles.filter((a) => selectedCategories.includes(a.category));
+  // category filter and the multi-select tag filter. Both are
+  // OR-matched individually (the existing category behavior) and
+  // then AND-combined: an article must satisfy both filters to
+  // appear. Empty selection on either side = no constraint from
+  // that filter.
+  const articles = allArticles.filter((a) => {
+    const okCat = selectedCategories.length === 0 || selectedCategories.includes(a.category);
+    const articleTags = (a.tags || []).map((t) => t.name);
+    const okTag = selectedTags.length === 0 || selectedTags.some((t) => articleTags.includes(t));
+    return okCat && okTag;
+  });
+
+  // Union of all tags across loaded articles — drives the chip
+  // suggestion row. We sort alphabetically so the chip order is
+  // stable across renders.
+  const tagSuggestions = (() => {
+    const set = new Set();
+    for (const a of allArticles) {
+      for (const t of a.tags || []) {
+        if (t?.name) set.add(t.name);
+      }
+    }
+    return Array.from(set).sort();
+  })();
 
   // When a search result asks us to deep-open a specific article,
   // search across allArticles (not just the filtered view) so a
@@ -213,6 +239,32 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
               </button>
             )}
           </div>
+          {tagSuggestions.length > 0 && (
+            <div className="filter-buttons knowledge-tag-row">
+              <span className="knowledge-tag-label">🏷️ Tag:</span>
+              {tagSuggestions.map((tag) => {
+                const active = selectedTags.includes(tag);
+                return (
+                  <button
+                    key={tag}
+                    className={`filter-btn ${active ? 'active' : ''}`}
+                    onClick={() => setSelectedTags((prev) => active ? prev.filter((t) => t !== tag) : [...prev, tag])}
+                    aria-pressed={active}
+                  >
+                    #{tag}
+                  </button>
+                );
+              })}
+              {selectedTags.length > 0 && (
+                <button
+                  className="filter-btn filter-btn-clear"
+                  onClick={() => setSelectedTags([])}
+                >
+                  Xóa tag
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {loading ? (
@@ -232,6 +284,25 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
                   <div className="card-content">
                     <h3>{article.title}</h3>
                     <p className="description">{article.description}</p>
+
+                    {article.tags && article.tags.length > 0 && (
+                      <div className="card-tags">
+                        {article.tags.map((t) => (
+                          <button
+                            key={t.id || t.name}
+                            className={`card-tag ${selectedTags.includes(t.name) ? 'active' : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedTags((prev) => prev.includes(t.name) ? prev.filter((x) => x !== t.name) : [...prev, t.name]);
+                            }}
+                            title={`Lọc theo #${t.name}`}
+                            type="button"
+                          >
+                            #{t.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
 
                     <div className="card-meta">
                       <span className="author">👤 {article.author}</span>

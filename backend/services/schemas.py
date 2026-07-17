@@ -104,6 +104,11 @@ class KnowledgeCreateRequest(BaseModel):
     description: str
     content: Optional[str] = None
     author: str
+    # Tier 3 L: optional tags to attach on creation. Server normalizes
+    # + dedupes; unknown names auto-create. Empty list / None = no
+    # tags. We don't validate length here — the service rejects
+    # over-100-char names with a 400.
+    tags: Optional[List[str]] = None
 
 
 # Authentication Schemas
@@ -137,6 +142,10 @@ class PostCreateRequest(BaseModel):
     title: str
     description: Optional[str] = None
     media_url: Optional[str] = None
+    # Tier 3 L: optional tags to attach on creation. Same semantics
+    # as KnowledgeCreateRequest.tags — normalized + deduped, unknown
+    # names auto-create.
+    tags: Optional[List[str]] = None
     thumbnail: Optional[str] = None
     status: Optional[str] = 'public'
 
