@@ -86,6 +86,19 @@
   font-weight: 600;
 }
 
+.filter-btn-clear {
+  margin-left: 8px;
+  background: transparent;
+  border-color: var(--border-color);
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.filter-btn-clear:hover {
+  background: var(--bg-item);
+  color: var(--text-main);
+}
+
 .knowledge-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));

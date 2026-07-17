@@ -6,9 +6,19 @@ import { useBookmarks } from '../../lib/BookmarksContext';
 
 export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearchOpen, currentUser }) {
   const { isBookmarked: isBmKnowledge, toggle: toggleBm } = useBookmarks();
-  const [selectedTopic, setSelectedTopic] = useState('all');
-  const [articles, setArticles] = useState([]);
-  const [categories, setCategories] = useState(['Tất Cả']);
+  // Multi-select category filter. Empty array = "All categories"
+  // (no filter). Selecting multiple is an OR match — show articles
+  // that belong to any of the selected categories. This lets a user
+  // who wants "Lập Trình OR AI" do it with two clicks instead of
+  // having to switch back and forth.
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  // `allArticles` is the unfiltered list we got from the API.
+  // `articles` is the filtered view derived from `allArticles` +
+  // `selectedCategories`. We keep both because filtering on every
+  // render is cheaper than re-fetching from the BE on every chip
+  // toggle — Knowledge has <100 rows in practice.
+  const [allArticles, setAllArticles] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -54,53 +64,67 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
     }
   };
 
+  // Articles are loaded once on mount (we filter client-side by
+  // category). Categories are also loaded once.
   useEffect(() => {
     loadArticles();
     loadCategories();
-  }, [selectedTopic]);
+  }, []);
+
+  // Derived: visible articles after applying the multi-select
+  // category filter. Empty selection = show everything.
+  const articles = selectedCategories.length === 0
+    ? allArticles
+    : allArticles.filter((a) => selectedCategories.includes(a.category));
 
   // When a search result asks us to deep-open a specific article,
-  // find it in the loaded list and open the modal. We wait for
-  // articles to be loaded first; if the id doesn't match any row
-  // (e.g. wrong category filter) we silently consume the request so
-  // it doesn't keep firing.
+  // search across allArticles (not just the filtered view) so a
+  // hit in a category the user had filtered out still opens the
+  // modal. We add the article's category to the selection so the
+  // user can see where it lives in the list — without this, the
+  // modal would open over an apparently empty grid (the article
+  // exists but is hidden by the filter) which feels broken.
   useEffect(() => {
     if (searchOpenKnowledgeId == null) return;
     if (loading) return;
-    const target = articles.find((a) => a.id === searchOpenKnowledgeId);
+    const target = allArticles.find((a) => a.id === searchOpenKnowledgeId);
     if (target) {
+      if (selectedCategories.length > 0 && !selectedCategories.includes(target.category)) {
+        setSelectedCategories((prev) => [...prev, target.category]);
+      }
       handleOpenArticle(target);
     }
     onConsumeSearchOpen?.();
-  }, [searchOpenKnowledgeId, loading, articles]);
+  }, [searchOpenKnowledgeId, loading, allArticles]);
 
   // Listen for cross-view deep opens from the Bookmarks page.
   // Pattern matches App.jsx's search-deeplink: stash id via state
   // event, then re-enter the same handler above. We piggyback on
   // a custom event so the Bookmarks page doesn't need a callback
-  // prop drilled down through App.
+  // prop drilled down through App. Search in allArticles so a
+  // filtered-out bookmark still opens.
   useEffect(() => {
     const handler = (e) => {
       const detail = e.detail;
       if (!detail || detail.content_type !== 'knowledge') return;
-      const target = articles.find((a) => a.id === detail.content_id);
-      if (target) handleOpenArticle(target);
+      const target = allArticles.find((a) => a.id === detail.content_id);
+      if (target) {
+        if (selectedCategories.length > 0 && !selectedCategories.includes(target.category)) {
+          setSelectedCategories((prev) => [...prev, target.category]);
+        }
+        handleOpenArticle(target);
+      }
     };
     window.addEventListener('bookmarks-open', handler);
     return () => window.removeEventListener('bookmarks-open', handler);
-  }, [articles]);
+  }, [allArticles, selectedCategories]);
 
   const loadArticles = async () => {
     try {
       setLoading(true);
       setError(null);
-      let response;
-      if (selectedTopic === 'all') {
-        response = await api.fetchAllKnowledge();
-      } else {
-        response = await api.fetchKnowledgeByCategory(selectedTopic);
-      }
-      setArticles(response.data || []);
+      const response = await api.fetchAllKnowledge();
+      setAllArticles(response.data || []);
     } catch (err) {
       console.error('Error loading articles:', err);
       setError('Failed to load articles');
@@ -112,10 +136,18 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
   const loadCategories = async () => {
     try {
       const response = await api.fetchKnowledgeCategories();
-      setCategories(['Tất Cả', ...response.data.categories]);
+      setCategories(response.data.categories || []);
     } catch (err) {
       console.error('Error loading categories:', err);
     }
+  };
+
+  // Toggle a category in/out of the selection. Treats "click the
+  // active chip again" as deselect — common chip-UI convention.
+  const toggleCategory = (cat) => {
+    setSelectedCategories((prev) =>
+      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
+    );
   };
 
   const handleLikeArticle = async (articleId) => {
@@ -152,15 +184,33 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
       <div className="knowledge-main">
         <div className="filter-bar">
           <div className="filter-buttons">
-            {categories.map((cat, idx) => (
+            <button
+              className={`filter-btn ${selectedCategories.length === 0 ? 'active' : ''}`}
+              onClick={() => setSelectedCategories([])}
+            >
+              Tất Cả
+            </button>
+            {categories.map((cat) => {
+              const active = selectedCategories.includes(cat);
+              return (
+                <button
+                  key={cat}
+                  className={`filter-btn ${active ? 'active' : ''}`}
+                  onClick={() => toggleCategory(cat)}
+                  aria-pressed={active}
+                >
+                  {cat}
+                </button>
+              );
+            })}
+            {selectedCategories.length > 0 && (
               <button
-                key={idx}
-                className={`filter-btn ${selectedTopic === (cat === 'Tất Cả' ? 'all' : cat) ? 'active' : ''}`}
-                onClick={() => setSelectedTopic(cat === 'Tất Cả' ? 'all' : cat)}
+                className="filter-btn filter-btn-clear"
+                onClick={() => setSelectedCategories([])}
               >
-                {cat}
+                Xóa lọc
               </button>
-            ))}
+            )}
           </div>
         </div>
 
