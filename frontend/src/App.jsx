@@ -13,14 +13,29 @@ import PostModal from './pages/Feed/PostModal';
 import FaceSetupModal from './components/FaceSetupModal';
 import SearchBar from './components/SearchBar';
 import NotificationBell from './components/NotificationBell';
-import { readJson } from './lib/safeStorage';
+import Bookmarks from './pages/Bookmarks';
+import UserProfile from './pages/UserProfile';
+import Collections from './pages/Collections/Collections';
+import CollectionDetail from './pages/Collections/CollectionDetail';
+import { BookmarksProvider } from './lib/BookmarksContext';
+import * as api from './services/api';
 
 // Map view name <-> URL path so the navbar becomes bookmarkable and
 // back/forward works. `home` is the Personal Dashboard (the new
 // landing view); `feed` is the unified posts feed. Admin views stay
 // hidden until role check.
-const VIEW_PATHS = ['/home', '/feed', '/dashboard', '/users', '/logs', '/games', '/music', '/knowledge'];
-const VIEW_NAMES = ['home', 'feed', 'dashboard', 'users', 'logs', 'games', 'music', 'knowledge'];
+const VIEW_PATHS = ['/home', '/feed', '/bookmarks', '/collections', '/dashboard', '/users', '/logs', '/games', '/music', '/knowledge'];
+const VIEW_NAMES = ['home', 'feed', 'bookmarks', 'collections', 'dashboard', 'users', 'logs', 'games', 'music', 'knowledge'];
+
+// Detail routes are nested under a top-level view, e.g.
+// '/users/<id>' renders the same shell as '/users' but with the
+// detail prop set so the page knows which user to show. Keeping
+// the detail id in the URL (not React state) means a profile link
+// can be shared / bookmarked.
+const DETAIL_PATTERN = /^\/users\/([A-Za-z0-9._-]+)$/;
+// Collection detail uses /collections/<id> — same pattern as the
+// user profile. The id is an integer; we capture it directly.
+const COLLECTION_DETAIL_PATTERN = /^\/collections\/(\d+)$/;
 
 const pathToView = (pathname) => {
   // Backwards-compat: a stale bookmark at '/' used to mean the Feed.
@@ -29,17 +44,26 @@ const pathToView = (pathname) => {
   // on the new Home view, not a broken empty Feed. /feed still
   // works explicitly for those who bookmarked it.
   if (pathname === '/') return 'home';
+  if (DETAIL_PATTERN.test(pathname)) return 'userProfile';
+  if (COLLECTION_DETAIL_PATTERN.test(pathname)) return 'collectionDetail';
   const idx = VIEW_PATHS.indexOf(pathname);
   return idx === -1 ? 'home' : VIEW_NAMES[idx];
 };
 
-const viewToPath = (viewName) => {
+const viewToPath = (viewName, detail) => {
+  if (viewName === 'userProfile' && detail?.userId) return `/users/${detail.userId}`;
+  if (viewName === 'collectionDetail' && detail?.id) return `/collections/${detail.id}`;
   const idx = VIEW_NAMES.indexOf(viewName);
   return idx === -1 ? '/' : VIEW_PATHS[idx];
 };
 
 function App() {
-  const [user, setUser] = useState(() => readJson('user'));
+  // `user` lives in React state only (not localStorage). The BE
+  // sets the auth cookie; on page reload we rebuild this object
+  // via /auth/me. The old localStorage pattern was a second
+  // XSS-stealable piece of data — now gone.
+  const [user, setUser] = useState(null);
+  const [authChecked, setAuthChecked] = useState(false);
   const [view, setViewRaw] = useState(() => pathToView(window.location.pathname));
   const [showPostModal, setShowPostModal] = useState(false);
   const [feedKey, setFeedKey] = useState(0);
@@ -50,23 +74,96 @@ function App() {
   // target view consumes them so a later manual nav doesn't reopen.
   const [searchOpenKnowledgeId, setSearchOpenKnowledgeId] = useState(null);
   const [searchOpenGameId, setSearchOpenGameId] = useState(null);
+  // Detail-route payload. UserProfile uses the user_id, CollectionDetail
+  // uses the collection id. Both are pulled from the URL on first
+  // render and updated on popstate so back/forward keeps them in sync.
+  const [profileUserId, setProfileUserId] = useState(() => {
+    const m = DETAIL_PATTERN.exec(window.location.pathname);
+    return m ? decodeURIComponent(m[1]) : null;
+  });
+  const [collectionId, setCollectionId] = useState(() => {
+    const m = COLLECTION_DETAIL_PATTERN.exec(window.location.pathname);
+    return m ? Number(m[1]) : null;
+  });
+
+  // On first mount, ask the BE "who am I?". The fw_auth cookie (if
+  // present) makes this succeed; if not, we render Login.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const me = await api.fetchMe();
+        if (!cancelled) setUser(me);
+      } catch {
+        // 401 etc. — no session.
+        if (!cancelled) setUser(null);
+      } finally {
+        if (!cancelled) setAuthChecked(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Listen for session-expiry 401s raised by the axios interceptor
+  // (api.js). On expiry the cookie is gone but App still holds the
+  // user object from /auth/me at mount, so the only way to force a
+  // re-render into <Login/> is to clear that state here. We use a
+  // CustomEvent (not a direct api.* call) so this file stays the
+  // single source of truth for auth-state transitions.
+  useEffect(() => {
+    const onExpired = () => handleLogout();
+    window.addEventListener('auth:session-expired', onExpired);
+    return () => window.removeEventListener('auth:session-expired', onExpired);
+    // handleLogout is stable for this component's lifetime — listing
+    // it in deps would cause a re-bind on every render that closes
+    // over a different `user`, which is the opposite of what we want.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Wrap setView so clicking a nav button also updates the URL. We use
   // pushState (not replaceState) so each tab becomes a history entry
   // and the browser back/forward buttons cycle through them.
-  const setView = useCallback((next) => {
+  //
+  // The `detail` optional argument carries per-view payload:
+  //   { userId } for 'userProfile'
+  //   { id }     for 'collectionDetail'
+  // Passing nothing falls back to the existing detail state, so
+  // navigating to a detail view without an id is treated as a
+  // request to revisit the previously-shown record.
+  const setView = useCallback((next, detail) => {
     setViewRaw(next);
-    const nextPath = viewToPath(next);
+    if (next === 'userProfile') {
+      const nextId = detail?.userId ?? profileUserId;
+      if (nextId) setProfileUserId(nextId);
+    } else if (next === 'collectionDetail') {
+      const nextId = detail?.id ?? collectionId;
+      if (nextId) setCollectionId(nextId);
+    }
+    const payload = next === 'userProfile'
+      ? (detail?.userId ?? profileUserId)
+      : next === 'collectionDetail'
+        ? (detail?.id ?? collectionId)
+        : undefined;
+    const nextPath = viewToPath(next, payload ? { userId: next === 'userProfile' ? payload : undefined, id: next === 'collectionDetail' ? payload : undefined } : undefined);
     if (window.location.pathname !== nextPath) {
       window.history.pushState(null, '', nextPath);
     }
     setMobileMenuOpen(false);
-  }, []);
+  }, [profileUserId, collectionId]);
 
   // Browser back/forward: popstate fires with the new location. Sync state
-  // without re-pushing (we already navigated).
+  // without re-pushing (we already navigated). When the path now
+  // points at a detail view, refresh the detail id so the page shows
+  // the right record.
   useEffect(() => {
-    const onPop = () => setViewRaw(pathToView(window.location.pathname));
+    const onPop = () => {
+      const p = window.location.pathname;
+      setViewRaw(pathToView(p));
+      const m = DETAIL_PATTERN.exec(p);
+      if (m) setProfileUserId(decodeURIComponent(m[1]));
+      const cm = COLLECTION_DETAIL_PATTERN.exec(p);
+      if (cm) setCollectionId(Number(cm[1]));
+    };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
   }, []);
@@ -93,9 +190,22 @@ function App() {
     return `${base}${url}`;
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
+  const handleLogout = async () => {
+    // Tell the BE to clear the cookie. Even if the request fails
+    // (offline), we still drop the local user state — the cookie
+    // will expire on its own within 7 days.
+    try {
+      await api.logout();
+    } catch (err) {
+      console.warn('[auth] logout request failed', err);
+    }
+    // Drop any leftover legacy keys from the old localStorage flow.
+    try {
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+    } catch (err) {
+      console.warn('[auth] failed to clear localStorage', err);
+    }
     setUser(null);
   };
 
@@ -147,6 +257,12 @@ function App() {
   }, []);
 
   // Nếu chưa đăng nhập, chỉ hiển thị màn hình Login
+  if (!authChecked) {
+    // Brief moment while /auth/me is in flight. Render nothing
+    // rather than flash the Login screen — that's a small UX win
+    // for users on slow connections.
+    return null;
+  }
   if (!user) {
     return <Login onLoginSuccess={(u) => setUser(u)} />;
   }
@@ -156,6 +272,8 @@ function App() {
   const NAV_ITEMS = [
     { name: 'home', label: '🏠 Trang chủ' },
     { name: 'feed', label: '📰 Bảng tin' },
+    { name: 'bookmarks', label: '🔖 Đã lưu' },
+    { name: 'collections', label: '📂 Bộ sưu tập' },
     { name: 'dashboard', label: '📷 Quét khuôn mặt' },
     { name: 'users', label: '👥 Users', adminOnly: true },
     { name: 'logs', label: '📋 Logs', adminOnly: true },
@@ -176,7 +294,8 @@ function App() {
   );
 
   return (
-    <div className={`App ${isDarkMode ? 'dark-theme' : ''}`}>
+    <BookmarksProvider>
+      <div className={`App ${isDarkMode ? 'dark-theme' : ''}`}>
       <header className="main-navbar">
         <div className="navbar-left">
           <div className="navbar-logo">
@@ -186,6 +305,7 @@ function App() {
           <SearchBar
             onSelectItem={handleSearchSelect}
             isAdmin={user.role === 'admin'}
+            userId={user.user_id}
           />
         </div>
 
@@ -309,7 +429,12 @@ function App() {
 
       <main>
         {view === 'home' && <Home onNavigate={setView} />}
-        {view === 'feed' && <Feed key={feedKey} />}
+        {view === 'feed' && <Feed key={feedKey} currentUser={user} onNavigate={setView} />}
+        {view === 'bookmarks' && <Bookmarks onNavigate={setView} />}
+        {view === 'collections' && <Collections onNavigate={setView} />}
+        {view === 'collectionDetail' && collectionId && (
+          <CollectionDetail collectionId={collectionId} onNavigate={setView} />
+        )}
         {view === 'dashboard' && <Dashboard />}
         {view === 'users' && user?.role === 'admin' && <Users />}
         {view === 'logs' && user?.role === 'admin' && <Logs />}
@@ -325,6 +450,14 @@ function App() {
             searchOpenKnowledgeId={searchOpenKnowledgeId}
             onConsumeSearchOpen={consumeSearchOpenKnowledge}
             currentUser={user}
+            onNavigate={setView}
+          />
+        )}
+        {view === 'userProfile' && profileUserId && (
+          <UserProfile
+            userId={profileUserId}
+            currentUser={user}
+            onNavigate={setView}
           />
         )}
       </main>
@@ -348,7 +481,8 @@ function App() {
           }}
         />
       )}
-    </div>
+      </div>
+    </BookmarksProvider>
   );
 }
 

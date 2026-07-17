@@ -11,6 +11,7 @@ FE only renders one indent — deeper nesting would be visual noise
 in the article/post modal, and tree-building SQL gets ugly.
 """
 from collections import defaultdict
+from datetime import datetime
 from typing import Iterable
 
 from sqlalchemy import func
@@ -99,6 +100,7 @@ def list_comments(db: Session, content_type: str, content_id: int,
             'body': c.body,
             'parent_id': c.parent_id,
             'created_at': c.created_at.isoformat(),
+            'updated_at': c.updated_at.isoformat() if c.updated_at else None,
             'replies': [],
         }
 
@@ -164,9 +166,14 @@ def create_comment(db: Session, user_id: str, content_type: str,
     # Trigger a notification on the relevant recipient. We only fire
     # ONE notification per comment (not both reply + on-post): a
     # reply notifies the parent comment's author; a top-level
-    # comment on a Post notifies the post's owner. Knowledge articles
-    # have no "owner" column, so they don't trigger on_post — the
-    # community is anonymous on the comment side, by design.
+    # comment notifies the content's owner (Post.user_id for posts,
+    # Knowledge.author_user_id for articles). Knowledge rows created
+    # before Commit D don't have author_user_id set — in that case we
+    # silently skip rather than notify a random legacy owner.
+    #
+    # Self-comments never notify (you don't need a ping to know you
+    # just commented on your own thing).
+    #
     # Lazy import so comments_service doesn't pull in
     # notification_service at module-load time (it imports db_models,
     # which would risk a cycle if notification_service ever needs
@@ -179,7 +186,7 @@ def create_comment(db: Session, user_id: str, content_type: str,
             # Reply → notify the parent comment's author.
             parent_row = db.query(Comment).filter(Comment.id == parent_id).first()
             target_user = parent_row.user_id if parent_row else None
-            if target_user:
+            if target_user and target_user != user_id:
                 notification_service.create_notification(
                     db,
                     recipient_id=target_user,
@@ -193,7 +200,7 @@ def create_comment(db: Session, user_id: str, content_type: str,
             # Top-level on a Post → notify the post's owner.
             from backend.services.db_models import Post
             post = db.query(Post).filter(Post.id == content_id).first()
-            if post and post.user_id:
+            if post and post.user_id and post.user_id != user_id:
                 notification_service.create_notification(
                     db,
                     recipient_id=post.user_id,
@@ -202,6 +209,24 @@ def create_comment(db: Session, user_id: str, content_type: str,
                     content_type='post',
                     content_id=content_id,
                     message=f'{actor_name} đã bình luận về bài "{post.title}": "{snippet}"',
+                )
+        elif content_type == 'knowledge':
+            # Top-level on a Knowledge article → notify the article's
+            # author. Reuse the comment_on_post type so the FE doesn't
+            # need a new icon — the bell just shows the same comment
+            # bubble, with the message text disambiguating ("bài viết
+            # X" vs "bài viết Y").
+            from backend.services.db_models import Knowledge
+            article = db.query(Knowledge).filter(Knowledge.id == content_id).first()
+            if article and article.author_user_id and article.author_user_id != user_id:
+                notification_service.create_notification(
+                    db,
+                    recipient_id=article.author_user_id,
+                    actor_id=user_id,
+                    type_='comment_on_post',
+                    content_type='knowledge',
+                    content_id=content_id,
+                    message=f'{actor_name} đã bình luận về bài "{article.title}": "{snippet}"',
                 )
     except Exception as notif_err:
         # Notification failures must not roll back the comment.
@@ -216,6 +241,45 @@ def create_comment(db: Session, user_id: str, content_type: str,
         'body': c.body,
         'parent_id': c.parent_id,
         'created_at': c.created_at.isoformat(),
+        'updated_at': c.updated_at.isoformat() if c.updated_at else None,
+        'replies': [],
+    }
+
+
+def update_comment(db: Session, comment_id: int, user_id: str,
+                   body: str) -> dict:
+    """Edit a comment's body. Owner-only (admins use delete +
+    recreate). Sets `updated_at` to utcnow so the FE can show a
+    'đã chỉnh sửa' hint.
+
+    Editing is intentionally narrow — we don't allow moving a
+    comment under a different thread, changing its owner, or
+    anything else. That's how most comment systems work and it
+    keeps the integrity simple: the parent_id of any existing
+    replies still points at the same comment id."""
+    c = db.query(Comment).filter(Comment.id == comment_id).first()
+    if not c:
+        raise LookupError("comment not found")
+    if c.user_id != user_id:
+        raise PermissionError("not your comment")
+    body = (body or '').strip()
+    if not body or len(body) > 2000:
+        raise ValueError("body must be 1..2000 characters")
+    c.body = body
+    c.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(c)
+
+    user = db.query(User).filter(User.user_id == c.user_id).first()
+    return {
+        'id': c.id,
+        'user_id': c.user_id,
+        'user_name': user.name if user else None,
+        'user_avatar_url': getattr(user, 'avatar_url', None) if user else None,
+        'body': c.body,
+        'parent_id': c.parent_id,
+        'created_at': c.created_at.isoformat(),
+        'updated_at': c.updated_at.isoformat() if c.updated_at else None,
         'replies': [],
     }
 

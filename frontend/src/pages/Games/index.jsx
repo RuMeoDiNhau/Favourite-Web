@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import './Games.css';
 import * as api from '../../services/api';
+import { useBookmarks } from '../../lib/BookmarksContext';
 
 export default function Games({ searchOpenGameId = null, onConsumeSearchOpen }) {
+  const { isBookmarked: isBm, toggle: toggleBm } = useBookmarks();
   const [selectedLibrary, setSelectedLibrary] = useState('all');
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -152,6 +154,14 @@ export default function Games({ searchOpenGameId = null, onConsumeSearchOpen }) 
                         <div className="game-actions" onClick={(e) => e.stopPropagation()}>
                           <button onClick={() => handleViewGame(game)} className="action-btn">📖 Đọc bài</button>
                           <button onClick={() => handleLikeGame(game.id)} className="action-btn">❤️ Thích</button>
+                          <button
+                            onClick={() => toggleBm('game', game.id)}
+                            className={`action-btn ${isBm('game', game.id) ? 'bookmark-active' : ''}`}
+                            title={isBm('game', game.id) ? 'Bỏ lưu' : 'Lưu bài viết'}
+                            aria-label={isBm('game', game.id) ? 'Bỏ lưu' : 'Lưu bài viết'}
+                          >
+                            {isBm('game', game.id) ? '🔖' : '⚪'}
+                          </button>
                         </div>
                       </div>
                     ))
@@ -184,12 +194,20 @@ export default function Games({ searchOpenGameId = null, onConsumeSearchOpen }) 
               <p style={{ whiteSpace: 'pre-line' }}>{selectedGame.content || selectedGame.description}</p>
             </div>
             <div className="modal-footer">
-              <button 
-                onClick={() => handleLikeGame(selectedGame.id)} 
+              <button
+                onClick={() => handleLikeGame(selectedGame.id)}
                 className="action-btn"
                 style={{ maxWidth: '120px', background: 'rgba(255, 107, 107, 0.3)', borderColor: '#ff6b6b' }}
               >
                 ❤️ Thích bài viết
+              </button>
+              <button
+                onClick={() => toggleBm('game', selectedGame.id)}
+                className={`action-btn ${isBm('game', selectedGame.id) ? 'bookmark-active' : ''}`}
+                style={{ maxWidth: '120px' }}
+                title={isBm('game', selectedGame.id) ? 'Bỏ lưu' : 'Lưu bài viết'}
+              >
+                {isBm('game', selectedGame.id) ? '🔖 Đã lưu' : '⚪ Lưu bài viết'}
               </button>
               <button onClick={handleCloseModal} className="action-btn" style={{ maxWidth: '100px' }}>
                 Đóng

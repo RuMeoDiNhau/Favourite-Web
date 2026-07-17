@@ -41,8 +41,8 @@ export default function Login({ onLoginSuccess }) {
       const data = response.data;
       
       if (data.status === 'success') {
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
+        // Cookie was set by the BE. Don't store anything in
+        // localStorage — an XSS payload could read it.
         onLoginSuccess(data.user);
       }
     } catch (err) {
@@ -66,8 +66,6 @@ export default function Login({ onLoginSuccess }) {
         
         if (data.status === 'success') {
           setFaceStatus('success');
-          localStorage.setItem('token', data.token);
-          localStorage.setItem('user', JSON.stringify(data.user));
           setTimeout(() => {
             onLoginSuccess(data.user);
           }, 1000);

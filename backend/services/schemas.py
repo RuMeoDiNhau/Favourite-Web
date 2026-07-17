@@ -104,6 +104,17 @@ class KnowledgeCreateRequest(BaseModel):
     description: str
     content: Optional[str] = None
     author: str
+    # Tier 3 L: optional tags to attach on creation. Server normalizes
+    # + dedupes; unknown names auto-create. Empty list / None = no
+    # tags. We don't validate length here — the service rejects
+    # over-100-char names with a 400.
+    tags: Optional[List[str]] = None
+    # Tier 3 M: draft + scheduled publish. `status` defaults to
+    # 'published' on the BE so existing callers (no body field)
+    # behave the same. Use 'draft' to save an unpublished article,
+    # 'scheduled' with `scheduled_at` (ISO 8601) to defer publish.
+    status: Optional[str] = 'published'
+    scheduled_at: Optional[datetime] = None
 
 
 # Authentication Schemas
@@ -137,6 +148,10 @@ class PostCreateRequest(BaseModel):
     title: str
     description: Optional[str] = None
     media_url: Optional[str] = None
+    # Tier 3 L: optional tags to attach on creation. Same semantics
+    # as KnowledgeCreateRequest.tags — normalized + deduped, unknown
+    # names auto-create.
+    tags: Optional[List[str]] = None
     thumbnail: Optional[str] = None
     status: Optional[str] = 'public'
 
@@ -168,11 +183,22 @@ class CommentCreateRequest(BaseModel):
     parent_id: Optional[int] = None
 
 
+class CommentUpdateRequest(BaseModel):
+    """Body-only update — content_type / content_id / parent are
+    immutable after creation. Editing your own comment doesn't move
+    it under a different thread or change who can reply to it."""
+    body: str
+
+
 class CommentResponse(BaseModel):
     """One comment node in the thread. Top-level nodes carry their
     replies in `replies`; reply nodes have empty `replies`. The FE
     uses this 1-level structure to render indented replies without
-    recursion."""
+    recursion.
+
+    `updated_at` is None for never-edited comments; the FE shows a
+    "đã chỉnh sửa" hint next to the timestamp when it's non-null.
+    """
     id: int
     user_id: str
     user_name: Optional[str] = None
@@ -180,6 +206,7 @@ class CommentResponse(BaseModel):
     body: str
     parent_id: Optional[int] = None
     created_at: datetime
+    updated_at: Optional[datetime] = None
     replies: List['CommentResponse'] = []
 
 
@@ -223,4 +250,20 @@ class NotificationList(BaseModel):
 
 class UnreadCount(BaseModel):
     count: int
+
+
+# Collection Schemas
+class CollectionCreateRequest(BaseModel):
+    name: str
+    description: Optional[str] = None
+
+
+class CollectionUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+
+
+class CollectionItemRequest(BaseModel):
+    content_type: str
+    content_id: int
 

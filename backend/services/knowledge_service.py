@@ -3,6 +3,7 @@ from backend.services.db_models import Knowledge
 from backend.services.schemas import VideoItem
 import os
 import requests
+from datetime import datetime
 from dotenv import load_dotenv
 from pathlib import Path
 
@@ -100,13 +101,40 @@ def init_articles(db: Session):
 
 
 def get_all_articles(db: Session, limit: int = 100):
-    """Get all articles"""
-    return db.query(Knowledge).order_by(Knowledge.created_at.desc()).limit(limit).all()
+    """Get published articles. The draft / scheduled rows are owned
+    content — they're surfaced through the author's own list, not
+    here."""
+    return (
+        db.query(Knowledge)
+        .filter(Knowledge.status == 'published')
+        .order_by(Knowledge.created_at.desc())
+        .limit(limit)
+        .all()
+    )
 
 
 def get_articles_by_category(db: Session, category: str):
-    """Get articles by category"""
-    return db.query(Knowledge).filter(Knowledge.category == category).order_by(Knowledge.created_at.desc()).all()
+    """Get published articles in a category. Draft / scheduled rows
+    stay hidden until they go live."""
+    return (
+        db.query(Knowledge)
+        .filter(Knowledge.category == category, Knowledge.status == 'published')
+        .order_by(Knowledge.created_at.desc())
+        .all()
+    )
+
+
+def get_my_articles(db: Session, user_id: str, limit: int = 100):
+    """Articles owned by the current user — including drafts and
+    scheduled-but-not-yet-published. The dashboard / "my posts"
+    surface uses this."""
+    return (
+        db.query(Knowledge)
+        .filter(Knowledge.author_user_id == user_id)
+        .order_by(Knowledge.created_at.desc())
+        .limit(limit)
+        .all()
+    )
 
 
 def get_article_by_id(db: Session, article_id: int, user_id: str = None):
@@ -133,9 +161,43 @@ def get_article_by_id(db: Session, article_id: int, user_id: str = None):
     return article
 
 
-def create_article(db: Session, title: str, category: str, description: str, content: str, author: str):
-    """Create a new article"""
-    article = Knowledge(title=title, category=category, description=description, content=content, author=author)
+def create_article(
+    db: Session,
+    title: str,
+    category: str,
+    description: str,
+    content: str,
+    author: str,
+    status: str = 'published',
+    scheduled_at=None,
+):
+    """Create a new article. Sets author_user_id to `author` when it
+    looks like a User.user_id (alphanumeric, ≤50 chars) — that's the
+    signal the route layer passes current_user.user_id; legacy callers
+    pass a display name like "Bùi Văn H" which we leave as the legacy
+    `author` field and skip author_user_id. The comment notification
+    uses author_user_id to find the recipient.
+
+    Tier 3 M: `status` is one of 'published' | 'draft' | 'scheduled'.
+    For 'scheduled' rows, `scheduled_at` must be a future datetime —
+    the caller is responsible for validation. For 'published' rows
+    we stamp `published_at` = now; 'scheduled' rows have it set by
+    the publisher loop when they go live; 'draft' rows leave it None.
+    """
+    author_user_id = author if (author and len(author) <= 50 and author.replace('_', '').isalnum()) else None
+    now = datetime.utcnow()
+    published_at = now if status == 'published' else None
+    article = Knowledge(
+        title=title,
+        category=category,
+        description=description,
+        content=content,
+        author=author,
+        author_user_id=author_user_id,
+        status=status,
+        scheduled_at=scheduled_at if status == 'scheduled' else None,
+        published_at=published_at,
+    )
     db.add(article)
     db.commit()
     db.refresh(article)

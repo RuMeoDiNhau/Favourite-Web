@@ -219,6 +219,16 @@
   color: var(--text-title, #0f172a);
 }
 
+.comment-author-link {
+  cursor: pointer;
+  transition: color 0.1s ease;
+}
+
+.comment-author-link:hover {
+  color: var(--primary, #6366f1);
+  text-decoration: underline;
+}
+
 .comment-time {
   color: var(--text-muted, #94a3b8);
 }
@@ -226,6 +236,27 @@
 .comment-pending {
   color: var(--text-muted, #94a3b8);
   font-style: italic;
+}
+
+.comment-edited {
+  color: var(--text-muted, #94a3b8);
+  font-size: 11px;
+  font-style: italic;
+}
+
+.comment-edit {
+  margin-top: 4px;
+}
+
+.comment-edit-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.comment-submit-inline {
+  padding: 4px 12px;
+  font-size: 12px;
 }
 
 .comment-text {

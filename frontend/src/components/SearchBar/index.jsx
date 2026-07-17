@@ -36,16 +36,23 @@ const DEBOUNCE_MS = 250;
 // query.
 const MIN_QUERY_LEN = 2;
 
-export default function SearchBar({ onSelectItem, isAdmin = false }) {
+export default function SearchBar({ onSelectItem, isAdmin = false, userId = null }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
-  const [history, setHistory] = useState(() => getSearchHistory());
+  const [history, setHistory] = useState(() => getSearchHistory(userId));
   // Track the in-flight request so an older response can't overwrite
   // a newer one (race when typing fast on a slow connection).
   const reqIdRef = useRef(0);
   const wrapperRef = useRef(null);
+  // Held in a ref so handleSelect can blur the <input> after the
+  // dropdown closes. Without this, the input keeps DOM focus and the
+  // :focus-within ring stays lit — and any keystroke the user intended
+  // for the page that just opened (e.g. typing into a modal filter,
+  // hitting Esc to close a modal) lands in the now-empty search box
+  // instead.
+  const inputRef = useRef(null);
 
   // Click-outside closes the dropdown. Use mousedown so a click that
   // starts outside but ends inside (drag-select) doesn't reopen it.
@@ -122,21 +129,26 @@ export default function SearchBar({ onSelectItem, isAdmin = false }) {
   // (only on a real selection, not on a hover/keystroke). Closes
   // the dropdown so the parent can navigate immediately.
   const handleSelect = useCallback((type, item) => {
-    pushSearchQuery(query);
-    setHistory(getSearchHistory());
+    pushSearchQuery(userId, query);
+    setHistory(getSearchHistory(userId));
     setOpen(false);
     setQuery('');
     setResults(null);
+    // Drop DOM focus from the input so the :focus-within ring on the
+    // input wrap turns off and any subsequent keystroke lands in the
+    // page that just opened (modal / list view) — not the now-empty
+    // search box. setQuery('') alone wouldn't do this.
+    inputRef.current?.blur();
     onSelectItem?.(item, type);
-  }, [query, onSelectItem]);
+  }, [query, userId, onSelectItem]);
 
   // Pressing Enter on a non-empty query: if there's an exact
   // top result, treat Enter as "go to that one". Otherwise just
   // remember the query and let the user keep scrolling.
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && query.trim().length >= MIN_QUERY_LEN) {
-      pushSearchQuery(query);
-      setHistory(getSearchHistory());
+      pushSearchQuery(userId, query);
+      setHistory(getSearchHistory(userId));
     }
   };
 
@@ -152,6 +164,7 @@ export default function SearchBar({ onSelectItem, isAdmin = false }) {
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => setOpen(true)}
           onKeyDown={handleKeyDown}
+          ref={inputRef}
           aria-label="Tìm kiếm"
         />
         {query && (
@@ -177,7 +190,7 @@ export default function SearchBar({ onSelectItem, isAdmin = false }) {
                 <span>Tìm gần đây</span>
                 <button
                   className="searchbar-history-clear"
-                  onClick={() => { clearSearchHistory(); setHistory([]); }}
+                  onClick={() => { clearSearchHistory(userId); setHistory([]); }}
                   type="button"
                 >
                   Xóa lịch sử
