@@ -2,14 +2,26 @@ import React, { useState, useEffect, useRef } from 'react';
 import './Feed.css';
 import * as api from '../../services/api';
 import CameraBox from '../../components/CameraBox';
-import { readJson } from '../../lib/safeStorage';
+import CommentSection from '../../components/Comments/CommentSection';
+import { useBookmarks } from '../../lib/BookmarksContext';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Legend
 } from 'recharts';
 
-export default function Feed() {
-  const user = readJson('user');
+// Same set as CommentSection — kept inline so the inline summary
+// doesn't need a network roundtrip to know which keys to render.
+const POST_REACTION_EMOJIS = [
+  { key: 'like',  icon: '👍' },
+  { key: 'love',  icon: '❤️' },
+  { key: 'fire',  icon: '🔥' },
+  { key: 'laugh', icon: '😂' },
+  { key: 'wow',   icon: '😮' },
+];
+
+export default function Feed({ currentUser, onNavigate }) {
+  const { isBookmarked: isBmPost, toggle: toggleBmPost } = useBookmarks();
+
 
   // 1. Loading & error states
   const [loading, setLoading] = useState(true);
@@ -23,6 +35,17 @@ export default function Feed() {
   const [logsData, setLogsData] = useState([]);
   const [popularSongs, setPopularSongs] = useState([]);
   const [activeTab, setActiveTab] = useState('checkin');
+  // Tier 3 N: latest activity events from users the current viewer
+  // follows. Lazily loaded with the rest of the feed payload so we
+  // don't add a second mount-time round-trip.
+  const [friendsActivity, setFriendsActivity] = useState([]);
+
+  // Per-post reactions summary. Loaded lazily as posts scroll into
+  // view would be ideal but the FE only renders ~5–10 posts on the
+  // dashboard — one fetch per post at load time is fine and avoids
+  // a more complex intersection-observer setup.
+  const [postReactions, setPostReactions] = useState({});   // {postId: {counts, my_emoji}}
+  const [commentModalPost, setCommentModalPost] = useState(null);
 
   // 3. Category filter for Games Blog
   const [activeGameCategory, setActiveGameCategory] = useState('all');
@@ -129,7 +152,32 @@ export default function Feed() {
 
       // Fetch Feed posts (Top 3)
       const feedRes = await api.fetchPosts();
-      setPosts((feedRes.data || []).slice(0, 3));
+      const fetchedPosts = (feedRes.data || []).slice(0, 3);
+      setPosts(fetchedPosts);
+
+      // Tier 3 N: latest activity from followed users. Best-effort
+      // — the FE renders an empty state if the call fails (e.g.
+      // user not logged in, follows nobody). We don't gate the
+      // rest of the feed on this single call.
+      if (currentUser) {
+        try {
+          const friends = await api.fetchFriendsActivity(20);
+          setFriendsActivity(friends || []);
+        } catch (err) {
+          setFriendsActivity([]);
+        }
+      } else {
+        setFriendsActivity([]);
+      }
+
+      // Reactions per post. Best-effort — a failed fetch on one
+      // post shouldn't blank the rest of the feed.
+      const reactionPairs = await Promise.all(
+        fetchedPosts.map((p) =>
+          api.fetchReactions('post', p.id).then((r) => [p.id, r]).catch(() => [p.id, { counts: {}, my_emoji: null }]),
+        ),
+      );
+      setPostReactions(Object.fromEntries(reactionPairs));
 
       // Fetch Knowledge posts (Top 2)
       const knowledgeRes = await api.fetchAllKnowledge();
@@ -144,7 +192,7 @@ export default function Feed() {
       }
       setGames((gamesRes.data || []).slice(0, 2));
 
-      if (user && user.role === 'admin') {
+      if (currentUser && currentUser.role === 'admin') {
         try {
           const [usersRes, logsRes, songsRes] = await Promise.all([
             api.fetchUsers(1, 4),
@@ -334,16 +382,52 @@ export default function Feed() {
                     {post.post_type === 'game' && (
                       <div className="dash-media-preview game-type">
                         <button className="dash-game-play-btn" onClick={() => setActiveGameUrl({ url: post.media_url, title: post.title })}>
-                          <img 
-                            src="/game-icon.png" 
-                            alt="Game Icon" 
-                            style={{ width: '16px', height: '16px', display: 'inline-block', verticalAlign: 'middle', marginRight: '6px', borderRadius: '3px' }} 
+                          <img
+                            src="/game-icon.png"
+                            alt="Game Icon"
+                            style={{ width: '16px', height: '16px', display: 'inline-block', verticalAlign: 'middle', marginRight: '6px', borderRadius: '3px' }}
                           />
                           Chơi trực tuyến: {post.title}
                         </button>
                       </div>
                     )}
                   </div>
+
+                  {/* Reactions row + comment trigger. Counts only render
+                      for emojis with > 0 reactions, so a quiet post
+                      doesn't show five zeroes. */}
+                  {(postReactions[post.id]?.counts) && (
+                    <div className="post-reactions-row">
+                      {POST_REACTION_EMOJIS.map((r) => {
+                        const count = postReactions[post.id]?.counts?.[r.key] || 0;
+                        if (count === 0) return null;
+                        return (
+                          <span
+                            key={r.key}
+                            className={`post-reaction-chip ${postReactions[post.id].my_emoji === r.key ? 'mine' : ''}`}
+                          >
+                            {r.icon} {count}
+                          </span>
+                        );
+                      })}
+                      <button
+                        type="button"
+                        className="post-comment-btn"
+                        onClick={() => setCommentModalPost(post)}
+                      >
+                        💬 Bình luận
+                      </button>
+                      <button
+                        type="button"
+                        className={`post-bookmark-btn ${isBmPost('post', post.id) ? 'filled' : ''}`}
+                        onClick={() => toggleBmPost('post', post.id)}
+                        title={isBmPost('post', post.id) ? 'Bỏ lưu' : 'Lưu bài đăng'}
+                        aria-label={isBmPost('post', post.id) ? 'Bỏ lưu' : 'Lưu bài đăng'}
+                      >
+                        {isBmPost('post', post.id) ? '🔖' : '⚪ Lưu'}
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))
             ) : (
@@ -385,6 +469,76 @@ export default function Feed() {
             )}
           </div>
         </section>
+
+        {/* Tier 3 N: latest activity from users the current viewer
+            follows. Hidden for non-authenticated viewers since the
+            BE endpoint requires login. */}
+        {currentUser && (
+          <section className="dashboard-card feed-card-section">
+            <div className="card-title-header">
+              <h3>👥 Hoạt động bạn bè</h3>
+            </div>
+            <div className="dashboard-posts-list">
+              {friendsActivity.length > 0 ? (
+                friendsActivity.map((ev) => {
+                  // Friendly action verb per (content_type, event_type).
+                  // Keeping this mapping local avoids loading a
+                  // shared constants module just for three strings.
+                  const verb = ({
+                    'knowledge|view': 'đã đọc',
+                    'knowledge|like': 'đã thích',
+                    'music|play': 'đã nghe',
+                    'music|like': 'đã thích',
+                    'game|view': 'đã xem',
+                    'game|like': 'đã thích',
+                    'post|like': 'đã thích',
+                    'post|view': 'đã xem',
+                  })[`${ev.content_type}|${ev.event_type}`] || ev.event_type;
+                  const icon = ({
+                    'knowledge': '📚',
+                    'music': '🎵',
+                    'game': '🎮',
+                    'post': '📰',
+                  })[ev.content_type] || '✨';
+                  return (
+                    <div key={ev.id} className="dash-post-item friends-activity-item">
+                      <div className="post-item-meta">
+                        <div
+                          className="post-avatar"
+                          onClick={() => onNavigate?.('userProfile', { userId: ev.actor_id })}
+                          role="button"
+                          tabIndex={0}
+                        >
+                          {(ev.actor_name || ev.actor_id || '?').substring(0, 2).toUpperCase()}
+                        </div>
+                        <div className="post-author-time">
+                          <span
+                            className="post-username"
+                            onClick={() => onNavigate?.('userProfile', { userId: ev.actor_id })}
+                            role="button"
+                            tabIndex={0}
+                          >
+                            @{ev.actor_id}
+                          </span>
+                          <span className="post-time">{formatDate(ev.created_at)}</span>
+                        </div>
+                        <span className="post-badge-type">{icon}</span>
+                      </div>
+                      <div className="post-item-content">
+                        <p className="post-desc">
+                          <strong>{ev.actor_name || ev.actor_id}</strong> {verb}{' '}
+                          <span className="friends-activity-title">{ev.title || `#${ev.content_id}`}</span>
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="no-data-text">Bạn chưa theo dõi ai, hoặc bạn bè chưa có hoạt động nào gần đây.</p>
+              )}
+            </div>
+          </section>
+        )}
 
       </div>
 
@@ -455,7 +609,7 @@ export default function Feed() {
         </section>
 
         {/* THỐNG KÊ NGƯỜI DÙNG (CHỈ DÀNH CHO ADMIN) */}
-        {user && user.role === 'admin' && (
+        {currentUser && currentUser.role === 'admin' && (
           <section className="dashboard-card statistics-card-section">
             <div className="card-title-header">
               <h3>Thống Kê Người Dùng</h3>
@@ -581,9 +735,10 @@ export default function Feed() {
                   return (
                     <div style={{ padding: '24px', color: '#ff6b6b' }}>
                       ⚠️ Không thể mở game từ nguồn không đáng tin cậy: {fullUrl}
-                      {/* TODO(security): move JWT from localStorage to httpOnly cookie so
-                          the iframe can keep `allow-same-origin` without exposing the
-                          token to framed scripts. */}
+                      {/* Cookie migration done: the JWT now lives in an
+                          httpOnly cookie the iframe can't read, so this
+                          URL guard is the only remaining defense for
+                          cross-origin game embeds. */}
                     </div>
                   );
                 }
@@ -603,7 +758,9 @@ export default function Feed() {
         </div>
       )}
 
-      {/* Knowledge Article Modal */}
+      {/* Knowledge Article Modal — includes comments + reactions
+           so the Feed and the dedicated Knowledge page share the
+           same engagement surface. */}
       {selectedArticle && (
         <div className="modal-overlay" onClick={() => setSelectedArticle(null)}>
           <div className="modal-container" onClick={(e) => e.stopPropagation()}>
@@ -619,9 +776,15 @@ export default function Feed() {
             </div>
             <div className="modal-body">
               <p style={{ whiteSpace: 'pre-line' }}>{selectedArticle.content || selectedArticle.description}</p>
+              <CommentSection
+                contentType="knowledge"
+                contentId={selectedArticle.id}
+                currentUser={currentUser}
+                onNavigate={onNavigate}
+              />
             </div>
             <div className="modal-footer">
-              <button 
+              <button
                 onClick={() => {
                   handleLikeKnowledge(selectedArticle.id);
                   setSelectedArticle(prev => ({ ...prev, likes: prev.likes + 1 }));
@@ -632,6 +795,40 @@ export default function Feed() {
                 ❤️ Thích bài viết
               </button>
               <button onClick={() => setSelectedArticle(null)} className="action-btn" style={{ maxWidth: '100px' }}>
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Post detail modal — opens when user clicks "Bình luận" on a
+           feed post. Renders the post content inline plus the same
+           CommentSection component the article modal uses. */}
+      {commentModalPost && (
+        <div className="modal-overlay" onClick={() => setCommentModalPost(null)}>
+          <div className="modal-container" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close-btn" onClick={() => setCommentModalPost(null)}>&times;</button>
+            <div className="modal-header-detail">
+              <h2>{commentModalPost.title}</h2>
+              <div className="modal-meta">
+                <span>👤 Tác giả: <strong>@{commentModalPost.user_id}</strong></span>
+                <span>📁 Loại: <strong>{commentModalPost.post_type}</strong></span>
+              </div>
+            </div>
+            <div className="modal-body">
+              {commentModalPost.description && (
+                <p style={{ whiteSpace: 'pre-line' }}>{commentModalPost.description}</p>
+              )}
+              <CommentSection
+                contentType="post"
+                contentId={commentModalPost.id}
+                currentUser={currentUser}
+                onNavigate={onNavigate}
+              />
+            </div>
+            <div className="modal-footer">
+              <button onClick={() => setCommentModalPost(null)} className="action-btn" style={{ maxWidth: '100px' }}>
                 Đóng
               </button>
             </div>

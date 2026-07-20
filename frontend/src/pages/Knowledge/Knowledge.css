@@ -38,6 +38,26 @@
   transition: all 0.3s ease;
 }
 
+.knowledge-create-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.create-btn-secondary {
+  padding: 8px 18px;
+  font-size: 14px;
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.create-btn-secondary:hover {
+  background: var(--bg-item);
+  color: var(--text-main);
+}
+
 .create-btn:hover {
   background: var(--bg-item);
   transform: translateY(-2px);
@@ -84,6 +104,19 @@
   border-color: #6366f1;
   color: white;
   font-weight: 600;
+}
+
+.filter-btn-clear {
+  margin-left: 8px;
+  background: transparent;
+  border-color: var(--border-color);
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.filter-btn-clear:hover {
+  background: var(--bg-item);
+  color: var(--text-main);
 }
 
 .knowledge-grid {
@@ -167,6 +200,48 @@
   color: var(--text-muted);
 }
 
+.card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 12px;
+}
+
+.card-tag {
+  background: var(--bg-item);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.card-tag:hover {
+  background: rgba(99, 102, 241, 0.12);
+  border-color: #6366f1;
+}
+
+.card-tag.active {
+  background: #6366f1;
+  border-color: #6366f1;
+  color: white;
+}
+
+.knowledge-tag-row {
+  margin-top: 10px;
+  align-items: center;
+}
+
+.knowledge-tag-label {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-right: 6px;
+}
+
 .author {
   padding-left: 0;
 }
@@ -239,4 +314,332 @@
     padding: 8px 16px;
     font-size: 13px;
   }
+}
+
+/* ============ Article modal ============
+   Clicking "Đọc Thêm →" on a card opens a full-width modal showing the
+   article body and up to 3 related YouTube videos. Same overlay pattern
+   as PostModal so the visual language stays consistent across pages.
+*/
+
+.article-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  z-index: 1100;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 40px 16px;
+  overflow-y: auto;
+  animation: article-modal-fade-in 0.18s ease;
+}
+
+@keyframes article-modal-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.article-modal {
+  background: #ffffff;
+  color: #1e293b;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 880px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  animation: article-modal-slide-in 0.22s ease;
+}
+
+@keyframes article-modal-slide-in {
+  from { transform: translateY(-16px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.article-modal-header {
+  padding: 24px 28px 16px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.article-modal-header h2 {
+  margin: 8px 0 4px;
+  font-size: 1.5rem;
+  color: #0f172a;
+  line-height: 1.3;
+}
+
+.article-modal-meta {
+  display: flex;
+  gap: 14px;
+  font-size: 0.88rem;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.article-modal-close {
+  background: #f1f5f9;
+  border: none;
+  color: #475569;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.article-modal-bookmark {
+  background: #f1f5f9;
+  border: none;
+  color: #475569;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+  margin-right: 8px;
+}
+
+.article-modal-bookmark:hover {
+  background: #e2e8f0;
+}
+
+.article-modal-bookmark.filled {
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  color: white;
+}
+
+.article-modal-close:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.article-modal-body {
+  padding: 20px 28px 28px;
+}
+
+.article-modal-desc {
+  font-size: 1.05rem;
+  color: #334155;
+  margin: 0 0 14px;
+  font-weight: 500;
+}
+
+.article-modal-content {
+  font-size: 0.96rem;
+  color: #475569;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  margin: 0 0 24px;
+}
+
+.article-modal-videos h3 {
+  font-size: 1.05rem;
+  color: #0f172a;
+  margin: 0 0 14px;
+}
+
+.videos-status {
+  color: #64748b;
+  font-size: 0.92rem;
+  font-style: italic;
+}
+
+.video-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.video-item {
+  display: flex;
+  flex-direction: column;
+  background: #f8fafc;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+}
+
+.video-item iframe {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: none;
+  display: block;
+  background: #0f172a;
+}
+
+.video-meta {
+  padding: 10px 12px 12px;
+}
+
+.video-title {
+  margin: 0 0 4px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.35;
+  /* Clamp to 2 lines so the grid stays balanced even when one title is long. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.video-channel {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+@media (max-width: 600px) {
+  .article-modal-overlay {
+    padding: 12px;
+  }
+
+  .article-modal-header,
+  .article-modal-body {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
+/* ===== Tier 3 M: status badge + create modal ===== */
+
+.card-status {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  margin-left: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.card-status-draft {
+  background: rgba(245, 158, 11, 0.15);
+  color: #b45309;
+}
+
+.card-status-scheduled {
+  background: rgba(99, 102, 241, 0.15);
+  color: #4f46e5;
+}
+
+.knowledge-create-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+}
+
+.knowledge-create-modal {
+  background: var(--bg-card);
+  color: var(--text-main);
+  border-radius: 14px;
+  width: min(640px, 92vw);
+  max-height: 88vh;
+  overflow-y: auto;
+  padding: 24px 28px;
+  position: relative;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+}
+
+.knowledge-create-modal h2 {
+  margin: 0 0 18px;
+  font-size: 22px;
+  color: var(--text-title);
+}
+
+.knowledge-create-close {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.knowledge-create-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.knowledge-create-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.knowledge-create-form input,
+.knowledge-create-form textarea {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+  font-family: inherit;
+  background: var(--bg-app);
+  color: var(--text-main);
+}
+
+.knowledge-create-form input:focus,
+.knowledge-create-form textarea:focus {
+  outline: none;
+  border-color: #6366f1;
+}
+
+.knowledge-create-error {
+  background: rgba(220, 38, 38, 0.08);
+  color: #b91c1c;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.knowledge-create-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.knowledge-create-submit {
+  background: #6366f1;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 22px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.knowledge-create-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.knowledge-create-cancel {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 10px 22px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
 }

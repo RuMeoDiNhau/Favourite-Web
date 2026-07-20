@@ -1,5 +1,17 @@
 from sqlalchemy.orm import Session
 from backend.services.db_models import Knowledge
+from backend.services.schemas import VideoItem
+import os
+import requests
+from datetime import datetime
+from dotenv import load_dotenv
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parents[2]
+load_dotenv(dotenv_path=BASE_DIR / ".env")
+
+YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
+YOUTUBE_SEARCH_URL = "https://www.googleapis.com/youtube/v3/search"
 
 # Sample knowledge articles
 SAMPLE_ARTICLES = [
@@ -89,29 +101,103 @@ def init_articles(db: Session):
 
 
 def get_all_articles(db: Session, limit: int = 100):
-    """Get all articles"""
-    return db.query(Knowledge).order_by(Knowledge.created_at.desc()).limit(limit).all()
+    """Get published articles. The draft / scheduled rows are owned
+    content — they're surfaced through the author's own list, not
+    here."""
+    return (
+        db.query(Knowledge)
+        .filter(Knowledge.status == 'published')
+        .order_by(Knowledge.created_at.desc())
+        .limit(limit)
+        .all()
+    )
 
 
 def get_articles_by_category(db: Session, category: str):
-    """Get articles by category"""
-    return db.query(Knowledge).filter(Knowledge.category == category).order_by(Knowledge.created_at.desc()).all()
+    """Get published articles in a category. Draft / scheduled rows
+    stay hidden until they go live."""
+    return (
+        db.query(Knowledge)
+        .filter(Knowledge.category == category, Knowledge.status == 'published')
+        .order_by(Knowledge.created_at.desc())
+        .all()
+    )
 
 
-def get_article_by_id(db: Session, article_id: int):
-    """Get article by ID"""
+def get_my_articles(db: Session, user_id: str, limit: int = 100):
+    """Articles owned by the current user — including drafts and
+    scheduled-but-not-yet-published. The dashboard / "my posts"
+    surface uses this."""
+    return (
+        db.query(Knowledge)
+        .filter(Knowledge.author_user_id == user_id)
+        .order_by(Knowledge.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+
+def get_article_by_id(db: Session, article_id: int, user_id: str = None):
+    """Get article by ID. Bumps the global view counter and, if a
+    user_id is provided, also records a per-user view event for the
+    Personal Dashboard. The user_id arg is optional (None = anonymous
+    request) — keeps the call site compatible with code that doesn't
+    have auth context."""
     article = db.query(Knowledge).filter(Knowledge.id == article_id).first()
     if article:
-        # Increment views when article is viewed
+        # Increment global view counter
         article.views += 1
         db.commit()
         db.refresh(article)
+        # Record per-user event when the caller is signed in. Lazy
+        # import to avoid a circular dependency: dashboard_service
+        # imports Knowledge from db_models.
+        if user_id:
+            try:
+                from backend.services.dashboard_service import record_event
+                record_event(db, user_id, 'knowledge', article_id, 'view')
+            except Exception as ev_err:
+                print(f'[knowledge_service] Failed to record view event: {ev_err}')
     return article
 
 
-def create_article(db: Session, title: str, category: str, description: str, content: str, author: str):
-    """Create a new article"""
-    article = Knowledge(title=title, category=category, description=description, content=content, author=author)
+def create_article(
+    db: Session,
+    title: str,
+    category: str,
+    description: str,
+    content: str,
+    author: str,
+    status: str = 'published',
+    scheduled_at=None,
+):
+    """Create a new article. Sets author_user_id to `author` when it
+    looks like a User.user_id (alphanumeric, ≤50 chars) — that's the
+    signal the route layer passes current_user.user_id; legacy callers
+    pass a display name like "Bùi Văn H" which we leave as the legacy
+    `author` field and skip author_user_id. The comment notification
+    uses author_user_id to find the recipient.
+
+    Tier 3 M: `status` is one of 'published' | 'draft' | 'scheduled'.
+    For 'scheduled' rows, `scheduled_at` must be a future datetime —
+    the caller is responsible for validation. For 'published' rows
+    we stamp `published_at` = now; 'scheduled' rows have it set by
+    the publisher loop when they go live; 'draft' rows leave it None.
+    """
+    author_user_id = author if (author and len(author) <= 50 and author.replace('_', '').isalnum()) else None
+    now = datetime.utcnow()
+    published_at = now if status == 'published' else None
+    article = Knowledge(
+        title=title,
+        category=category,
+        description=description,
+        content=content,
+        author=author,
+        author_user_id=author_user_id,
+        status=status,
+        scheduled_at=scheduled_at if status == 'scheduled' else None,
+        published_at=published_at,
+    )
     db.add(article)
     db.commit()
     db.refresh(article)
@@ -149,3 +235,59 @@ def search_articles(db: Session, query: str):
 def get_categories(db: Session):
     """Get all unique categories"""
     return db.query(Knowledge.category).distinct().all()
+
+
+def _youtube_query_for(article) -> str:
+    """Build a YouTube search query from an article. Title alone is too narrow
+    when titles are short like "Machine Learning Cơ Bản"; combining with the
+    category adds Vietnamese context that surfaces better tutorials."""
+    parts = [article.title]
+    if article.category:
+        parts.append(f"hướng dẫn {article.category}")
+    return " ".join(parts)
+
+
+def search_youtube_videos(article, max_results: int = 3) -> list[VideoItem]:
+    """Search YouTube for short, embed-friendly videos related to an article.
+
+    Returns an empty list if YOUTUBE_API_KEY is unset or the upstream call
+    fails. The caller (route handler) should treat an empty list as a soft
+    failure — the FE renders "no related videos" gracefully instead of an
+    error banner. We never raise here so a missing key does not 500 the
+    knowledge view.
+    """
+    if not YOUTUBE_API_KEY:
+        print("[knowledge_service] YOUTUBE_API_KEY not set; skipping video lookup")
+        return []
+
+    query = _youtube_query_for(article)
+    params = {
+        "part": "snippet",
+        "q": query,
+        "type": "video",
+        "maxResults": max_results,
+        "relevanceLanguage": "vi",
+        "safeSearch": "strict",
+        "key": YOUTUBE_API_KEY,
+    }
+    try:
+        resp = requests.get(YOUTUBE_SEARCH_URL, params=params, timeout=5)
+        resp.raise_for_status()
+    except requests.RequestException as e:
+        print(f"[knowledge_service] YouTube search failed: {e}")
+        return []
+
+    items = resp.json().get("items", [])
+    results = []
+    for item in items:
+        # Prefer videoId; some items (channels/playlists) lack it — skip them.
+        vid = item.get("id", {}).get("videoId")
+        if not vid:
+            continue
+        snippet = item.get("snippet", {})
+        results.append(VideoItem(
+            videoId=vid,
+            title=snippet.get("title", ""),
+            channel=snippet.get("channelTitle", ""),
+        ))
+    return results

@@ -826,3 +826,104 @@
   font-weight: 600 !important;
 }
 
+
+/* ============== Post reactions row + comment trigger ==============
+   Inline summary sits under each post body. We render emoji chips
+   only for emojis that have at least one reaction, so a quiet post
+   doesn't show five empty counters. The comment button is always
+   visible (it doubles as the entry point to the comment modal). */
+
+.post-reactions-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color, #e2e8f0);
+}
+
+.post-reaction-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 14px;
+  background: var(--bg-hover, rgba(99, 102, 241, 0.08));
+  color: var(--text-body, #475569);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.post-reaction-chip.mine {
+  background: rgba(99, 102, 241, 0.18);
+  color: var(--primary, #4f46e5);
+  outline: 1px solid var(--primary, #6366f1);
+}
+
+.post-comment-btn {
+  margin-left: auto;
+  background: none;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 14px;
+  padding: 3px 12px;
+  font-size: 12px;
+  color: var(--text-body, #475569);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.post-comment-btn:hover {
+  border-color: var(--primary, #6366f1);
+  color: var(--primary, #6366f1);
+}
+
+.post-bookmark-btn {
+  margin-left: 6px;
+  background: none;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 14px;
+  padding: 3px 12px;
+  font-size: 12px;
+  color: var(--text-body, #475569);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.post-bookmark-btn:hover {
+  border-color: var(--primary, #6366f1);
+  color: var(--primary, #6366f1);
+}
+
+.post-bookmark-btn.filled {
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  border-color: transparent;
+  color: white;
+}
+
+.friends-activity-item {
+  border-left: 3px solid #6366f1;
+  background: rgba(99, 102, 241, 0.04);
+}
+
+.friends-activity-item .post-username {
+  cursor: pointer;
+}
+
+.friends-activity-item .post-username:hover {
+  color: #4f46e5;
+}
+
+.friends-activity-item .post-avatar {
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.friends-activity-item .post-avatar:hover {
+  transform: scale(1.05);
+}
+
+.friends-activity-title {
+  color: var(--text-title);
+  font-weight: 600;
+}

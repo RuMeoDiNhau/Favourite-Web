@@ -226,6 +226,11 @@
   transform: scale(1.1);
 }
 
+.play-btn.bookmark-active {
+  background: rgba(168, 85, 247, 0.35);
+  border-color: rgba(168, 85, 247, 0.7);
+}
+
 /* Scrollbar styling */
 .music-sidebar::-webkit-scrollbar,
 .music-main::-webkit-scrollbar {
