@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './Feed.css';
+import { resolveBackendOrigin } from '../../lib/apiBase';
 import * as api from '../../services/api';
 import CameraBox from '../../components/CameraBox';
 import CommentSection from '../../components/Comments/CommentSection';
@@ -263,9 +264,7 @@ export default function Feed({ currentUser, onNavigate }) {
   const getFullAssetUrl = (url) => {
     if (!url) return '';
     if (url.startsWith('http://') || url.startsWith('https://')) return url;
-    const base = import.meta.env.VITE_API_URL 
-      ? import.meta.env.VITE_API_URL.replace('/api/v1', '') 
-      : 'http://localhost:8000';
+    const base = resolveBackendOrigin(import.meta.env.VITE_API_URL);
     return `${base}${url}`;
   };
 
@@ -724,7 +723,7 @@ export default function Feed({ currentUser, onNavigate }) {
             <div className="game-modal-body">
               {(() => {
                 const fullUrl = getFullAssetUrl(activeGameUrl.url);
-                const apiBase = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace('/api/v1', '');
+                const apiBase = resolveBackendOrigin(import.meta.env.VITE_API_URL);
                 let isTrusted = false;
                 try {
                   isTrusted = new URL(fullUrl).origin === new URL(apiBase).origin;

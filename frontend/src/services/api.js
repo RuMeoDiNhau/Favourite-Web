@@ -1,7 +1,8 @@
 import axios from 'axios';
+import { resolveApiBaseUrl } from '../lib/apiBase';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1',
+  baseURL: resolveApiBaseUrl(import.meta.env.VITE_API_URL),
   timeout: 15000,
   // Send the fw_auth httpOnly cookie on every same-origin request.
   // Without this the browser drops the cookie on cross-origin XHR.

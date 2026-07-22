@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Sidebar from './Sidebar';
 import './Music.css';
+import { resolveBackendOrigin } from '../../lib/apiBase';
 import * as api from '../../services/api';
 import { readJson } from '../../lib/safeStorage';
 import { getLikedSongIds, toggleLikedSong, isLikedSong } from '../../lib/likedSongs';
@@ -155,9 +156,7 @@ export default function Music() {
     if (!url) return '';
     if (url.startsWith('http://') || url.startsWith('https://')) return url;
     // Lấy domain của backend từ env hoặc mặc định localhost
-    const base = import.meta.env.VITE_API_URL 
-      ? import.meta.env.VITE_API_URL.replace('/api/v1', '') 
-      : 'http://localhost:8000';
+    const base = resolveBackendOrigin(import.meta.env.VITE_API_URL);
     return `${base}${url}`;
   };
 

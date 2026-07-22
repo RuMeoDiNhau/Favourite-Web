@@ -18,6 +18,7 @@ import UserProfile from './pages/UserProfile';
 import Collections from './pages/Collections/Collections';
 import CollectionDetail from './pages/Collections/CollectionDetail';
 import { BookmarksProvider } from './lib/BookmarksContext';
+import { resolveBackendOrigin } from './lib/apiBase';
 import * as api from './services/api';
 
 // Map view name <-> URL path so the navbar becomes bookmarkable and
@@ -185,9 +186,7 @@ function App() {
   const getFullAssetUrl = (url) => {
     if (!url) return '';
     if (url.startsWith('http://') || url.startsWith('https://')) return url;
-    const base = import.meta.env.VITE_API_URL 
-      ? import.meta.env.VITE_API_URL.replace('/api/v1', '') 
-      : 'http://localhost:8000';
+    const base = resolveBackendOrigin(import.meta.env.VITE_API_URL);
     return `${base}${url}`;
   };
 
