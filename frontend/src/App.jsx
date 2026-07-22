@@ -297,80 +297,86 @@ function App() {
     <BookmarksProvider>
       <div className={`App ${isDarkMode ? 'dark-theme' : ''}`}>
       <header className="main-navbar">
-        <div className="navbar-left">
-          <div className="navbar-logo">
+        {/* ── Row 1: Logo | Search | spacer | Controls ── */}
+        <div className="navbar-top">
+          <div className="navbar-logo" onClick={() => window.location.href = '/'}>
             <span className="logo-icon">🌐</span>
             <span className="logo-text">Fav Web</span>
           </div>
-          <SearchBar
-            onSelectItem={handleSearchSelect}
-            isAdmin={user.role === 'admin'}
-            userId={user.user_id}
-          />
+
+          <div className="navbar-search-wrap">
+            <SearchBar
+              onSelectItem={handleSearchSelect}
+              isAdmin={user.role === 'admin'}
+              userId={user.user_id}
+            />
+          </div>
+
+          <div className="navbar-spacer" />
+
+          <div className="navbar-right">
+            <NotificationBell onSelectItem={handleNotificationSelect} />
+
+            <button
+              className="theme-toggle-btn"
+              onClick={toggleTheme}
+              title={isDarkMode ? "Chuyển sang Chế độ sáng" : "Chuyển sang Chế độ tối"}
+            >
+              {isDarkMode ? '☀️ Sáng' : '🌙 Tối'}
+            </button>
+
+            <div className="user-profile-dropdown">
+              {user.avatar_url ? (
+                <img
+                  src={getFullAssetUrl(user.avatar_url)}
+                  alt="Avatar"
+                  className="avatar-circle"
+                  style={{ objectFit: 'cover', border: '2px solid var(--primary-color, #6366f1)' }}
+                />
+              ) : (
+                <div className="avatar-circle">{user.name.substring(0, 2).toUpperCase()}</div>
+              )}
+              <span className="username-text">{user.name} ({user.role})</span>
+              <span className="chevron-icon">▼</span>
+            </div>
+
+            <button className="create-post-nav-btn" onClick={() => setShowPostModal(true)}>
+              <img
+                src="/create-post-icon.png"
+                alt="Create Post"
+                style={{ width: '15px', height: '15px', filter: 'brightness(0) invert(1)' }}
+              />
+              Đăng bài
+            </button>
+
+            <button className="logout-icon-btn" onClick={handleLogout} title="Đăng xuất">
+              <img
+                src="/logout-icon.png"
+                alt="Logout"
+                className="logout-btn-icon-img"
+                style={{ width: '15px', height: '15px' }}
+              />
+              Đăng xuất
+            </button>
+
+            {/* Hamburger — mobile only */}
+            <button
+              className="mobile-menu-btn"
+              onClick={() => setMobileMenuOpen((v) => !v)}
+              aria-label="Toggle navigation menu"
+              aria-expanded={mobileMenuOpen}
+            >
+              {mobileMenuOpen ? '✕' : '☰'}
+            </button>
+          </div>
         </div>
 
+        {/* ── Row 2: Nav menu buttons (centered) ── */}
         <nav className="navbar-center">
           {visibleNav.map(renderNavButton)}
         </nav>
 
-        <div className="navbar-right">
-          <NotificationBell onSelectItem={handleNotificationSelect} />
-
-          {/* Nút bật/tắt chế độ sáng/tối */}
-          <button
-            className="theme-toggle-btn"
-            onClick={toggleTheme}
-            title={isDarkMode ? "Chuyển sang Chế độ sáng" : "Chuyển sang Chế độ tối"}
-          >
-            {isDarkMode ? '☀️ Sáng' : '🌙 Tối'}
-          </button>
-
-          <div className="user-profile-dropdown">
-            {user.avatar_url ? (
-              <img 
-                src={getFullAssetUrl(user.avatar_url)} 
-                alt="Avatar" 
-                className="avatar-circle" 
-                style={{ objectFit: 'cover', border: '2px solid var(--primary-color, #6366f1)' }} 
-              />
-            ) : (
-              <div className="avatar-circle">{user.name.substring(0, 2).toUpperCase()}</div>
-            )}
-            <span className="username-text">{user.name} ({user.role})</span>
-            <span className="chevron-icon">▼</span>
-          </div>
-          <button className="create-post-nav-btn" onClick={() => setShowPostModal(true)}>
-            <img 
-              src="/create-post-icon.png" 
-              alt="Create Post" 
-              style={{ width: '16px', height: '16px', display: 'inline-block', verticalAlign: 'middle', marginRight: '6px', filter: 'brightness(0) invert(1)' }} 
-            />
-            Đăng bài
-          </button>
-          <button className="logout-icon-btn" onClick={handleLogout} title="Đăng xuất">
-            <img
-              src="/logout-icon.png"
-              alt="Logout"
-              className="logout-btn-icon-img"
-              style={{ width: '16px', height: '16px', display: 'inline-block', verticalAlign: 'middle', marginRight: '6px' }}
-            />
-            Đăng xuất
-          </button>
-
-          {/* Hamburger toggle — only meaningful on mobile (CSS hides on desktop). */}
-          <button
-            className="mobile-menu-btn"
-            onClick={() => setMobileMenuOpen((v) => !v)}
-            aria-label="Toggle navigation menu"
-            aria-expanded={mobileMenuOpen}
-          >
-            {mobileMenuOpen ? '✕' : '☰'}
-          </button>
-        </div>
-
-        {/* Mobile drawer. CSS shows this only below 900px and hides the desktop
-            <nav> at the same breakpoint, so on desktop the drawer is invisible.
-            Click on the overlay closes it. */}
+        {/* Mobile drawer */}
         {mobileMenuOpen && (
           <div className="mobile-menu-overlay" onClick={() => setMobileMenuOpen(false)} />
         )}
