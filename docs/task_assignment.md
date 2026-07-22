@@ -1,63 +1,50 @@
-# BẢNG PHÂN CÔNG NHIỆM VỤ DỰ ÁN (TEAM WORK ASSIGNMENT)
+# BẢNG PHÂN CÔNG NHIỆM VỤ DỰ ÁN (ĐƠN GIẢN HƠN)
 
-Dưới đây là bảng phân chia vai trò, công việc chi tiết và sản phẩm đầu ra cho từng thành viên trong nhóm (gồm 5 người) để hoàn thiện dự án trong các tuần tiếp theo (Tuần 6 - 8):
-
----
-
-## 1. THÀNH VIÊN 1: LEADER (DEVOP & SECURITY)
-*   **Vai trò:** Quản trị hạ tầng AWS, Điều phối chung và Bảo mật Production.
-*   **Nhiệm vụ chi tiết:**
-    *   Cấp quyền truy cập GitHub, AWS EC2 SSH cho các thành viên cần thiết.
-    *   Quản lý việc deploy Frontend lên S3 và Backend Docker lên máy chủ EC2.
-    *   Giám sát logs và tài nguyên máy chủ thông qua AWS CloudWatch.
-    *   Duyệt và Merge các Pull Request (PR) của thành viên từ GitHub vào nhánh `main`.
-*   **Sản phẩm đầu ra:** Hệ thống chạy ổn định 24/7 trên AWS, không bị rò rỉ Key bảo mật.
+Dưới đây là bảng phân chia công việc đã được giảm tải, phù hợp cho các thành viên làm quen và phát triển các chức năng cơ bản của dự án:
 
 ---
 
-## 2. THÀNH VIÊN 2: AI DEVELOPER
-*   **Vai trò:** Nghiên cứu & Tối ưu mô hình AI (Face ID & Chatbot).
-*   **Nhiệm vụ chi tiết:**
-    *   Nghiên cứu tối ưu hóa tốc độ xử lý ảnh và độ chính xác của model nhận diện khuôn mặt.
-    *   **Tích hợp Chatbot cá nhân hóa (Personalized Chatbot):** Tích hợp Gemini API hoặc OpenAI API để tạo chatbot có thể học hỏi và trả lời thông minh dựa trên dữ liệu cá nhân của người dùng.
-*   **Sản phẩm đầu ra:**
-    *   Model Face ID nhận dạng nhanh dưới 1 giây.
-    *   Lõi API Chatbot thông minh xử lý câu hỏi mượt mà.
+## 1. BẠN (LEADER - DEVOPS & QUẢN TRỊ)
+*   **Nhiệm vụ:**
+    *   Quản lý tài khoản AWS, EC2, S3, RDS.
+    *   Duyệt và Merge code từ GitHub của các bạn vào nhánh `main`.
+    *   SSH vào EC2 để gõ lệnh cập nhật chạy code mới (Deploy).
+*   **Sản phẩm:** Web chạy ổn định trên link online.
 
 ---
 
-## 3. THÀNH VIÊN 3: BACKEND DEVELOPER
-*   **Vai trò:** Phát triển API nâng cao, Caching & Bảo mật code.
-*   **Nhiệm vụ chi tiết:**
-    *   **Tối ưu truy xuất:** Viết cơ chế tự động nạp (cache) danh sách embeddings khuôn mặt vào RAM khi backend khởi động để tăng tốc độ so khớp Face ID.
-    *   **Bảo mật thông tin nhạy cảm:** Chuyển cấu hình Key AWS, mật khẩu RDS từ file `.env` sang quản lý tập trung bằng **AWS Systems Manager (SSM) Parameter Store** hoặc **AWS Secrets Manager**.
-    *   Cập nhật cấu hình CORS chặt chẽ (chỉ cho phép tên miền Frontend truy cập API).
-    *   Xây dựng thêm các API endpoint phục vụ cho tính năng Chatbot và quản lý dữ liệu (nhạc, game).
-*   **Sản phẩm đầu ra:** 
-    *   Mã nguồn backend tối ưu bảo mật, đạt chuẩn an toàn thông tin AWS.
-    *   Các API chạy mượt mà, phản hồi nhanh.
+## 2. THÀNH VIÊN 2 (AI DEVELOPER - QUẢN LÝ ẢNH & FACE ID)
+*   **Nhiệm vụ:**
+    *   Thu thập ảnh chân dung của các thành viên trong nhóm để chuẩn bị dữ liệu test.
+    *   Sử dụng trang `Users` trên Web để đăng ký người dùng mới bằng ảnh đã chụp.
+    *   Tinh chỉnh các tham số nhận diện (như chỉnh lại ngưỡng khoảng cách nhận dạng nhạy hơn hoặc bớt nhạy đi) trong tệp `backend/services/face_service.py` để tối ưu nhận dạng khuôn mặt cho cả nhóm.
+*   **Sản phẩm:** Danh sách người dùng được đăng ký đầy đủ và nhận dạng chính xác khuôn mặt các thành viên.
 
 ---
 
-## 4. THÀNH VIÊN 4: FRONTEND DEVELOPER
-*   **Vai trò:** Thiết kế giao diện UI/UX & Tích hợp tính năng.
-*   **Nhiệm vụ chi tiết:**
-    *   Xây dựng giao diện Khung Chatbot thông minh (bong bóng chat hoặc trang trò chuyện riêng).
-    *   Tối ưu hóa khả năng hiển thị tương thích (Responsive) của website trên mọi thiết bị (Điện thoại, Máy tính bảng, PC).
-    *   Đồng bộ dữ liệu động từ database cho các trang Games Blog, Music Player và Knowledge.
-*   **Sản phẩm đầu ra:**
-    *   Giao diện Web mượt mà, đẹp mắt, không còn phần cứng (hardcode) dữ liệu.
-    *   Tính năng Chatbot và phát nhạc hoạt động hoàn hảo trên giao diện.
+## 3. THÀNH VIÊN 3 (BACKEND DEVELOPER - API CƠ BẢN)
+*   **Nhiệm vụ:**
+    *   Viết các API CRUD cơ bản cho các bảng dữ liệu (không cần làm bảo mật SSM hay cache RAM phức tạp).
+    *   Ví dụ: 
+        *   API cập nhật thông tin cá nhân (Email, Tên hiển thị) của User.
+        *   API Thích/Bỏ thích bài hát.
+        *   API đếm lượt chơi game để hiển thị bảng xếp hạng game được chơi nhiều nhất.
+*   **Sản phẩm:** Các API cơ bản chạy tốt, kết nối và ghi được dữ liệu vào database RDS.
 
 ---
 
-## 5. THÀNH VIÊN 5: QA / TESTER & TECHNICAL WRITER
-*   **Vai trò:** Kiểm thử chất lượng hệ thống & Làm tài liệu báo cáo.
-*   **Nhiệm vụ chi tiết:**
-    *   **Kiểm thử hiệu năng:** Đo lường tốc độ phản hồi API, kiểm tra tải đồng thời của website.
-    *   **Kiểm thử chịu lỗi (Failover):** Giả lập ngắt kết nối database hoặc S3 để kiểm tra cách hệ thống phản ứng và ghi log lỗi.
-    *   **Viết tài liệu:** Vẽ sơ đồ kiến trúc hệ thống AWS, viết tài liệu hướng dẫn vận hành, chuẩn bị nội dung báo cáo tổng kết và quay video demo hoạt động của sản phẩm.
-*   **Sản phẩm đầu ra:**
-    *   Tài liệu sơ đồ kiến trúc và vận hành hệ thống.
-    *   File báo cáo kết quả kiểm thử (Test Report).
-    *   Video Demo sản phẩm hoàn thiện.
+## 4. THÀNH VIÊN 4 (FRONTEND DEVELOPER - GIAO DIỆN & TÍCH HỢP)
+*   **Nhiệm vụ:**
+    *   Thiết kế trang giao diện chỉnh sửa thông tin cá nhân (Profile) của User.
+    *   Làm giao diện hiển thị danh sách bài hát yêu thích của người dùng.
+    *   Tối ưu hiển thị responsive (co giãn giao diện) để trang web hiển thị đẹp mắt trên cả điện thoại di động và máy tính.
+*   **Sản phẩm:** Giao diện hoàn chỉnh, đẹp mắt, các trang nhạc/game kết nối dữ liệu thật từ API.
+
+---
+
+## 5. THÀNH VIÊN 5 (TESTER & BÁO CÁO)
+*   **Nhiệm vụ:**
+    *   Vào web click kiểm thử từng tính năng (đăng ký, đăng nhập, quét mặt, phát nhạc, chơi game) xem có nút nào bị lỗi hay giao diện bị lệch không.
+    *   Chụp ảnh giao diện web thực tế làm minh chứng.
+    *   Viết tệp báo cáo Word/Markdown hướng dẫn các bước cài đặt local và cách sử dụng web để nộp bài/báo cáo.
+*   **Sản phẩm:** File báo cáo/tài liệu hướng dẫn hoàn chỉnh kèm hình ảnh minh họa.
