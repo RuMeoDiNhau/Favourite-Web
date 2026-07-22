@@ -1,7 +1,7 @@
 .searchbar {
   position: relative;
   flex: 1;
-  max-width: 260px;
+  max-width: 210px;
 }
 
 .searchbar-input-wrap {
@@ -176,28 +176,7 @@
   color: #94a3b8;
 }
 
-/* Light theme override — search bar gets a soft white surface */
-.App:not(.dark-theme) .searchbar-input-wrap {
-  background: #ffffff;
-  border-color: #cbd5e1;
-}
 
-.App:not(.dark-theme) .searchbar-input {
-  color: #0f172a;
-}
-
-.App:not(.dark-theme) .searchbar-input::placeholder {
-  color: #64748b;
-}
-
-.App:not(.dark-theme) .searchbar-clear {
-  color: #64748b;
-}
-
-.App:not(.dark-theme) .searchbar-clear:hover {
-  background: rgba(0, 0, 0, 0.06);
-  color: #0f172a;
-}
 
 .App:not(.dark-theme) .searchbar-dropdown {
   background: #ffffff;
