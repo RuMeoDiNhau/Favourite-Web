@@ -9,6 +9,22 @@ const api = axios.create({
   withCredentials: true,
 });
 
+// Send the fw_auth httpOnly cookie on same-origin requests AND
+// attach Authorization: Bearer header from localStorage if present
+// for cross-domain requests (e.g. S3 static site -> EC2 backend) where
+// browsers block HTTP cookies.
+api.interceptors.request.use((config) => {
+  try {
+    const token = localStorage.getItem('token');
+    if (token && !config.headers.Authorization) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  } catch (err) {
+    // Ignore localStorage errors
+  }
+  return config;
+});
+
 // No more Authorization / X-Auth-Token injection from JS — the
 // server sets the cookie on /auth/login and the browser auto-attaches
 // it. JS code (including any injected XSS payload) cannot read the

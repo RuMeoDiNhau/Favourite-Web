@@ -51,6 +51,9 @@ export default function Login({ onLoginSuccess }) {
       const data = response.data;
 
       if (data.status === 'success') {
+        if (data.token) {
+          try { localStorage.setItem('token', data.token); } catch (_) {}
+        }
         onLoginSuccess(data.user);
       }
     } catch (err) {
@@ -64,15 +67,18 @@ export default function Login({ onLoginSuccess }) {
   const handleFaceCapture = async (file) => {
     setFaceStatus('scanning');
     setError('');
-    
+
     const reader = new FileReader();
     reader.onloadend = async () => {
       const imageBase64 = reader.result;
       try {
         const response = await api.loginWithFace(imageBase64);
         const data = response.data;
-        
+
         if (data.status === 'success') {
+          if (data.token) {
+            try { localStorage.setItem('token', data.token); } catch (_) {}
+          }
           setFaceStatus('success');
           setTimeout(() => {
             onLoginSuccess(data.user);

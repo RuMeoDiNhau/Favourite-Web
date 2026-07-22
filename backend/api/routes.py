@@ -502,6 +502,7 @@ def login(request: LoginRequest, response: Response):
     logger.info(f"User logged in successfully via password: {user.user_id} (Role: {user.role})")
     return {
         'status': 'success',
+        'token': token,
         'user': {
             'user_id': user.user_id,
             'name': user.name,
@@ -525,6 +526,7 @@ def login_face(request: FaceLoginRequest, response: Response):
                 logger.info(f"User logged in successfully via Face ID: {user.user_id} (Confidence: {result['data'].get('confidence', 'N/A')})")
                 return {
                     'status': 'success',
+                    'token': token,
                     'user': {
                         'user_id': user.user_id,
                         'name': user.name,
