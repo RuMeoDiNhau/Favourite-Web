@@ -1,3 +1,9 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
 .App {
   --bg-app: #f3f6fb;
   --bg-card: #ffffff;
