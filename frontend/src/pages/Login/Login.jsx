@@ -27,6 +27,16 @@ export default function Login({ onLoginSuccess }) {
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
+  const formatErrorMsg = (err, fallback) => {
+    const detail = err?.response?.data?.detail;
+    if (!detail) return fallback;
+    if (typeof detail === 'string') return detail;
+    if (Array.isArray(detail)) {
+      return detail.map((d) => d.msg || d.detail || JSON.stringify(d)).join(', ');
+    }
+    return JSON.stringify(detail);
+  };
+
   const handlePasswordLogin = async (e) => {
     e.preventDefault();
     if (!usernameOrEmail || !password) {
@@ -39,15 +49,13 @@ export default function Login({ onLoginSuccess }) {
       setError('');
       const response = await api.loginWithPassword(usernameOrEmail, password);
       const data = response.data;
-      
+
       if (data.status === 'success') {
-        // Cookie was set by the BE. Don't store anything in
-        // localStorage — an XSS payload could read it.
         onLoginSuccess(data.user);
       }
     } catch (err) {
       console.error(err);
-      setError(err.response?.data?.detail || 'Đăng nhập thất bại. Vui lòng kiểm tra lại tài khoản/mật khẩu.');
+      setError(formatErrorMsg(err, 'Đăng nhập thất bại. Vui lòng kiểm tra lại tài khoản/mật khẩu.'));
     } finally {
       setLoading(false);
     }
@@ -140,7 +148,7 @@ export default function Login({ onLoginSuccess }) {
       }, 2000);
     } catch (err) {
       console.error(err);
-      setError(err.response?.data?.detail || 'Đăng ký thất bại. Tên tài khoản hoặc email có thể đã tồn tại.');
+      setError(formatErrorMsg(err, 'Đăng ký thất bại. Tên tài khoản hoặc email có thể đã tồn tại.'));
     } finally {
       setLoading(false);
     }
