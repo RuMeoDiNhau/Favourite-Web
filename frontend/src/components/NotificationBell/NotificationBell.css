@@ -219,17 +219,7 @@
 
 /* Light theme override — the bell button lives in the dark navbar
    but the dropdown sits over the page body which may be light. */
-.App:not(.dark-theme) .notif-bell-btn {
-  background: rgba(255, 255, 255, 0.95);
-  border-color: #cbd5e1;
-  color: #0f172a;
-}
-.App:not(.dark-theme) .notif-bell-btn:hover {
-  background: #f1f5f9;
-}
-.App:not(.dark-theme) .notif-bell-badge {
-  box-shadow: 0 0 0 2px #f8fafc;
-}
+
 .App:not(.dark-theme) .notif-dropdown {
   background: #ffffff;
   border-color: #e2e8f0;
