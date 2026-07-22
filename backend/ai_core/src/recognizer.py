@@ -65,6 +65,26 @@ def embed_face(image_bytes: bytes):
     return embedding[0].cpu().numpy()
 
 
+# Global RAM Cache for face embeddings to speed up recognition
+_embeddings_cache = {}
+
+
+def load_embeddings_into_cache():
+    """
+    Loads all .npy face embeddings from the local EMBED_DIR into the RAM cache.
+    """
+    global _embeddings_cache
+    _embeddings_cache.clear()
+    count = 0
+    for path in EMBED_DIR.glob('*.npy'):
+        try:
+            _embeddings_cache[path.stem] = np.load(path)
+            count += 1
+        except Exception as e:
+            print(f"[recognizer] Error caching embedding for {path.name}: {e}")
+    print(f"[recognizer] Successfully cached {count} face embeddings in RAM.")
+
+
 def save_user_embedding(user_id: str, embeddings):
     if not embeddings:
         return None
@@ -72,21 +92,35 @@ def save_user_embedding(user_id: str, embeddings):
     avg_embedding = stacked.mean(axis=0)
     path = EMBED_DIR / f'{user_id}.npy'
     np.save(path, avg_embedding)
+    
+    # Update RAM Cache immediately
+    _embeddings_cache[user_id] = avg_embedding
+    
     return str(path)
 
 
 def load_user_embedding(user_id: str):
+    # Try cache first
+    if user_id in _embeddings_cache:
+        return _embeddings_cache[user_id]
+        
+    # Fallback to disk
     path = EMBED_DIR / f'{user_id}.npy'
     if not path.exists():
         return None
-    return np.load(path)
+    try:
+        emb = np.load(path)
+        _embeddings_cache[user_id] = emb
+        return emb
+    except Exception:
+        return None
 
 
 def list_user_embeddings():
-    embeddings = []
-    for path in EMBED_DIR.glob('*.npy'):
-        embeddings.append((path.stem, np.load(path)))
-    return embeddings
+    # If cache is empty, load it once
+    if not _embeddings_cache:
+        load_embeddings_into_cache()
+    return list(_embeddings_cache.items())
 
 
 def cosine_similarity(query, candidate):
@@ -106,3 +140,4 @@ def recognize_embedding(query_embedding, threshold: float = 0.75):
     if best_score < threshold:
         return None
     return {'user_id': best_user_id, 'score': best_score}
+

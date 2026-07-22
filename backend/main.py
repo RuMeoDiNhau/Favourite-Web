@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -10,6 +11,7 @@ from backend.services.publish_service import start_publisher, stop_publisher
 from backend.services.logging_service import logger
 from backend.middleware.rate_limit import rate_limit_middleware
 from backend.middleware.csp import csp_middleware
+from backend.ai_core.src.recognizer import load_embeddings_into_cache
 
 init_db()
 download_all_embeddings()
@@ -19,6 +21,10 @@ app = FastAPI(title='Fav Web Face Recognition')
 @app.on_event("startup")
 def on_startup():
     logger.info("FastAPI Web Application starting up...")
+    try:
+        load_embeddings_into_cache()
+    except Exception as e:
+        logger.error(f"Error loading face embeddings on startup: {e}")
     # Tier 3 M: kick off the scheduled-publish background loop. The
     # thread is a daemon so a missing stop on shutdown doesn't block
     # process exit — worst case is one extra cycle of "promote due
@@ -43,8 +49,12 @@ DEV_ORIGINS = [
     'http://localhost:8080',
     'http://127.0.0.1:8080',
 ]
-PROD_ORIGINS: list[str] = []   # set when the FE is deployed
+FRONTEND_URL = os.getenv("FRONTEND_URL")
+PROD_ORIGINS: list[str] = []
+if FRONTEND_URL:
+    PROD_ORIGINS.append(FRONTEND_URL.rstrip('/'))
 ALLOWED_ORIGINS = DEV_ORIGINS + PROD_ORIGINS
+
 
 app.add_middleware(
     CORSMiddleware,
