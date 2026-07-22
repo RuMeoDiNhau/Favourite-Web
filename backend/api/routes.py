@@ -47,7 +47,11 @@ AUTH_COOKIE_NAME = 'fw_auth'
 # otherwise). We detect "secure eligible" via APP_ENV=production so
 # local dev (http://localhost) doesn't lose its cookie.
 def _is_secure_cookie() -> bool:
-    return os.getenv('APP_ENV', 'development') == 'production'
+    # Only set Secure=True if explicitly enabled via COOKIE_SECURE=true (e.g. when HTTPS/SSL is enabled).
+    # For HTTP deployments (e.g. EC2 IP http://<IP>), setting Secure causes modern browsers to
+    # silently drop the auth cookie on login/register.
+    val = os.getenv('COOKIE_SECURE', '').lower()
+    return val in ('true', '1', 'yes')
 
 
 def _set_auth_cookie(response: Response, token: str) -> None:

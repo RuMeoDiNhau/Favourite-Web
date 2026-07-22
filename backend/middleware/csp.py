@@ -20,13 +20,13 @@ from fastapi import Request
 # baseline fallback; everything else inherits unless overridden.
 CSP_VALUE = (
     "default-src 'self'; "
-    "frame-src http://localhost:8000 https:; "
+    "frame-src http: https:; "
     "frame-ancestors 'none'; "
     "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
     "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
     "font-src 'self' https://fonts.gstatic.com; "
-    "img-src 'self' data: https:; "
-    "connect-src 'self' http://localhost:8000"
+    "img-src 'self' data: https: http:; "
+    "connect-src 'self' http: https: ws: wss:"
 )
 
 # Routes that serve Swagger UI — skip CSP so the UI assets load
