@@ -27,19 +27,20 @@
   opacity: 0.8;
 }
 
-.searchbar-input {
+.searchbar-input-wrap input.searchbar-input {
   flex: 1;
-  border: none;
-  background: transparent;
+  border: none !important;
+  background: transparent !important;
   outline: none;
   font-size: 13px;
-  color: #f1f5f9;
+  color: #f1f5f9 !important;
   padding: 5px 0;
   min-width: 0;
+  box-shadow: none !important;
 }
 
-.searchbar-input::placeholder {
-  color: #94a3b8;
+.searchbar-input-wrap input.searchbar-input::placeholder {
+  color: #94a3b8 !important;
 }
 
 .searchbar-clear {
