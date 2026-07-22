@@ -4,9 +4,11 @@ import './Music.css';
 import * as api from '../../services/api';
 import { readJson } from '../../lib/safeStorage';
 import { getLikedSongIds, toggleLikedSong, isLikedSong } from '../../lib/likedSongs';
+import { useBookmarks } from '../../lib/BookmarksContext';
 
 export default function Music() {
   const user = readJson('user');
+  const { isBookmarked: isBm, toggle: toggleBm } = useBookmarks();
 
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [playlists, setPlaylists] = useState([]);
@@ -181,7 +183,13 @@ export default function Music() {
 
       // Gọi API tăng lượt nghe
       await api.playSong(song.id);
-      
+
+      // Dashboard event: same play counter, parallel per-user log.
+      // Best-effort — a failure here doesn't affect playback.
+      api.trackActivity({
+        content_type: 'music', content_id: song.id, event_type: 'play',
+      }).catch(() => { /* dashboard is best-effort */ });
+
       // Đồng bộ lượt nghe trên UI
       setSongs(prev => prev.map(s => s.id === song.id ? { ...s, plays: s.plays + 1 } : s));
     } catch (err) {
@@ -201,6 +209,14 @@ export default function Music() {
     try {
       if (nowLiked && !wasLiked) {
         await api.likeSong(songId);
+        // Dashboard event — fired only on the rising edge to match
+        // the backend global counter (which is also +1 on like and
+        // has no unlike endpoint). Unlike toggling back, the user
+        // can re-like to fire again, which is the same shape as the
+        // global counter.
+        api.trackActivity({
+          content_type: 'music', content_id: songId, event_type: 'like',
+        }).catch(() => { /* dashboard is best-effort */ });
       }
       loadMusicData();
       if (currentSong && currentSong.id === songId) {
@@ -578,6 +594,15 @@ const handleFileChange = (e) => {
                         </button>
                         <button onClick={() => handleLikeSong(song.id)} className="play-btn" style={{ marginLeft: '8px' }}>
                           ❤️
+                        </button>
+                        <button
+                          onClick={() => toggleBm('music', song.id)}
+                          className={`play-btn ${isBm('music', song.id) ? 'bookmark-active' : ''}`}
+                          style={{ marginLeft: '8px' }}
+                          title={isBm('music', song.id) ? 'Bỏ lưu' : 'Lưu bài hát'}
+                          aria-label={isBm('music', song.id) ? 'Bỏ lưu' : 'Lưu bài hát'}
+                        >
+                          {isBm('music', song.id) ? '🔖' : '⚪'}
                         </button>
                         
                         {user && (
