@@ -464,12 +464,11 @@ def init_db():
     db = SessionLocal()
     try:
         has_admin = db.query(User).filter(User.role == 'admin').first()
-        app_env = os.getenv('APP_ENV', 'development').lower()
-        seed_default_admin = os.getenv('SEED_DEFAULT_ADMIN', 'false').lower() in ('1', 'true', 'yes')
-
-        if not has_admin and (app_env != 'production' or seed_default_admin):
-            # Lazy import to avoid circular dependency at module load time.
-            from services.db_service import hash_password
+        if not has_admin:
+            try:
+                from backend.services.db_service import hash_password
+            except ImportError:
+                from services.db_service import hash_password
             admin = User(
                 user_id='admin',
                 name='Admin',
