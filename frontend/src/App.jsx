@@ -390,7 +390,7 @@ function App() {
                   onClick={() => setSidebarOpen((v) => !v)}
                   title="Toggle sidebar"
                 >
-                  â˜°
+                  ☰
                 </button>
               </div>
               <div className="top-header-right">
@@ -398,9 +398,9 @@ function App() {
                 <button
                   className="theme-toggle-btn"
                   onClick={toggleTheme}
-                  title={isDarkMode ? 'Chuyá»ƒn sang Cháº¿ Ä‘á»™ sÃ¡ng' : 'Chuyá»ƒn sang Cháº¿ Ä‘á»™ tá»‘i'}
+                  title={isDarkMode ? 'Chuyển sang Chế độ sáng' : 'Chuyển sang Chế độ tối'}
                 >
-                  {isDarkMode ? 'â˜€ï¸ SÃ¡ng' : 'ðŸŒ™ Tá»‘i'}
+                  {isDarkMode ? '☀️ Sáng' : '🌙 Tối'}
                 </button>
               </div>
             </header>
@@ -409,13 +409,13 @@ function App() {
             {(!user.registered_images || user.registered_images === 0) && (
               <div className="face-id-banner">
                 <div className="face-id-banner-inner">
-                  <span style={{ fontSize: '18px' }}>ðŸ”</span>
+                  <span style={{ fontSize: '18px' }}>🔐</span>
                   <div>
                     <span style={{ fontWeight: 600, fontSize: '0.88rem', color: '#a5b4fc' }}>
-                      Báº¡n chÆ°a kÃ­ch hoáº¡t Face ID.
+                      Bạn chưa kích hoạt Face ID.
                     </span>
                     <span style={{ fontSize: '0.82rem', color: '#64748b', marginLeft: '8px' }}>
-                      ÄÄƒng kÃ½ khuÃ´n máº·t Ä‘á»ƒ Ä‘Äƒng nháº­p nhanh hÆ¡n báº±ng camera.
+                      Đăng ký khuôn mặt để đăng nhập nhanh hơn bằng camera.
                     </span>
                   </div>
                 </div>
@@ -423,7 +423,7 @@ function App() {
                   className="face-id-activate-btn"
                   onClick={() => setShowFaceSetup(true)}
                 >
-                  ðŸ“· KÃ­ch hoáº¡t Face ID ngay
+                  📷 Kích hoạt Face ID ngay
                 </button>
               </div>
             )}
