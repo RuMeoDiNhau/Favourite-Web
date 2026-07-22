@@ -1,16 +1,27 @@
-# Node.js
+# ══════════════════════════════════════════════
+#  Node.js / Frontend
+# ══════════════════════════════════════════════
 node_modules/
 **/node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
 
 # Build output
 dist/
 **/dist/
 build/
+**/build/
+.vite/
 
-# Python
+# Vite cache
+**/.vite/
+
+# ══════════════════════════════════════════════
+#  Python / Backend
+# ══════════════════════════════════════════════
 .venv/
 venv/
 env/
@@ -19,11 +30,21 @@ __pycache__/
 **/__pycache__/
 *.py[cod]
 *$py.class
+*.egg-info/
+*.egg
 .pytest_cache/
 .mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
 .poetry/
+poetry.lock
+pip-wheel-metadata/
 
-# Environments — ignore ALL .env variants (chứa secret keys, IP EC2)
+# ══════════════════════════════════════════════
+#  Environment / Secrets (chứa secret keys, IP EC2)
+# ══════════════════════════════════════════════
 .env
 .env.*
 !.env.example
@@ -32,13 +53,17 @@ frontend/.env.production
 frontend/.env.local
 frontend/.env.development
 
-# Databases
+# ══════════════════════════════════════════════
+#  Databases
+# ══════════════════════════════════════════════
 database/*.db
 database/app.db
 *.db
 *.sqlite3
 
-# IDEs & Editors
+# ══════════════════════════════════════════════
+#  IDEs & Editors
+# ══════════════════════════════════════════════
 .vscode/
 .vscode
 .idea/
@@ -47,22 +72,68 @@ database/app.db
 *.njsproj
 *.sln
 *.swp
+*.swo
+*~
+.fleet/
+.cursor/
+
+# ══════════════════════════════════════════════
+#  Logs
+# ══════════════════════════════════════════════
 *.log
+logs/
+*.log.*
 
-
-# Credentials & Keys
-*.csv
-*_accessKeys.csv
+# ══════════════════════════════════════════════
+#  Credentials & Keys (KHÔNG được push lên git)
+# ══════════════════════════════════════════════
 *.pem
+*.key
+*.p12
+*.pfx
+*_accessKeys.csv
+*_credentials.csv
+aws-credentials*
+.aws/
 
-# Documents
+# ══════════════════════════════════════════════
+#  Documents / Media
+# ══════════════════════════════════════════════
 *.pdf
+*.csv
 
-# OS Files
+# ══════════════════════════════════════════════
+#  OS Files
+# ══════════════════════════════════════════════
 Thumbs.db
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+desktop.ini
 
-# User-Uploaded Media (lưu local khi không có S3)
+# ══════════════════════════════════════════════
+#  Docker
+# ══════════════════════════════════════════════
+.docker/
+docker-compose.override.yml
+
+# ══════════════════════════════════════════════
+#  AWS / Cloud
+# ══════════════════════════════════════════════
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraformrc
+terraform.tfvars
+sam-local-*
+.aws-sam/
+
+# ══════════════════════════════════════════════
+#  User-Uploaded Media (lưu local khi không có S3)
+# ══════════════════════════════════════════════
 static/uploads/
 static/games/
 static/logs/
@@ -70,13 +141,27 @@ static/music/
 static/posts/
 static/icon/
 
-# AI Data — raw images & embeddings (backup trên S3, không cần push git)
+# ══════════════════════════════════════════════
+#  AI Data — raw images & embeddings
+#  (backup trên S3, không cần push git)
+# ══════════════════════════════════════════════
 data/
 backend/data/
 backend/ai_core/data/raw/
 backend/ai_core/data/embeddings/
 
-# Scratch / Temp Files
+# ══════════════════════════════════════════════
+#  Scratch / Temp Files
+# ══════════════════════════════════════════════
 scratch/
+tmp/
+temp/
+*.tmp
+*.bak
+*.orig
 
+# ══════════════════════════════════════════════
+#  Docs generated / private
+# ══════════════════════════════════════════════
 docs/walkthrough.md
+docs/task_assignment.md
