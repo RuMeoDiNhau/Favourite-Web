@@ -22,11 +22,15 @@ CSP_VALUE = (
     "default-src 'self'; "
     "frame-src http://localhost:8000 https:; "
     "frame-ancestors 'none'; "
-    "script-src 'self' 'unsafe-inline'; "
-    "style-src 'self' 'unsafe-inline'; "
+    "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+    "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
+    "font-src 'self' https://fonts.gstatic.com; "
     "img-src 'self' data: https:; "
     "connect-src 'self' http://localhost:8000"
 )
+
+# Routes that serve Swagger UI — skip CSP so the UI assets load
+DOCS_PATHS = {'/docs', '/redoc', '/openapi.json'}
 
 
 async def csp_middleware(request: Request, call_next):
@@ -39,5 +43,8 @@ async def csp_middleware(request: Request, call_next):
     each middleware having to forward it manually.
     """
     response = await call_next(request)
-    response.headers['Content-Security-Policy'] = CSP_VALUE
+    # Don't add CSP on Swagger/ReDoc pages — they load JS+CSS from CDN
+    if request.url.path not in DOCS_PATHS:
+        response.headers['Content-Security-Policy'] = CSP_VALUE
     return response
+
