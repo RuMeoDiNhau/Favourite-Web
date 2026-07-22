@@ -18,10 +18,10 @@ FAV_WEB/
 ├── docs/                        # Tài liệu dự án
 │   ├── api-specification        # Đặc tả API đầy đủ
 │   ├── description              # Mô tả tổng quan dự án (file này)
-│   ├── guide                    # Hướng dẫn cài đặt và triển khai
-│   ├── walkthrough.md           # Nhật ký tiến độ tuần theo tuần
-│   ├── feature.md               # Ghi chú ý tưởng & tính năng
-│   ├── todo.txt                 # Danh sách công việc
+│   ├── guide                    # Hướng dẫn cài đặt và triển khai trên EC2
+│   ├── team_guidelines.md       # Quy trình phân quyền phát triển và deploy cho nhóm
+│   ├── task_assignment.md       # Bảng phân công nhiệm vụ cho 5 thành viên
+│   ├── todo.txt                 # Danh sách tiến độ công việc
 │   └── idea.txt                 # Ghi chú ý tưởng ban đầu
 │
 ├── database/
@@ -54,6 +54,7 @@ FAV_WEB/
 │   │   ├── music_service.py     # CRUD bài hát và playlist
 │   │   ├── knowledge_service.py # CRUD bài viết kiến thức
 │   │   ├── posts_service.py     # Upload media, giải nén game zip, CRUD Feed posts
+│   │   ├── logging_service.py   # Tích hợp ghi log và gửi lên AWS CloudWatch Logs
 │   │   └── s3_service.py        # Boto3: upload/download S3, sync embeddings khi start
 │   │
 │   └── ai_core/
