@@ -1,7 +1,7 @@
 .searchbar {
   position: relative;
-  width: 100%;
-  max-width: 360px;
+  flex: 1;
+  max-width: 260px;
 }
 
 .searchbar-input-wrap {
