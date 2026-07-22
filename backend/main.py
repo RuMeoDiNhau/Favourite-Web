@@ -48,6 +48,7 @@ DEV_ORIGINS = [
     'http://127.0.0.1:3000',
     'http://localhost:8080',
     'http://127.0.0.1:8080',
+    'http://fav-web-frontend-bucket.s3-website-ap-southeast-2.amazonaws.com',
 ]
 FRONTEND_URL = os.getenv("FRONTEND_URL")
 PROD_ORIGINS: list[str] = []
