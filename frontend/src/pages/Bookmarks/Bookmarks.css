@@ -5,8 +5,16 @@
   background: var(--bg-app);
   color: var(--text-main);
   padding: 0 0 80px;
-  max-width: 1200px;
-  margin: 0 auto;
+  /* Fill the available main-area width (sidebar is already accounted
+     for by App.css's `.main-area { margin-left: 260px; flex: 1 }`).
+     The old `max-width: 1200px` cap was the reason the page felt tiny
+     on a 1440–1920px viewport: the container sat centred in ~1200px
+     while the right ~240–720px was empty space. The new cap matches
+     a comfortable reading width for very wide monitors without
+     leaving an empty band on a laptop. */
+  width: 100%;
+  max-width: 1600px;
+  margin: 0;
   /* Side gutters on every viewport — the main area inherits padding
      from the App shell, but inner content still needs edge breathing
      room so headings don't sit flush against the panel edge. */
@@ -117,7 +125,12 @@
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  /* auto-fit (NOT auto-fill): when there's only 1 saved item we want
+     the card to stretch across the full content width instead of
+     sitting in a 280px cell with a huge empty area to the right.
+     auto-fill reserves empty 1fr tracks for the missing items and
+     truncates the lone item to the same track width. */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
   gap: 16px;
 }
 
