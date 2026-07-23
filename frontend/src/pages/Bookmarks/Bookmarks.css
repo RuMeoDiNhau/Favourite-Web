@@ -5,18 +5,28 @@
   background: var(--bg-app);
   color: var(--text-main);
   padding: 0 0 80px;
+  max-width: 1200px;
+  margin: 0 auto;
+  /* Side gutters on every viewport — the main area inherits padding
+     from the App shell, but inner content still needs edge breathing
+     room so headings don't sit flush against the panel edge. */
+  padding-left: clamp(12px, 3vw, 32px);
+  padding-right: clamp(12px, 3vw, 32px);
+  box-sizing: border-box;
 }
 
 .bookmarks-header {
-  padding: 60px 40px 24px;
-  text-align: center;
+  padding: 32px 0 20px;
+  text-align: left;
 }
 
 .bookmarks-header h1 {
   margin: 0 0 8px;
-  font-size: 28px;
+  font-size: clamp(22px, 4vw, 28px);
   font-weight: 700;
   color: var(--text-title);
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
 }
 
 .bookmarks-subtitle {
@@ -28,8 +38,8 @@
 .bookmarks-filters {
   display: flex;
   gap: 8px;
-  justify-content: center;
-  padding: 16px 24px 32px;
+  justify-content: flex-start;
+  padding: 8px 0 24px;
   flex-wrap: wrap;
 }
 
@@ -105,12 +115,10 @@
 .bookmarks-grid {
   list-style: none;
   margin: 0;
-  padding: 0 40px;
+  padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: 16px;
 }
 
 .bookmarks-card {
@@ -123,6 +131,7 @@
   cursor: pointer;
   transition: transform 0.12s, border-color 0.12s, background 0.12s;
   outline: none;
+  min-width: 0;
 }
 
 .bookmarks-card:hover,
@@ -236,12 +245,56 @@
   color: var(--accent-danger);
 }
 
-@media (max-width: 640px) {
+/* Responsive — three tiers instead of one so the page degrades
+   smoothly on phones (no banner, no horizontal scroll) without
+   ruining the tablet / desktop look. */
+
+@media (max-width: 1024px) {
+  /* Tablet: title centered, filters wrap below it; cards go
+     side-by-side as long as there's room. */
   .bookmarks-header {
-    padding: 80px 20px 16px;
+    text-align: center;
+    padding-top: 24px;
+  }
+  .bookmarks-filters {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Phone: 1-column grid, tighter spacing on the header so the
+     filters row isn't pushed below the fold. */
+  .bookmarks-container {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .bookmarks-header {
+    padding: 16px 0 12px;
+  }
+  .bookmarks-filters {
+    padding-bottom: 16px;
   }
   .bookmarks-grid {
-    padding: 0 16px;
     grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .bookmarks-card {
+    padding: 12px;
+  }
+  .bookmarks-empty {
+    padding: 48px 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Tiny phones: cut the header breathing room further, shrink the
+     card thumbnail so long titles get more room. */
+  .bookmarks-card-thumb {
+    width: 64px;
+    height: 64px;
+  }
+  .bookmarks-card-meta,
+  .bookmarks-card-time {
+    font-size: 10px;
   }
 }
