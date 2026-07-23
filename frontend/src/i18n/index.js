@@ -34,6 +34,12 @@ i18n
     fallbackLng: 'vi',
     supportedLngs: ['en', 'vi'],
     debug: false,
+    // We use 'msg:<hash>' as keys (see T.jsx). The default i18next
+    // nsSeparator is ':', which would split 'msg:<hash>' into
+    // namespace='msg' + key='<hash>' and the lookup would miss
+    // every time. Disabling the separator makes the whole string
+    // the lookup key — exactly what we want.
+    nsSeparator: false,
     interpolation: {
       // React already escapes interpolated values — turning this off
       // avoids double-escaping things like {title} inside a JSX
