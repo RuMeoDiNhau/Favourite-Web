@@ -140,6 +140,16 @@
   background: var(--bg-item);
 }
 
+/* Keyboard-nav highlight. Distinct from :hover so the user can tell
+   which row their ↑↓ landed on vs. which one their cursor is over.
+   A left bar + slightly stronger background reads as "selected row"
+   without changing the typography (so the layout doesn't shift). */
+.searchbar-row.is-focused,
+.searchbar-row.is-focused:hover {
+  background: var(--sidebar-hover-bg);
+  box-shadow: inset 3px 0 0 var(--accent-primary);
+}
+
 .searchbar-row-icon {
   font-size: 14px;
   opacity: 0.8;
