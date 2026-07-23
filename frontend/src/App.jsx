@@ -13,6 +13,8 @@ import PostModal from './pages/Feed/PostModal';
 import FaceSetupModal from './components/FaceSetupModal';
 import SearchBar from './components/SearchBar';
 import NotificationBell from './components/NotificationBell';
+import LanguageSwitcher from './components/LanguageSwitcher';
+import T from './i18n/T';
 import Bookmarks from './pages/Bookmarks';
 import UserProfile from './pages/UserProfile';
 import Collections from './pages/Collections/Collections';
@@ -338,8 +340,14 @@ function App() {
                 className="sidebar-post-btn"
                 onClick={() => setShowPostModal(true)}
               >
-                ✏️ Đăng bài mới
+                ✏️ <T>Đăng bài mới</T>
               </button>
+
+              {/* Language pill — sits between the post button and the
+                  user chip so it's reachable without crowding either.
+                  Active state reads off i18next.language directly so the
+                  pill flips as soon as the user picks the other side. */}
+              <LanguageSwitcher />
 
               <div className="sidebar-user">
                 {user.avatar_url ? (

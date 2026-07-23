@@ -1,0 +1,43 @@
+/* Language switcher — segmented EN/VI toggle that inherits sidebar
+   surface so it reads correctly in both page themes. */
+
+.lang-switcher {
+  display: inline-flex;
+  background: var(--sidebar-hover-bg);
+  border: 1px solid var(--sidebar-border);
+  border-radius: 999px;
+  padding: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  align-self: stretch;
+  justify-content: center;
+}
+
+.lang-switcher-btn {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--sidebar-text-muted);
+  padding: 6px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  font: inherit;
+  letter-spacing: inherit;
+}
+
+.lang-switcher-btn:hover:not(.is-active) {
+  color: var(--sidebar-text);
+}
+
+.lang-switcher-btn.is-active {
+  background: var(--bg-card);
+  color: var(--accent-primary);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.lang-switcher-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
