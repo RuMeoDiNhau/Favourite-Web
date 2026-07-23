@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend,
@@ -49,6 +49,11 @@ function Home({ onNavigate }) {
   const [error, setError] = useState(null);
   const [exporting, setExporting] = useState(false);
 
+  // Stash the load function in a ref so the focus/visibility listener
+  // can call the latest version (with current `days`) without needing
+  // to be re-bound each render.
+  const loadRef = useRef(null);
+
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
@@ -72,9 +77,34 @@ function Home({ onNavigate }) {
         if (!cancelled) setLoading(false);
       }
     };
+    loadRef.current = load;
     load();
     return () => { cancelled = true; };
   }, [days]);
+
+  // Re-fetch when the user comes back to this tab after reacting
+  // or commenting in another (Knowledge/Feed) tab. Without this, the
+  // stat cards and "Bạn đã đọc gần đây" list stay stale until the
+  // user manually switches the days-toggle. We listen on:
+  //   - window 'focus'  → tab switch back
+  //   - document 'visibilitychange' → unmounted tab coming back
+  //     (Safari fires this rather than focus)
+  //   - 'pageshow' with persisted=true → bfcache restore
+  // The fetch is best-effort; failures fall through silently and the
+  // existing state stays visible.
+  useEffect(() => {
+    const refetch = () => {
+      loadRef.current?.();
+    };
+    window.addEventListener('focus', refetch);
+    document.addEventListener('visibilitychange', refetch);
+    window.addEventListener('pageshow', refetch);
+    return () => {
+      window.removeEventListener('focus', refetch);
+      document.removeEventListener('visibilitychange', refetch);
+      window.removeEventListener('pageshow', refetch);
+    };
+  }, []);
 
   // Trigger a file download for the user's insights in `fmt`
   // ('csv' or 'json'). We disable both export buttons while in
