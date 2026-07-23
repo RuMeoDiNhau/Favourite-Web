@@ -1,8 +1,10 @@
+/* Collections page — theme-aware via App.css tokens */
+
 .collections-container {
   max-width: 960px;
   margin: 0 auto;
   padding: 24px 16px 64px;
-  color: var(--text-main, #1b263b);
+  color: var(--text-main);
 }
 
 .collections-header {
@@ -12,18 +14,18 @@
 .collections-header h1 {
   margin: 0 0 8px;
   font-size: 28px;
-  color: var(--text-title, #0f172a);
+  color: var(--text-title);
 }
 
 .collections-subtitle {
   margin: 0;
-  color: var(--text-muted, #64748b);
+  color: var(--text-muted);
   font-size: 14px;
 }
 
 .collections-create-btn {
-  background: #6366f1;
-  color: white;
+  background: var(--accent-primary);
+  color: var(--text-on-accent);
   border: none;
   border-radius: 8px;
   padding: 10px 16px;
@@ -35,31 +37,31 @@
 }
 
 .collections-create-btn:hover {
-  background: #4f46e5;
+  background: var(--accent-primary-2);
 }
 
 .collections-create-form {
-  background: var(--bg-card, #ffffff);
-  border: 1px solid var(--border-color, #e2e8f0);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 16px;
   margin-bottom: 20px;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  box-shadow: var(--shadow-card, 0 4px 20px rgba(15, 23, 42, 0.03));
+  box-shadow: var(--shadow-card);
 }
 
 .collections-input,
 .collections-textarea {
   width: 100%;
-  border: 1px solid var(--border-color, #e2e8f0);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 10px 12px;
   font-size: 14px;
   font-family: inherit;
-  background: var(--bg-app, #ffffff);
-  color: var(--text-main, #1b263b);
+  background: var(--bg-app);
+  color: var(--text-main);
   box-sizing: border-box;
 }
 
@@ -71,7 +73,7 @@
 .collections-input:focus,
 .collections-textarea:focus {
   outline: none;
-  border-color: #6366f1;
+  border-color: var(--accent-primary);
 }
 
 .collections-create-actions {
@@ -80,13 +82,17 @@
 }
 
 .collections-submit {
-  background: #6366f1;
-  color: white;
+  background: var(--accent-primary);
+  color: var(--text-on-accent);
   border: none;
   border-radius: 8px;
   padding: 8px 18px;
   font-weight: 600;
   cursor: pointer;
+}
+
+.collections-submit:hover {
+  background: var(--accent-primary-2);
 }
 
 .collections-submit:disabled {
@@ -96,8 +102,8 @@
 
 .collections-cancel {
   background: transparent;
-  color: var(--text-muted, #64748b);
-  border: 1px solid var(--border-color, #e2e8f0);
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 8px 18px;
   font-weight: 600;
@@ -107,20 +113,20 @@
 .collections-status {
   text-align: center;
   padding: 32px;
-  color: var(--text-muted, #94a3b8);
+  color: var(--text-muted);
 }
 
 .collections-error {
-  color: #b91c1c;
+  color: var(--status-error-fg);
 }
 
 .collections-empty {
   text-align: center;
   padding: 60px 20px;
-  color: var(--text-muted, #64748b);
-  border: 1px dashed var(--border-color, #cbd5e1);
+  color: var(--text-muted);
+  border: 1px dashed var(--border-color);
   border-radius: 12px;
-  background: var(--bg-card, #ffffff);
+  background: var(--bg-card);
 }
 
 .collections-empty-icon {
@@ -130,7 +136,7 @@
 
 .collections-empty h3 {
   margin: 0 0 8px;
-  color: var(--text-title, #0f172a);
+  color: var(--text-title);
   font-size: 18px;
 }
 
@@ -149,8 +155,8 @@
 }
 
 .collections-card {
-  background: var(--bg-card, #ffffff);
-  border: 1px solid var(--border-color, #e2e8f0);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 14px 16px;
   cursor: pointer;
@@ -158,25 +164,25 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  box-shadow: var(--shadow-card, 0 4px 20px rgba(15, 23, 42, 0.03));
+  box-shadow: var(--shadow-card);
 }
 
 .collections-card:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-card-hover, 0 8px 28px rgba(15, 23, 42, 0.08));
-  border-color: #6366f1;
+  box-shadow: var(--shadow-card-hover);
+  border-color: var(--accent-primary);
 }
 
 .collections-card-name {
   font-size: 16px;
   font-weight: 700;
-  color: var(--text-title, #0f172a);
+  color: var(--text-title);
   word-wrap: break-word;
 }
 
 .collections-card-desc {
   font-size: 13px;
-  color: var(--text-muted, #64748b);
+  color: var(--text-muted);
   word-wrap: break-word;
 }
 
@@ -184,7 +190,7 @@
   display: flex;
   gap: 10px;
   font-size: 12px;
-  color: var(--text-muted, #64748b);
+  color: var(--text-muted);
   flex-wrap: wrap;
 }
 
@@ -193,10 +199,10 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-top: 1px solid var(--border-color, #f1f5f9);
+  border-top: 1px solid var(--border-color);
   padding-top: 8px;
   font-size: 12px;
-  color: var(--text-muted, #64748b);
+  color: var(--text-muted);
 }
 
 .collections-card-count {
@@ -206,7 +212,7 @@
 .collections-card-delete {
   background: transparent;
   border: none;
-  color: var(--text-muted, #94a3b8);
+  color: var(--text-muted);
   cursor: pointer;
   font-size: 13px;
   padding: 4px 8px;
@@ -215,14 +221,14 @@
 }
 
 .collections-card-delete:hover {
-  background: rgba(220, 38, 38, 0.08);
-  color: #b91c1c;
+  background: var(--status-error-bg);
+  color: var(--accent-danger);
 }
 
 .collections-back {
   background: transparent;
-  border: 1px solid var(--border-color, #e2e8f0);
-  color: var(--text-main, #1b263b);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
   padding: 8px 14px;
   border-radius: 8px;
   font-size: 14px;
@@ -233,7 +239,7 @@
 }
 
 .collections-back:hover {
-  background: var(--bg-item, #f1f5f9);
+  background: var(--bg-item);
 }
 
 .collections-detail-actions {
@@ -242,35 +248,21 @@
 
 .collections-edit-btn {
   background: transparent;
-  border: 1px solid var(--border-color, #e2e8f0);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 6px 14px;
   font-size: 14px;
-  color: var(--text-main, #1b263b);
+  color: var(--text-main);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .collections-edit-btn:hover {
-  background: var(--bg-item, #f1f5f9);
-}
-
-.dark-theme .collections-card-name {
-  color: #f1f5f9;
-}
-
-.dark-theme .collections-input,
-.dark-theme .collections-textarea {
-  background: rgba(255, 255, 255, 0.05);
-  color: #f1f5f9;
-  border-color: rgba(255, 255, 255, 0.12);
-}
-
-.dark-theme .collections-create-form {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--bg-item);
 }
 
 /* ===== AddToCollection picker ===== */
+
 .collections-picker-overlay {
   position: fixed;
   inset: 0;
@@ -282,21 +274,21 @@
 }
 
 .collections-picker {
-  background: var(--bg-card, #ffffff);
+  background: var(--bg-card);
   border-radius: 12px;
   width: min(420px, 90vw);
   max-height: 70vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--shadow-card-hover);
 }
 
 .collections-picker-header {
   padding: 14px 18px;
-  border-bottom: 1px solid var(--border-color, #e2e8f0);
+  border-bottom: 1px solid var(--border-color);
   font-weight: 700;
-  color: var(--text-title, #0f172a);
+  color: var(--text-title);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -306,7 +298,7 @@
   background: transparent;
   border: none;
   font-size: 20px;
-  color: var(--text-muted, #94a3b8);
+  color: var(--text-muted);
   cursor: pointer;
 }
 
@@ -321,37 +313,24 @@
   align-items: center;
   padding: 10px 18px;
   font-size: 14px;
-  color: var(--text-main, #1b263b);
+  color: var(--text-main);
   cursor: pointer;
   transition: background 0.15s ease;
 }
 
 .collections-picker-item:hover {
-  background: var(--bg-item, #f1f5f9);
+  background: var(--bg-item);
 }
 
 .collections-picker-item.added {
-  background: rgba(99, 102, 241, 0.08);
-  color: #4f46e5;
+  background: rgba(99, 102, 241, 0.12);
+  color: var(--accent-primary);
   font-weight: 600;
 }
 
 .collections-picker-empty {
   padding: 24px;
   text-align: center;
-  color: var(--text-muted, #94a3b8);
+  color: var(--text-muted);
   font-size: 14px;
-}
-
-.dark-theme .collections-picker {
-  background: #1e293b;
-}
-
-.dark-theme .collections-picker-header {
-  color: #f1f5f9;
-  border-bottom-color: rgba(255, 255, 255, 0.08);
-}
-
-.dark-theme .collections-picker-item {
-  color: #f1f5f9;
 }

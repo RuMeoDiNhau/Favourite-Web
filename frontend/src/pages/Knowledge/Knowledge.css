@@ -100,9 +100,9 @@
 }
 
 .filter-btn.active {
-  background: #6366f1;
-  border-color: #6366f1;
-  color: white;
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: var(--text-on-accent);
   font-weight: 600;
 }
 
@@ -221,13 +221,13 @@
 
 .card-tag:hover {
   background: rgba(99, 102, 241, 0.12);
-  border-color: #6366f1;
+  border-color: var(--accent-primary);
 }
 
 .card-tag.active {
-  background: #6366f1;
-  border-color: #6366f1;
-  color: white;
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: var(--text-on-accent);
 }
 
 .knowledge-tag-row {
@@ -290,6 +290,11 @@
   font-size: 18px;
 }
 
+.knowledge-error-text {
+  text-align: center;
+  color: var(--status-error-fg);
+}
+
 /* Responsive */
 @media (max-width: 1024px) {
   .knowledge-grid {
@@ -341,8 +346,8 @@
 }
 
 .article-modal {
-  background: #ffffff;
-  color: #1e293b;
+  background: var(--bg-card);
+  color: var(--text-main);
   border-radius: 16px;
   width: 100%;
   max-width: 880px;
@@ -358,7 +363,7 @@
 
 .article-modal-header {
   padding: 24px 28px 16px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -368,7 +373,7 @@
 .article-modal-header h2 {
   margin: 8px 0 4px;
   font-size: 1.5rem;
-  color: #0f172a;
+  color: var(--text-title);
   line-height: 1.3;
 }
 
@@ -376,14 +381,14 @@
   display: flex;
   gap: 14px;
   font-size: 0.88rem;
-  color: #64748b;
+  color: var(--text-muted);
   margin-top: 4px;
 }
 
 .article-modal-close {
-  background: #f1f5f9;
+  background: var(--bg-item);
   border: none;
-  color: #475569;
+  color: var(--text-main);
   width: 36px;
   height: 36px;
   border-radius: 8px;
@@ -394,9 +399,9 @@
 }
 
 .article-modal-bookmark {
-  background: #f1f5f9;
+  background: var(--bg-item);
   border: none;
-  color: #475569;
+  color: var(--text-main);
   width: 36px;
   height: 36px;
   border-radius: 8px;
@@ -408,17 +413,17 @@
 }
 
 .article-modal-bookmark:hover {
-  background: #e2e8f0;
+  background: var(--bg-card-hover);
 }
 
 .article-modal-bookmark.filled {
-  background: linear-gradient(135deg, #6366f1, #4f46e5);
-  color: white;
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-primary-2));
+  color: var(--text-on-accent);
 }
 
 .article-modal-close:hover {
-  background: #e2e8f0;
-  color: #0f172a;
+  background: var(--bg-card-hover);
+  color: var(--text-title);
 }
 
 .article-modal-body {
@@ -427,14 +432,14 @@
 
 .article-modal-desc {
   font-size: 1.05rem;
-  color: #334155;
+  color: var(--text-main);
   margin: 0 0 14px;
   font-weight: 500;
 }
 
 .article-modal-content {
   font-size: 0.96rem;
-  color: #475569;
+  color: var(--text-main);
   line-height: 1.65;
   white-space: pre-wrap;
   margin: 0 0 24px;
@@ -442,12 +447,12 @@
 
 .article-modal-videos h3 {
   font-size: 1.05rem;
-  color: #0f172a;
+  color: var(--text-title);
   margin: 0 0 14px;
 }
 
 .videos-status {
-  color: #64748b;
+  color: var(--text-muted);
   font-size: 0.92rem;
   font-style: italic;
 }
@@ -461,10 +466,10 @@
 .video-item {
   display: flex;
   flex-direction: column;
-  background: #f8fafc;
+  background: var(--bg-item);
   border-radius: 10px;
   overflow: hidden;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border-color);
 }
 
 .video-item iframe {
@@ -472,7 +477,7 @@
   aspect-ratio: 16 / 9;
   border: none;
   display: block;
-  background: #0f172a;
+  background: var(--scanner-bg);
 }
 
 .video-meta {
@@ -483,7 +488,7 @@
   margin: 0 0 4px;
   font-size: 0.88rem;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--text-title);
   line-height: 1.35;
   /* Clamp to 2 lines so the grid stays balanced even when one title is long. */
   display: -webkit-box;
@@ -495,7 +500,7 @@
 .video-channel {
   margin: 0;
   font-size: 0.78rem;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 @media (max-width: 600px) {
@@ -523,13 +528,13 @@
 }
 
 .card-status-draft {
-  background: rgba(245, 158, 11, 0.15);
-  color: #b45309;
+  background: var(--status-warn-bg);
+  color: var(--status-warn-fg);
 }
 
 .card-status-scheduled {
   background: rgba(99, 102, 241, 0.15);
-  color: #4f46e5;
+  color: var(--accent-primary-2);
 }
 
 .knowledge-create-overlay {
@@ -600,12 +605,12 @@
 .knowledge-create-form input:focus,
 .knowledge-create-form textarea:focus {
   outline: none;
-  border-color: #6366f1;
+  border-color: var(--accent-primary);
 }
 
 .knowledge-create-error {
-  background: rgba(220, 38, 38, 0.08);
-  color: #b91c1c;
+  background: var(--status-error-bg);
+  color: var(--status-error-fg);
   padding: 8px 12px;
   border-radius: 6px;
   font-size: 13px;
@@ -618,8 +623,8 @@
 }
 
 .knowledge-create-submit {
-  background: #6366f1;
-  color: white;
+  background: var(--accent-primary);
+  color: var(--text-on-accent);
   border: none;
   border-radius: 8px;
   padding: 10px 22px;
