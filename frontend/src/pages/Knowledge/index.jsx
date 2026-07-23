@@ -392,7 +392,7 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
         {loading ? (
           <p style={{ textAlign: 'center', color: 'white' }}>Đang tải bài viết...</p>
         ) : error ? (
-          <p style={{ textAlign: 'center', color: '#ff6b6b' }}>{error}</p>
+          <p className="knowledge-error-text">{error}</p>
         ) : (
           <div className="knowledge-grid">
             {articles.length > 0 ? (

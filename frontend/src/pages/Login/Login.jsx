@@ -169,7 +169,7 @@ export default function Login({ onLoginSuccess }) {
         </div>
 
         {error && <div className="login-error-msg">{error}</div>}
-        {successMsg && <div className="login-success-msg" style={{ backgroundColor: 'rgba(74, 222, 128, 0.15)', border: '1px solid rgba(74, 222, 128, 0.3)', color: '#4ade80', padding: '12px', borderRadius: '8px', fontSize: '13px', marginBottom: '20px', textAlign: 'center' }}>{successMsg}</div>}
+        {successMsg && <div className="login-success-msg">{successMsg}</div>}
 
         {!isRegistering ? (
           <>
@@ -231,9 +231,9 @@ export default function Login({ onLoginSuccess }) {
 
             <div className="login-footer" style={{ marginTop: '20px', textAlign: 'center', fontSize: '14px' }}>
               <span>Chưa có tài khoản? </span>
-              <button 
+              <button
+                className="login-toggle-btn"
                 onClick={() => { setIsRegistering(true); setError(''); }}
-                style={{ background: 'none', border: 'none', color: '#818cf8', cursor: 'pointer', fontWeight: '600', padding: 0 }}
               >
                 Đăng ký ngay
               </button>
@@ -310,7 +310,7 @@ export default function Login({ onLoginSuccess }) {
                   onChange={handleRegFileChange}
                   disabled={loading}
                 />
-                <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>Không bắt buộc. Chọn ít nhất 1 ảnh rõ nét nếu muốn đăng nhập bằng khuôn mặt</span>
+                <span className="login-helper-text">Không bắt buộc. Chọn ít nhất 1 ảnh rõ nét nếu muốn đăng nhập bằng khuôn mặt</span>
               </div>
               
               <button type="submit" className="login-submit-btn" disabled={loading}>
@@ -320,9 +320,9 @@ export default function Login({ onLoginSuccess }) {
 
             <div className="login-footer" style={{ marginTop: '20px', textAlign: 'center', fontSize: '14px' }}>
               <span>Đã có tài khoản? </span>
-              <button 
+              <button
+                className="login-toggle-btn"
                 onClick={() => { setIsRegistering(false); setError(''); }}
-                style={{ background: 'none', border: 'none', color: '#818cf8', cursor: 'pointer', fontWeight: '600', padding: 0 }}
               >
                 Đăng nhập
               </button>

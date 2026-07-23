@@ -157,21 +157,21 @@
 }
 
 .log-item-line.scanning {
-  background: #f0f9ff;
-  color: #0369a1;
-  border-left: 4px solid #38bdf8;
+  background: var(--status-scanning-bg);
+  color: var(--status-scanning-fg);
+  border-left: 4px solid var(--accent-primary);
 }
 
 .log-item-line.success {
-  background: #f0fdf4;
-  color: #166534;
-  border-left: 4px solid #22c55e;
+  background: var(--status-success-bg);
+  color: var(--status-success-fg);
+  border-left: 4px solid var(--accent-success);
 }
 
 .log-item-line.error {
-  background: #fef2f2;
-  color: #991b1b;
-  border-left: 4px solid #ef4444;
+  background: var(--status-error-bg);
+  color: var(--status-error-fg);
+  border-left: 4px solid var(--accent-danger);
 }
 
 .face-preview-box {
@@ -260,11 +260,11 @@
   border-radius: 6px;
 }
 
-.post-badge-type.image { background: #fdf2f8; color: #db2777; }
-.post-badge-type.video { background: #f5f3ff; color: #7c3aed; }
-.post-badge-type.audio { background: #ecfdf5; color: #059669; }
-.post-badge-type.game { background: #fff7ed; color: #ea580c; }
-.post-badge-type.text { background: #fef3c7; color: #d97706; }
+.post-badge-type.image { background: var(--badge-image-bg); color: var(--badge-image-fg); }
+.post-badge-type.video { background: var(--badge-video-bg); color: var(--badge-video-fg); }
+.post-badge-type.audio { background: var(--badge-audio-bg); color: var(--badge-audio-fg); }
+.post-badge-type.game { background: var(--badge-game-bg); color: var(--badge-game-fg); }
+.post-badge-type.text { background: var(--badge-text-bg); color: var(--badge-text-fg); }
 
 .post-item-content {
   text-align: left;
@@ -375,8 +375,8 @@
 
 .article-badge-cat {
   align-self: flex-start;
-  background: #e0f2fe;
-  color: #0369a1;
+  background: var(--badge-category-bg);
+  color: var(--badge-category-fg);
   font-size: 0.7rem;
   font-weight: 800;
   text-transform: uppercase;
@@ -926,4 +926,53 @@
 .friends-activity-title {
   color: var(--text-title);
   font-weight: 600;
+}
+
+.feed-error-text {
+  padding: 24px;
+  color: var(--status-error-fg);
+}
+
+.feed-action-btn-danger {
+  max-width: 120px;
+  background: var(--status-error-bg);
+  border-color: var(--accent-danger);
+  color: var(--accent-danger);
+}
+
+.feed-action-btn-danger:hover {
+  background: var(--accent-danger);
+  color: var(--text-on-accent);
+}
+
+/* Post badge tokens — light theme uses pale bg + saturated fg,
+   dark theme uses translucent bg + light fg (defined in App.css). */
+.post-badge-type.image { background: var(--badge-image-bg); color: var(--badge-image-fg); }
+.post-badge-type.video { background: var(--badge-video-bg); color: var(--badge-video-fg); }
+.post-badge-type.audio { background: var(--badge-audio-bg); color: var(--badge-audio-fg); }
+.post-badge-type.game { background: var(--badge-game-bg); color: var(--badge-game-fg); }
+.post-badge-type.text { background: var(--badge-text-bg); color: var(--badge-text-fg); }
+
+/* Status colors for scanner log rows */
+.log-item-line.scanning {
+  background: var(--status-scanning-bg);
+  color: var(--status-scanning-fg);
+  border-left: 4px solid var(--accent-primary);
+}
+
+.log-item-line.success {
+  background: var(--status-success-bg);
+  color: var(--status-success-fg);
+  border-left: 4px solid var(--accent-success);
+}
+
+.log-item-line.error {
+  background: var(--status-error-bg);
+  color: var(--status-error-fg);
+  border-left: 4px solid var(--accent-danger);
+}
+
+.article-badge-cat {
+  background: var(--badge-category-bg);
+  color: var(--badge-category-fg);
 }

@@ -15,6 +15,7 @@ html, body {
   --text-main:        #1b263b;
   --text-title:       #0f172a;
   --text-muted:       #64748b;
+  --text-on-accent:   #ffffff;
   --border-color:     #cbd5e1;
   --border-card:      #e2e8f0;
   --bg-item:          #f1f5f9;
@@ -24,10 +25,78 @@ html, body {
   --shadow-card:      0 4px 20px rgba(15, 23, 42, 0.03);
   --shadow-card-hover:0 10px 30px rgba(15, 23, 42, 0.06);
 
-  /* ── Sidebar tokens (always dark, independent of theme) ── */
-  --sidebar-bg:       #0f172a;
-  --sidebar-width:    260px;
-  --topbar-height:    52px;
+  /* ── Glassmorphism (originally tuned for dark — light override below) ── */
+  --glass-bg:         rgba(15, 23, 42, 0.04);
+  --glass-bg-hover:   rgba(15, 23, 42, 0.08);
+  --glass-border:     rgba(15, 23, 42, 0.10);
+  --glass-text:       var(--text-main);
+  --glass-text-muted: var(--text-muted);
+
+  /* ── Status / badge backgrounds (light) ── */
+  --status-info-bg:    #e0f2fe;
+  --status-info-fg:    #0369a1;
+  --status-success-bg: #dcfce7;
+  --status-success-fg: #166534;
+  --status-error-bg:   #fee2e2;
+  --status-error-fg:   #991b1b;
+  --status-warn-bg:    #fef3c7;
+  --status-warn-fg:    #92400e;
+  --status-scanning-bg:#f0f9ff;
+  --status-scanning-fg:#0369a1;
+
+  /* ── Post badge (light) ── */
+  --badge-image-bg:   #fdf2f8;
+  --badge-image-fg:   #db2777;
+  --badge-video-bg:   #f5f3ff;
+  --badge-video-fg:   #7c3aed;
+  --badge-audio-bg:   #ecfdf5;
+  --badge-audio-fg:   #059669;
+  --badge-game-bg:    #fff7ed;
+  --badge-game-fg:    #ea580c;
+  --badge-text-bg:    #fef3c7;
+  --badge-text-fg:    #d97706;
+  --badge-category-bg:#e0f2fe;
+  --badge-category-fg:#0369a1;
+
+  /* ── Brand accent (unchanged across themes) ── */
+  --accent-primary:    #6366f1;
+  --accent-primary-2:  #4f46e5;
+  --accent-success:    #10b981;
+  --accent-success-2:  #059669;
+  --accent-danger:     #ef4444;
+  --accent-danger-2:   #dc2626;
+  --accent-warn:       #f59e0b;
+  --accent-pink:       #d946ef;
+  --accent-pink-2:     #a855f7;
+  --accent-orange:     #f97316;
+  --accent-orange-2:   #ea580c;
+  --accent-purple:     #8b5cf6;
+  --accent-purple-2:   #7c3aed;
+
+  /* ── Camera / scanner dark surface (always dark) ── */
+  --scanner-bg:        #0f172a;
+  --scanner-text:      #94a3b8;
+
+  /* ── Sidebar tokens (theme-aware: matches current theme) ── */
+  --sidebar-bg:           #ffffff;
+  --sidebar-border:       rgba(15, 23, 42, 0.08);
+  --sidebar-shadow:       4px 0 24px rgba(15, 23, 42, 0.04);
+  --sidebar-text:         #1b263b;
+  --sidebar-text-muted:   #64748b;
+  --sidebar-hover-bg:     rgba(99, 102, 241, 0.08);
+  --sidebar-hover-text:   #4f46e5;
+  --sidebar-active-bg:    rgba(99, 102, 241, 0.14);
+  --sidebar-active-text:  #4338ca;
+  --sidebar-active-border:rgba(99, 102, 241, 0.25);
+  --sidebar-username:     #0f172a;
+  --sidebar-role:         #94a3b8;
+  --sidebar-input-bg:     rgba(15, 23, 42, 0.04);
+  --sidebar-input-border: rgba(15, 23, 42, 0.10);
+  --sidebar-input-bg-focus: rgba(15, 23, 42, 0.08);
+  --sidebar-logo-from:    #38bdf8;
+  --sidebar-logo-to:      #818cf8;
+  --sidebar-width:        260px;
+  --topbar-height:        52px;
 
   font-family: 'Inter', Arial, sans-serif;
   background: var(--bg-app);
@@ -43,14 +112,67 @@ html, body {
   --text-main:        #cbd5e1;
   --text-title:       #f8fafc;
   --text-muted:       #94a3b8;
+  --text-on-accent:   #ffffff;
   --border-color:     #30363d;
   --border-card:      #30363d;
-  --bg-item:          #0d1117;
+  --bg-item:          #161b22;
   --bg-input:         #0d1117;
   --text-input:       #cbd5e1;
   --border-input:     #30363d;
   --shadow-card:      0 4px 20px rgba(0, 0, 0, 0.4);
   --shadow-card-hover:0 10px 30px rgba(0, 0, 0, 0.5);
+
+  /* ── Sidebar (dark theme: keep dark) ── */
+  --sidebar-bg:           #0f172a;
+  --sidebar-border:       rgba(255, 255, 255, 0.06);
+  --sidebar-shadow:       4px 0 24px rgba(0, 0, 0, 0.3);
+  --sidebar-text:         #94a3b8;
+  --sidebar-text-muted:   #64748b;
+  --sidebar-hover-bg:     rgba(255, 255, 255, 0.06);
+  --sidebar-hover-text:   #e2e8f0;
+  --sidebar-active-bg:    rgba(99, 102, 241, 0.18);
+  --sidebar-active-text:  #a5b4fc;
+  --sidebar-active-border:rgba(99, 102, 241, 0.25);
+  --sidebar-username:     #e2e8f0;
+  --sidebar-role:         #64748b;
+  --sidebar-input-bg:     rgba(255, 255, 255, 0.08);
+  --sidebar-input-border: rgba(255, 255, 255, 0.15);
+  --sidebar-input-bg-focus: rgba(255, 255, 255, 0.12);
+  --sidebar-logo-from:    #38bdf8;
+  --sidebar-logo-to:      #818cf8;
+
+  /* ── Glassmorphism on dark ── */
+  --glass-bg:         rgba(255, 255, 255, 0.06);
+  --glass-bg-hover:   rgba(255, 255, 255, 0.12);
+  --glass-border:     rgba(255, 255, 255, 0.14);
+  --glass-text:       var(--text-main);
+  --glass-text-muted: rgba(255, 255, 255, 0.65);
+
+  /* ── Status / badge backgrounds (dark) ── */
+  --status-info-bg:    rgba(56, 189, 248, 0.14);
+  --status-info-fg:    #7dd3fc;
+  --status-success-bg: rgba(34, 197, 94, 0.14);
+  --status-success-fg: #86efac;
+  --status-error-bg:   rgba(239, 68, 68, 0.16);
+  --status-error-fg:   #fca5a5;
+  --status-warn-bg:    rgba(245, 158, 11, 0.16);
+  --status-warn-fg:    #fcd34d;
+  --status-scanning-bg:rgba(56, 189, 248, 0.10);
+  --status-scanning-fg:#7dd3fc;
+
+  /* ── Post badge (dark) ── */
+  --badge-image-bg:   rgba(219, 39, 119, 0.18);
+  --badge-image-fg:   #f9a8d4;
+  --badge-video-bg:   rgba(124, 58, 237, 0.18);
+  --badge-video-fg:   #c4b5fd;
+  --badge-audio-bg:   rgba(5, 150, 105, 0.20);
+  --badge-audio-fg:   #6ee7b7;
+  --badge-game-bg:    rgba(234, 88, 12, 0.18);
+  --badge-game-fg:    #fdba74;
+  --badge-text-bg:    rgba(217, 119, 6, 0.18);
+  --badge-text-fg:    #fcd34d;
+  --badge-category-bg:rgba(56, 189, 248, 0.18);
+  --badge-category-fg:#7dd3fc;
 }
 
 /* ══════════════════════════════════════════════════════
@@ -75,15 +197,15 @@ html, body {
   left: 0;
   bottom: 0;
   z-index: 200;
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3);
-  transition: transform 0.25s ease;
+  border-right: 1px solid var(--sidebar-border);
+  box-shadow: var(--sidebar-shadow);
+  transition: transform 0.25s ease, background 0.3s ease, border-color 0.3s ease;
 }
 
 /* ── Sidebar: Logo header ── */
 .sidebar-header {
   padding: 20px 20px 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--sidebar-border);
   flex-shrink: 0;
 }
 
@@ -103,7 +225,7 @@ html, body {
   font-size: 1.3rem;
   font-weight: 800;
   letter-spacing: 0.5px;
-  background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
+  background: linear-gradient(135deg, var(--sidebar-logo-from) 0%, var(--sidebar-logo-to) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   white-space: nowrap;
@@ -121,11 +243,11 @@ html, body {
   overflow-x: hidden;
   padding: 10px 10px;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255,255,255,0.1) transparent;
+  scrollbar-color: var(--sidebar-hover-bg) transparent;
 }
 
 .sidebar-nav::-webkit-scrollbar { width: 4px; }
-.sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+.sidebar-nav::-webkit-scrollbar-thumb { background: var(--sidebar-hover-bg); border-radius: 2px; }
 
 .sidebar-nav-item {
   display: flex;
@@ -136,7 +258,7 @@ html, body {
   border-radius: 10px;
   background: transparent;
   border: none;
-  color: #94a3b8;
+  color: var(--sidebar-text);
   font-size: 0.88rem;
   font-weight: 500;
   cursor: pointer;
@@ -148,16 +270,16 @@ html, body {
 }
 
 .sidebar-nav-item:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: #e2e8f0;
+  background: var(--sidebar-hover-bg);
+  color: var(--sidebar-hover-text);
   transform: translateX(2px);
 }
 
 .sidebar-nav-item.active {
-  background: rgba(99, 102, 241, 0.18);
-  color: #a5b4fc;
+  background: var(--sidebar-active-bg);
+  color: var(--sidebar-active-text);
   font-weight: 700;
-  border: 1px solid rgba(99, 102, 241, 0.25);
+  border: 1px solid var(--sidebar-active-border);
 }
 
 .sidebar-nav-item.active::before {
@@ -181,7 +303,7 @@ html, body {
 /* ── Sidebar: Bottom (User Profile) ── */
 .sidebar-bottom {
   padding: 12px 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid var(--sidebar-border);
   flex-shrink: 0;
 }
 
@@ -192,8 +314,8 @@ html, body {
   gap: 8px;
   width: 100%;
   padding: 10px 16px;
-  background: linear-gradient(135deg, #a855f7 0%, #d946ef 100%);
-  color: white;
+  background: linear-gradient(135deg, var(--accent-pink-2) 0%, var(--accent-pink) 100%);
+  color: var(--text-on-accent);
   border: none;
   border-radius: 10px;
   font-weight: 700;
@@ -221,7 +343,7 @@ html, body {
 }
 
 .sidebar-user:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--sidebar-hover-bg);
 }
 
 .sidebar-avatar {
@@ -248,7 +370,7 @@ html, body {
 .sidebar-username {
   font-size: 0.82rem;
   font-weight: 600;
-  color: #e2e8f0;
+  color: var(--sidebar-username);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -256,13 +378,13 @@ html, body {
 
 .sidebar-role {
   font-size: 0.72rem;
-  color: #64748b;
+  color: var(--sidebar-role);
 }
 
 .sidebar-logout-btn {
   background: none;
   border: none;
-  color: #64748b;
+  color: var(--sidebar-text-muted);
   cursor: pointer;
   padding: 4px;
   border-radius: 6px;

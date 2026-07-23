@@ -135,7 +135,7 @@ export default function Games({ searchOpenGameId = null, onConsumeSearchOpen }) 
           {loading ? (
             <p style={{ textAlign: 'center', color: 'white' }}>Đang tải danh sách bài viết...</p>
           ) : error ? (
-            <p style={{ textAlign: 'center', color: '#ff6b6b' }}>{error}</p>
+            <p className="games-error-text">{error}</p>
           ) : (
             <>
               <section className="games-section">
@@ -166,7 +166,7 @@ export default function Games({ searchOpenGameId = null, onConsumeSearchOpen }) 
                       </div>
                     ))
                   ) : (
-                    <p style={{ gridColumn: '1 / -1', textAlign: 'center', color: 'rgba(255,255,255,0.7)' }}>
+                    <p className="games-empty-text">
                       Không có bài viết nào
                     </p>
                   )}
@@ -196,8 +196,7 @@ export default function Games({ searchOpenGameId = null, onConsumeSearchOpen }) 
             <div className="modal-footer">
               <button
                 onClick={() => handleLikeGame(selectedGame.id)}
-                className="action-btn"
-                style={{ maxWidth: '120px', background: 'rgba(255, 107, 107, 0.3)', borderColor: '#ff6b6b' }}
+                className="action-btn games-action-btn-danger"
               >
                 ❤️ Thích bài viết
               </button>

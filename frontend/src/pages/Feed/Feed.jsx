@@ -732,7 +732,7 @@ export default function Feed({ currentUser, onNavigate }) {
                 }
                 if (!isTrusted) {
                   return (
-                    <div style={{ padding: '24px', color: '#ff6b6b' }}>
+                    <div className="feed-error-text">
                       ⚠️ Không thể mở game từ nguồn không đáng tin cậy: {fullUrl}
                       {/* Cookie migration done: the JWT now lives in an
                           httpOnly cookie the iframe can't read, so this
@@ -788,8 +788,7 @@ export default function Feed({ currentUser, onNavigate }) {
                   handleLikeKnowledge(selectedArticle.id);
                   setSelectedArticle(prev => ({ ...prev, likes: prev.likes + 1 }));
                 }}
-                className="action-btn"
-                style={{ maxWidth: '120px', background: 'rgba(255, 107, 107, 0.3)', borderColor: '#ff6b6b' }}
+                className="action-btn feed-action-btn-danger"
               >
                 ❤️ Thích bài viết
               </button>
@@ -857,8 +856,7 @@ export default function Feed({ currentUser, onNavigate }) {
                   handleLikeGame(selectedGame.id);
                   setSelectedGame(prev => ({ ...prev, likes: prev.likes + 1 }));
                 }} 
-                className="action-btn"
-                style={{ maxWidth: '120px', background: 'rgba(255, 107, 107, 0.3)', borderColor: '#ff6b6b' }}
+                className="action-btn feed-action-btn-danger"
               >
                 ❤️ Thích bài viết
               </button>

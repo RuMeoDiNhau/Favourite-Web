@@ -511,7 +511,7 @@ const handleFileChange = (e) => {
               />
               Âm Nhạc Trực Tuyến
             </h1>
-            <p style={{ margin: '5px 0 0 0', fontSize: '18px', color: 'rgba(255, 255, 255, 0.8)' }}>Thưởng thức và thư giãn cùng các bài hát bản quyền đỉnh cao</p>
+            <p className="music-header-subtitle">Thưởng thức và thư giãn cùng các bài hát bản quyền đỉnh cao</p>
           </div>
           <div style={{ display: 'flex', gap: '15px' }}>
             {selectedCategory === 'playlist' && !selectedPlaylist && user && (
@@ -537,7 +537,7 @@ const handleFileChange = (e) => {
           {loading ? (
             <p style={{ textAlign: 'center', color: 'white' }}>Đang tải âm nhạc...</p>
           ) : error ? (
-            <p style={{ textAlign: 'center', color: '#ff6b6b' }}>{error}</p>
+            <p className="music-error-text">{error}</p>
           ) : selectedPlaylist ? (
             /* Chi tiết Playlist */
             <div className="playlist-detail-view">
@@ -633,7 +633,7 @@ const handleFileChange = (e) => {
                     ))}
                   </div>
                 ) : (
-                  <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontStyle: 'italic', marginTop: '20px' }}>
+                  <p className="music-empty-text">
                     Danh sách phát này trống. Quay lại tab "Tất Cả" để thêm bài hát.
                   </p>
                 )}
@@ -672,7 +672,7 @@ const handleFileChange = (e) => {
                       ))}
                     </div>
                   ) : (
-                    <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.7)', marginTop: '20px' }}>
+                    <p className="music-empty-text">
                       Chưa có danh sách phát nào. {user ? 'Bấm "Tạo Playlist" để bắt đầu!' : 'Vui lòng đăng nhập để tạo mới.'}
                     </p>
                   )}
@@ -685,10 +685,9 @@ const handleFileChange = (e) => {
                     <section className="music-section">
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                         <h2 style={{ borderBottom: 'none', margin: 0 }}>📻 Danh Sách Phát Của Tôi</h2>
-                        <button 
+                        <button
                           className="view-all-playlists-btn"
                           onClick={() => setSelectedCategory('playlist')}
-                          style={{ background: 'none', border: 'none', color: '#a78bfa', cursor: 'pointer', fontWeight: '600' }}
                         >
                           Xem tất cả →
                         </button>
@@ -816,7 +815,7 @@ const handleFileChange = (e) => {
                   )}
 
                   {!loading && songs.length === 0 && (
-                    <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.7)', marginTop: '40px' }}>Không có dữ liệu bài hát</p>
+                    <p className="music-empty-text">Không có dữ liệu bài hát</p>
                   )}
                 </>
               )}
@@ -1001,7 +1000,7 @@ const handleFileChange = (e) => {
         <div className="music-modal-overlay">
           <div className="music-modal-content">
             <div className="music-modal-header">
-              <h2 style={{ color: '#8b5cf6' }}>Tạo Danh Sách Phát Mới</h2>
+              <h2 className="music-modal-title">Tạo Danh Sách Phát Mới</h2>
               <button className="music-close-btn" onClick={() => setShowCreatePlaylistModal(false)}>×</button>
             </div>
             <form onSubmit={handleCreatePlaylistSubmit} className="music-modal-body">
