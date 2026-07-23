@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import * as api from '../../services/api';
+import T from '../../i18n/T';
 import './Collections.css';
 
 // Renders a single collection by id. Loads the collection via
@@ -9,6 +11,7 @@ import './Collections.css';
 // Edit mode toggles an inline form for name/description — same UX as
 // the list page's create form, intentionally kept symmetric.
 export default function CollectionDetail({ collectionId, onNavigate }) {
+  const { t } = useTranslation();
   const [collection, setCollection] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -27,7 +30,9 @@ export default function CollectionDetail({ collectionId, onNavigate }) {
       } catch (err) {
         if (!cancelled) {
           const status = err?.response?.status;
-          setError(status === 404 ? 'Bộ sưu tập không tồn tại.' : 'Không tải được bộ sưu tập.');
+          setError(status === 404
+            ? t('collections.err.not_found', { defaultValue: 'Bộ sưu tập không tồn tại.' })
+            : t('collections.err.load_detail', { defaultValue: 'Không tải được bộ sưu tập.' }));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -78,14 +83,14 @@ export default function CollectionDetail({ collectionId, onNavigate }) {
   };
 
   if (loading) {
-    return <div className="collections-container"><div className="collections-status">Đang tải...</div></div>;
+    return <div className="collections-container"><div className="collections-status"><T>Đang tải...</T></div></div>;
   }
 
   if (error) {
     return (
       <div className="collections-container">
         <div className="collections-status collections-error">{error}</div>
-        <button className="collections-back" onClick={() => onNavigate?.('collections')}>← Về danh sách</button>
+        <button className="collections-back" onClick={() => onNavigate?.('collections')}><T>← Về danh sách</T></button>
       </div>
     );
   }
@@ -94,7 +99,7 @@ export default function CollectionDetail({ collectionId, onNavigate }) {
 
   return (
     <div className="collections-container">
-      <button className="collections-back" onClick={() => onNavigate?.('collections')}>← Về danh sách</button>
+      <button className="collections-back" onClick={() => onNavigate?.('collections')}><T>← Về danh sách</T></button>
 
       <header className="collections-header">
         {!editing ? (
@@ -102,7 +107,7 @@ export default function CollectionDetail({ collectionId, onNavigate }) {
             <h1>📂 {collection.name}</h1>
             {collection.description && <p className="collections-subtitle">{collection.description}</p>}
             <div className="collections-detail-actions">
-              <button className="collections-edit-btn" onClick={beginEdit}>✏️ Sửa</button>
+              <button className="collections-edit-btn" onClick={beginEdit}>✏️ <T>Sửa</T></button>
             </div>
           </>
         ) : (
@@ -122,9 +127,9 @@ export default function CollectionDetail({ collectionId, onNavigate }) {
             />
             <div className="collections-create-actions">
               <button type="submit" className="collections-submit" disabled={saving || !editName.trim()}>
-                {saving ? 'Đang lưu...' : 'Lưu'}
+                {saving ? <T>Đang lưu...</T> : <T>Lưu</T>}
               </button>
-              <button type="button" className="collections-cancel" onClick={() => setEditing(false)}>Huỷ</button>
+              <button type="button" className="collections-cancel" onClick={() => setEditing(false)}><T>Huỷ</T></button>
             </div>
           </form>
         )}
@@ -133,8 +138,8 @@ export default function CollectionDetail({ collectionId, onNavigate }) {
       {!collection.items || collection.items.length === 0 ? (
         <div className="collections-empty">
           <div className="collections-empty-icon">📄</div>
-          <h3>Bộ sưu tập trống</h3>
-          <p>Mở bài viết Knowledge → nhấn "📂 Thêm vào bộ sưu tập" → chọn "{collection.name}".</p>
+          <h3><T>Bộ sưu tập trống</T></h3>
+          <p><T>{`Mở bài viết Knowledge → nhấn "📂 Thêm vào bộ sưu tập" → chọn "${collection.name}".`}</T></p>
         </div>
       ) : (
         <ul className="collections-grid">
@@ -152,16 +157,16 @@ export default function CollectionDetail({ collectionId, onNavigate }) {
               <div className="collections-card-name">{item.title}</div>
               <div className="collections-card-meta">
                 {item.category && <span>📁 {item.category}</span>}
-                <span>📚 Bài viết</span>
+                <span>📚 <T>Bài viết</T></span>
               </div>
               <div className="collections-card-footer">
                 <button
                   className="collections-card-delete"
                   onClick={(e) => handleRemoveItem(item, e)}
-                  title="Xoá khỏi bộ sưu tập"
+                  title={<T>Xoá khỏi bộ sưu tập</T>}
                   type="button"
                 >
-                  ✕ Bỏ khỏi bộ sưu tập
+                  ✕ <T>Bỏ khỏi bộ sưu tập</T>
                 </button>
               </div>
             </li>

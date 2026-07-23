@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import * as api from '../../services/api';
+import T from '../../i18n/T';
 import './Collections.css';
 
 // Button + modal combo. Clicking the button opens a picker dialog
@@ -79,23 +80,23 @@ export default function AddToCollectionButton({ contentType, contentId }) {
       <button
         className="action-btn"
         onClick={() => setOpen(true)}
-        title="Thêm vào bộ sưu tập"
+        title={<T>Thêm vào bộ sưu tập</T>}
         type="button"
       >
-        📂 Thêm vào bộ sưu tập
+        📂 <T>Thêm vào bộ sưu tập</T>
       </button>
       {open && (
         <div className="collections-picker-overlay" onClick={() => setOpen(false)}>
           <div className="collections-picker" onClick={(e) => e.stopPropagation()}>
             <div className="collections-picker-header">
-              <span>Thêm vào bộ sưu tập</span>
+              <span><T>Thêm vào bộ sưu tập</T></span>
               <button className="collections-picker-close" onClick={() => setOpen(false)} type="button">×</button>
             </div>
             <div className="collections-picker-list">
               {loading ? (
-                <div className="collections-picker-empty">Đang tải...</div>
+                <div className="collections-picker-empty"><T>Đang tải...</T></div>
               ) : collections.length === 0 ? (
-                <div className="collections-picker-empty">Bạn chưa có bộ sưu tập nào. Hãy vào "Bộ sưu tập của tôi" để tạo.</div>
+                <div className="collections-picker-empty"><T>Bạn chưa có bộ sưu tập nào. Hãy vào "Bộ sưu tập của tôi" để tạo.</T></div>
               ) : (
                 collections.map((c) => {
                   const isAdded = addedIds.has(c.id);
@@ -106,7 +107,7 @@ export default function AddToCollectionButton({ contentType, contentId }) {
                       onClick={() => handleToggle(c)}
                     >
                       <span>{c.name}</span>
-                      <span>{isAdded ? '✓ Đã thêm' : '+ Thêm'}</span>
+                      <span>{isAdded ? <>✓ <T>Đã thêm</T></> : <>+ <T>Thêm</T></>}</span>
                     </div>
                   );
                 })

@@ -106,7 +106,7 @@
   "msg:ec4bfcda": "Tap 🔖 on a Knowledge article or on a post in the Feed to save it for later.",
   "msg:127e93ed": "Articles and posts you've saved for later.",
   "msg:a8bcf2ad": "No collections yet",
-  "msg:b4892a70": "No collections yet. Open \"My Collections\" to create one.",
+  "msg:b4892a70": "You have no collections yet. Open \"My collections\" to create one.",
   "msg:7df97e7a": "You don't follow anyone, or your friends haven't been active recently.",
   "msg:7d4e95ba": "No game posts.",
   "msg:ebe1e6d8": "No knowledge articles yet.",
@@ -324,5 +324,17 @@
   "msg:8addc9fd": "Success",
   "msg:b816e47b": "Failed",
   "msg:60bd67c5": "Plays",
-  "msg:61ef2696": "Likes"
+  "msg:61ef2696": "Likes",
+  "msg:0f35606d": "Creating...",
+  "msg:dda3c904": "Saving...",
+  "msg:e1b9b228": "✓ Added",
+  "msg:48a1d84f": "+ Add",
+  "msg:edaff857": "Open a Knowledge article → click \"📂 Add to collection\" → pick \"{name}\".",
+  "msg:764e43cb": "Could not load collections.",
+  "msg:96d6b5db": "Could not create. Name must be non-empty and ≤255 characters.",
+  "msg:95d5ecc3": "Collection not found.",
+  "msg:c991266d": "Could not load collection.",
+  "msg:658404bd": "Delete this collection?",
+  "msg:db840aa1": "Collection name (required)",
+  "msg:5c3fc9db": "Description (optional)"
 }
