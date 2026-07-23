@@ -260,5 +260,18 @@
   "msg:3848c838": "✏️ Edit",
   "msg:2e5584cf": "📚 Articles",
   "msg:8f8f80dc": "🗑️",
-  "msg:332e5b07": "🏆"
+  "msg:332e5b07": "🏆",
+  "msg:8709052d": "You haven't activated Face ID yet.",
+  "msg:a40a48fe": "Register your face to sign in faster using your camera.",
+  "msg:58bb9275": "Activate Face ID now",
+  "msg:885d7ac7": "Collections",
+  "msg:6b9247fa": "Face scan",
+  "msg:60ee99f2": "You're on a {n}-day streak! Keep going.",
+  "msg:886f765b": "You read this · {time}",
+  "msg:10476f1c": "You listened · {time}",
+  "msg:a5e32479": "You liked this · {time}",
+  "msg:ceb564f0": "You did something · {time}",
+  "msg:edc1054a": "Articles",
+  "msg:8f59d1c5": "Music",
+  "msg:7b9ec034": "Games"
 }

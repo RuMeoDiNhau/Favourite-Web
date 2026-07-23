@@ -3,6 +3,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend,
 } from 'recharts';
+import { useTranslation } from 'react-i18next';
 import * as api from '../../services/api';
 import T from '../../i18n/T';
 import './Home.css';
@@ -36,7 +37,18 @@ const EVENT_LABEL = {
   like: 'đã thích',
 };
 
+// Translation keys for the "Bạn X · time ago" small line under each
+// recent activity entry. Using dedicated keys (instead of the <T>
+// hash-of-template approach) because the {action} placeholder is
+// resolved per event_type at render time.
+const EVENT_KEY = {
+  view: 'home.event.view',  // "Bạn đã đọc · {time}"
+  play: 'home.event.play',  // "Bạn đã nghe · {time}"
+  like: 'home.event.like',  // "Bạn đã thích · {time}"
+};
+
 function Home({ onNavigate }) {
+  const { t } = useTranslation();
   const [days, setDays] = useState(7);
   const [insights, setInsights] = useState({
     totals: EMPTY_TOTALS,
@@ -147,11 +159,24 @@ function Home({ onNavigate }) {
         <div>
           <h1 className="home-title">🏠 <T>Trang chủ</T></h1>
           <p className="home-subtitle">
-            {loading
-              ? 'Đang tải...'
-              : hasActivity
-                ? `Bạn đang có chuỗi ${insights.streak_days} ngày liên tiếp! Hãy tiếp tục nhé.`
-                : 'Khám phá nội dung để bắt đầu ghi dấu hoạt động của bạn.'}
+            {loading ? (
+              <T>Đang tải...</T>
+            ) : hasActivity ? (
+              // Interpolation: t() renders the {n} placeholder from
+              // the English template "You're on a {n}-day streak!
+              // Keep going." `<T>` would re-hash the resolved string
+              // each render, which never matches a single JSON entry,
+              // so we bypass the hash for this one and let i18next
+              // interpolate directly.
+              <span>
+                {t('home.streak', {
+                  n: insights.streak_days,
+                  defaultValue: `Bạn đang có chuỗi ${insights.streak_days} ngày liên tiếp! Hãy tiếp tục nhé.`,
+                })}
+              </span>
+            ) : (
+              <T>Khám phá nội dung để bắt đầu ghi dấu hoạt động của bạn.</T>
+            )}
           </p>
         </div>
         <div className="home-days-toggle" role="tablist">
@@ -173,7 +198,7 @@ function Home({ onNavigate }) {
             className="home-export-btn"
             onClick={() => onExport('csv')}
             disabled={exporting}
-            title="Tải file CSV"
+            title={<T>Tải file CSV</T>}
           >
             ⬇️ CSV
           </button>
@@ -182,7 +207,7 @@ function Home({ onNavigate }) {
             className="home-export-btn"
             onClick={() => onExport('json')}
             disabled={exporting}
-            title="Tải file JSON"
+            title={<T>Tải file JSON</T>}
           >
             ⬇️ JSON
           </button>
@@ -224,9 +249,9 @@ function Home({ onNavigate }) {
                   labelStyle={{ color: '#f8fafc' }}
                 />
                 <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
-                <Line type="monotone" dataKey="knowledge" name="Bài viết" stroke="#6366f1" strokeWidth={2} dot={{ r: 3 }} />
-                <Line type="monotone" dataKey="music" name="Nhạc" stroke="#ec4899" strokeWidth={2} dot={{ r: 3 }} />
-                <Line type="monotone" dataKey="game" name="Game" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="knowledge" name={t('legend.knowledge', { defaultValue: 'Bài viết' })} stroke="#6366f1" strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="music" name={t('legend.music', { defaultValue: 'Nhạc' })} stroke="#ec4899" strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="game" name={t('legend.game', { defaultValue: 'Game' })} stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />
               </LineChart>
             </ResponsiveContainer>
           )}
@@ -241,7 +266,9 @@ function Home({ onNavigate }) {
             <Skeleton lines={3} />
           ) : insights.recent_articles.length === 0 ? (
             <p className="home-empty-text">
-              Chưa có bài viết nào. Hãy mở <a href="#" onClick={(e) => { e.preventDefault(); onNavigate?.('knowledge'); }}>Knowledge</a> để bắt đầu.
+              <T>Chưa có bài viết nào. Hãy mở </T>
+              <a href="#" onClick={(e) => { e.preventDefault(); onNavigate?.('knowledge'); }}><T>Knowledge</T></a>
+              <T> để bắt đầu.</T>
             </p>
           ) : (
             <ul className="home-recent-list">
@@ -264,7 +291,7 @@ function Home({ onNavigate }) {
           {loading ? (
             <Skeleton lines={4} />
           ) : recent.length === 0 ? (
-            <p className="home-empty-text">Chưa có hoạt động nào.</p>
+            <p className="home-empty-text"><T>Chưa có hoạt động nào.</T></p>
           ) : (
             <ul className="home-recent-list">
               {recent.map((r) => (
@@ -273,8 +300,10 @@ function Home({ onNavigate }) {
                   <div className="home-recent-meta">
                     <strong>{r.title || TYPE_LABEL[r.content_type] || r.content_type}</strong>
                     <small>
-                      Bạn {EVENT_LABEL[r.event_type] || r.event_type}{' '}
-                      · {formatRelative(r.created_at)}
+                      {t(EVENT_KEY[r.event_type] || 'home.event.unknown', {
+                        time: formatRelative(r.created_at),
+                        defaultValue: `Bạn ${EVENT_LABEL[r.event_type] || r.event_type} · ${formatRelative(r.created_at)}`,
+                      })}
                     </small>
                   </div>
                 </li>
@@ -344,11 +373,12 @@ function Skeleton({ lines }) {
 }
 
 function formatRelative(iso) {
-  // Best-effort relative time in Vietnamese. The server gives us
-  // ISO with no Z; we treat it as local-naive (the rest of the app
-  // also writes datetime.utcnow without TZ). For an MVP this is
-  // good enough — production should switch to timezone-aware
-  // datetimes server-side.
+  // Best-effort relative time. The server gives us ISO with no Z;
+  // we treat it as local-naive (the rest of the app also writes
+  // datetime.utcnow without TZ). For an MVP this is good enough —
+  // production should switch to timezone-aware datetimes server-side.
+  // Returns a Vietnamese-formatted string directly because the only
+  // caller composes it into another translation key's {time} slot.
   try {
     const t = new Date(iso + (iso.endsWith('Z') ? '' : 'Z'));
     const diff = Math.floor((Date.now() - t.getTime()) / 1000);

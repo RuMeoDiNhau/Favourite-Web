@@ -272,16 +272,16 @@ function App() {
   // Single source of truth for nav items so desktop <nav> and mobile drawer
   // can't drift. `adminOnly` is gated against the current user's role.
   const NAV_ITEMS = [
-    { name: 'home',        icon: '🏠', label: 'Trang chủ' },
-    { name: 'feed',        icon: '📰', label: 'Bảng tin' },
-    { name: 'bookmarks',   icon: '🔖', label: 'Đã lưu' },
-    { name: 'collections', icon: '📂', label: 'Bộ sưu tập' },
-    { name: 'dashboard',   icon: '📷', label: 'Quét khuôn mặt' },
-    { name: 'users',       icon: '👥', label: 'Users', adminOnly: true },
-    { name: 'logs',        icon: '📋', label: 'Logs',  adminOnly: true },
-    { name: 'games',       icon: '🎮', label: 'Games' },
-    { name: 'music',       icon: '🎵', label: 'Music' },
-    { name: 'knowledge',   icon: '📚', label: 'Knowledge' },
+    { name: 'home',        icon: '🏠', labelKey: 'Trang chủ' },
+    { name: 'feed',        icon: '📰', labelKey: 'Bảng tin' },
+    { name: 'bookmarks',   icon: '🔖', labelKey: 'Đã lưu' },
+    { name: 'collections', icon: '📂', labelKey: 'Bộ sưu tập' },
+    { name: 'dashboard',   icon: '📷', labelKey: 'Quét khuôn mặt' },
+    { name: 'users',       icon: '👥', labelKey: 'Users', adminOnly: true },
+    { name: 'logs',        icon: '📋', labelKey: 'Logs',  adminOnly: true },
+    { name: 'games',       icon: '🎮', labelKey: 'Games' },
+    { name: 'music',       icon: '🎵', labelKey: 'Music' },
+    { name: 'knowledge',   icon: '📚', labelKey: 'Knowledge' },
   ];
   const visibleNav = NAV_ITEMS.filter((it) => !it.adminOnly || user.role === 'admin');
 
@@ -291,7 +291,7 @@ function App() {
       className={view === item.name ? 'active' : ''}
       onClick={() => setView(item.name)}
     >
-      {item.label}
+      <T>{item.labelKey}</T>
     </button>
   );
 
@@ -329,7 +329,7 @@ function App() {
                   onClick={() => { setView(item.name); setSidebarOpen(false); }}
                 >
                   <span className="sidebar-nav-icon">{item.icon}</span>
-                  {item.label}
+                  <T>{item.labelKey}</T>
                 </button>
               ))}
             </nav>
@@ -419,10 +419,10 @@ function App() {
                   <span style={{ fontSize: '18px' }}>🔐</span>
                   <div>
                     <span style={{ fontWeight: 600, fontSize: '0.88rem', color: '#a5b4fc' }}>
-                      Bạn chưa kích hoạt Face ID.
+                      <T>Bạn chưa kích hoạt Face ID.</T>
                     </span>
                     <span style={{ fontSize: '0.82rem', color: '#64748b', marginLeft: '8px' }}>
-                      Đăng ký khuôn mặt để đăng nhập nhanh hơn bằng camera.
+                      <T>Đăng ký khuôn mặt để đăng nhập nhanh hơn bằng camera.</T>
                     </span>
                   </div>
                 </div>
@@ -430,7 +430,7 @@ function App() {
                   className="face-id-activate-btn"
                   onClick={() => setShowFaceSetup(true)}
                 >
-                  📷 Kích hoạt Face ID ngay
+                  📷 <T>Kích hoạt Face ID ngay</T>
                 </button>
               </div>
             )}
