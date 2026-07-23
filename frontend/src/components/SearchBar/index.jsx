@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import * as api from '../../services/api';
 import {
   getSearchHistory,
   pushSearchQuery,
   clearSearchHistory,
 } from '../../lib/searchHistory';
+import T from '../../i18n/T';
 import './SearchBar.css';
 
 // Display order of the result-type groups. Knowledge first because
@@ -13,6 +15,16 @@ import './SearchBar.css';
 const TYPE_ORDER = ['knowledge', 'music', 'game', 'user'];
 
 const TYPE_LABELS = {
+  knowledge: 'Bài viết',
+  music: 'Bài hát',
+  game: 'Trò chơi',
+  user: 'Người dùng',
+};
+
+// t() keys for the per-type group header. Using dedicated keys (not
+// the hash approach) so the label is shared with the rest of the
+// app and translates consistently.
+const TYPE_LABEL_KEY = {
   knowledge: 'Bài viết',
   music: 'Bài hát',
   game: 'Trò chơi',
@@ -37,6 +49,7 @@ const DEBOUNCE_MS = 250;
 const MIN_QUERY_LEN = 2;
 
 export default function SearchBar({ onSelectItem, isAdmin = false, userId = null }) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -226,13 +239,13 @@ export default function SearchBar({ onSelectItem, isAdmin = false, userId = null
         <input
           className="searchbar-input"
           type="text"
-          placeholder="Tìm kiếm bài viết, nhạc, game..."
+          placeholder={t('search.ph.placeholder', { defaultValue: 'Tìm kiếm bài viết, nhạc, game...' })}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => setOpen(true)}
           onKeyDown={handleKeyDown}
           ref={inputRef}
-          aria-label="Tìm kiếm"
+          aria-label={t('search.label', { defaultValue: 'Tìm kiếm' })}
           role="combobox"
           aria-expanded={open}
           aria-controls="searchbar-dropdown"
@@ -242,7 +255,7 @@ export default function SearchBar({ onSelectItem, isAdmin = false, userId = null
           <button
             className="searchbar-clear"
             onClick={() => { setQuery(''); setResults(null); }}
-            aria-label="Xóa"
+            aria-label={t('search.clear', { defaultValue: 'Xóa' })}
             type="button"
           >
             ×
@@ -258,13 +271,13 @@ export default function SearchBar({ onSelectItem, isAdmin = false, userId = null
           {query.trim().length < MIN_QUERY_LEN && history.length > 0 && (
             <div className="searchbar-section">
               <div className="searchbar-section-header">
-                <span>Tìm gần đây</span>
+                <span><T>Tìm gần đây</T></span>
                 <button
                   className="searchbar-history-clear"
                   onClick={() => { clearSearchHistory(userId); setHistory([]); }}
                   type="button"
                 >
-                  Xóa lịch sử
+                  <T>Xóa lịch sử</T>
                 </button>
               </div>
               {history.slice(0, 5).map((h, i) => {
@@ -296,11 +309,11 @@ export default function SearchBar({ onSelectItem, isAdmin = false, userId = null
           {query.trim().length >= MIN_QUERY_LEN && (
             <div className="searchbar-section">
               {loading && (
-                <div className="searchbar-status">Đang tìm...</div>
+                <div className="searchbar-status"><T>Đang tìm...</T></div>
               )}
               {!loading && totalCount === 0 && (
                 <div className="searchbar-status">
-                  Không tìm thấy kết quả cho "{query.trim()}"
+                  {t('search.no_results', { q: query.trim(), defaultValue: `Không tìm thấy kết quả cho "${query.trim()}"` })}
                 </div>
               )}
               {!loading && totalCount > 0 && (
@@ -311,7 +324,7 @@ export default function SearchBar({ onSelectItem, isAdmin = false, userId = null
                     return (
                       <div key={t} className="searchbar-group">
                         <div className="searchbar-group-header">
-                          {TYPE_ICONS[t]} {TYPE_LABELS[t]}
+                          {TYPE_ICONS[t]} <T>{TYPE_LABEL_KEY[t]}</T>
                         </div>
                         {arr.map((item, idx) => {
                           const key = `${t}-${item.id ?? item.user_id ?? idx}`;
@@ -362,7 +375,7 @@ export default function SearchBar({ onSelectItem, isAdmin = false, userId = null
 
           {query.trim().length < MIN_QUERY_LEN && history.length === 0 && (
             <div className="searchbar-status">
-              Gõ ít nhất {MIN_QUERY_LEN} ký tự để tìm kiếm.
+              <T>{`Gõ ít nhất ${MIN_QUERY_LEN} ký tự để tìm kiếm.`}</T>
             </div>
           )}
         </div>

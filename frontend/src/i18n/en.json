@@ -298,5 +298,9 @@
   "msg:11d07893": "Enter your full name...",
   "msg:b018f472": "Enter email (e.g. name@gmail.com)...",
   "msg:06cfb702": "Set a password...",
-  "msg:af3d07a4": "Enter department..."
+  "msg:af3d07a4": "Enter department...",
+  "msg:bb98b9be": "Search articles, music, games...",
+  "msg:7d51f0bd": "Search",
+  "msg:28b4b0e2": "Clear",
+  "msg:5a1d69af": "No results for \"{q}\""
 }
