@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import CameraBox from '../../components/CameraBox';
 import * as api from '../../services/api';
+import T from '../../i18n/T';
 import './Login.css';
 
 export default function Login({ onLoginSuccess }) {
+  const { t } = useTranslation();
   const [isRegistering, setIsRegistering] = useState(false); // Trạng thái Đăng ký vs Đăng nhập
   
   // Trạng thái Đăng nhập
@@ -40,7 +43,7 @@ export default function Login({ onLoginSuccess }) {
   const handlePasswordLogin = async (e) => {
     e.preventDefault();
     if (!usernameOrEmail || !password) {
-      setError('Vui lòng điền đầy đủ tài khoản và mật khẩu.');
+      setError(t('login.err.fill_all', { defaultValue: 'Vui lòng điền đầy đủ tài khoản và mật khẩu.' }));
       return;
     }
 
@@ -58,7 +61,7 @@ export default function Login({ onLoginSuccess }) {
       }
     } catch (err) {
       console.error(err);
-      setError(formatErrorMsg(err, 'Đăng nhập thất bại. Vui lòng kiểm tra lại tài khoản/mật khẩu.'));
+      setError(formatErrorMsg(err, t('login.err.password_fail', { defaultValue: 'Đăng nhập thất bại. Vui lòng kiểm tra lại tài khoản/mật khẩu.' })));
     } finally {
       setLoading(false);
     }
@@ -87,7 +90,7 @@ export default function Login({ onLoginSuccess }) {
       } catch (err) {
         console.error(err);
         setFaceStatus('error');
-        setError(err.response?.data?.detail || 'Không nhận diện được khuôn mặt. Vui lòng thử lại.');
+        setError(err.response?.data?.detail || t('login.err.face_fail', { defaultValue: 'Không nhận diện được khuôn mặt. Vui lòng thử lại.' }));
       }
     };
     reader.readAsDataURL(file);
@@ -104,7 +107,7 @@ export default function Login({ onLoginSuccess }) {
   const handleRegister = async (e) => {
     e.preventDefault();
     if (!regForm.user_id || !regForm.name || !regForm.password) {
-      setError('Vui lòng điền đầy đủ các trường bắt buộc (Username, Họ tên, Mật khẩu).');
+      setError(t('login.err.fill_required', { defaultValue: 'Vui lòng điền đầy đủ các trường bắt buộc (Username, Họ tên, Mật khẩu).' }));
       return;
     }
 
@@ -137,7 +140,7 @@ export default function Login({ onLoginSuccess }) {
         images_base64: imagesBase64,
       });
 
-      setSuccessMsg('Đăng ký tài khoản thành công! Bạn đã có thể đăng nhập bằng tài khoản này.');
+      setSuccessMsg(t('login.success.register', { defaultValue: 'Đăng ký tài khoản thành công! Bạn đã có thể đăng nhập bằng tài khoản này.' }));
       // Reset form đăng ký
       setRegForm({
         user_id: '',
@@ -154,7 +157,7 @@ export default function Login({ onLoginSuccess }) {
       }, 2000);
     } catch (err) {
       console.error(err);
-      setError(formatErrorMsg(err, 'Đăng ký thất bại. Tên tài khoản hoặc email có thể đã tồn tại.'));
+      setError(formatErrorMsg(err, t('login.err.register_fail', { defaultValue: 'Đăng ký thất bại. Tên tài khoản hoặc email có thể đã tồn tại.' })));
     } finally {
       setLoading(false);
     }
@@ -164,8 +167,8 @@ export default function Login({ onLoginSuccess }) {
     <div className="login-wrapper">
       <div className="login-card">
         <div className="login-header">
-          <h2>Fav Web Portal</h2>
-          <p>{isRegistering ? 'Tạo tài khoản thành viên mới' : 'Hệ thống nhận diện khuôn mặt & dịch vụ giải trí'}</p>
+          <h2><T>Fav Web Portal</T></h2>
+          <p>{isRegistering ? <T>Tạo tài khoản thành viên mới</T> : <T>Hệ thống nhận diện khuôn mặt & dịch vụ giải trí</T>}</p>
         </div>
 
         {error && <div className="login-error-msg">{error}</div>}
@@ -174,44 +177,44 @@ export default function Login({ onLoginSuccess }) {
         {!isRegistering ? (
           <>
             <div className="login-tabs">
-              <button 
+              <button
                 className={`tab-btn ${loginMethod === 'password' ? 'active' : ''}`}
                 onClick={() => { setLoginMethod('password'); setError(''); }}
               >
-                🔑 Mật khẩu
+                🔑 <T>Mật khẩu</T>
               </button>
-              <button 
+              <button
                 className={`tab-btn ${loginMethod === 'face' ? 'active' : ''}`}
                 onClick={() => { setLoginMethod('face'); setError(''); setFaceStatus('idle'); }}
               >
-                📷 Khuôn mặt
+                📷 <T>Khuôn mặt</T>
               </button>
             </div>
 
             {loginMethod === 'password' ? (
               <form className="login-form" onSubmit={handlePasswordLogin}>
                 <div className="input-group">
-                  <label>Tài khoản hoặc Email</label>
-                  <input 
-                    type="text" 
-                    placeholder="Nhập username hoặc email..." 
+                  <label><T>Tài khoản hoặc Email</T></label>
+                  <input
+                    type="text"
+                    placeholder={t('login.ph.username', { defaultValue: 'Nhập username hoặc email...' })}
                     value={usernameOrEmail}
                     onChange={(e) => setUsernameOrEmail(e.target.value)}
                     disabled={loading}
                   />
                 </div>
                 <div className="input-group">
-                  <label>Mật khẩu</label>
-                  <input 
-                    type="password" 
-                    placeholder="Nhập mật khẩu..." 
+                  <label><T>Mật khẩu</T></label>
+                  <input
+                    type="password"
+                    placeholder={t('login.ph.password', { defaultValue: 'Nhập mật khẩu...' })}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={loading}
                   />
                 </div>
                 <button type="submit" className="login-submit-btn" disabled={loading}>
-                  {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
+                  {loading ? <T>Đang đăng nhập...</T> : <T>Đăng nhập</T>}
                 </button>
               </form>
             ) : (
@@ -221,21 +224,21 @@ export default function Login({ onLoginSuccess }) {
                 </div>
                 
                 <div className="face-scan-status">
-                  {faceStatus === 'idle' && <p className="status-text text-idle">Chụp ảnh khuôn mặt đã đăng ký để đăng nhập</p>}
-                  {faceStatus === 'scanning' && <p className="status-text text-scanning">🔄 Đang nhận diện... Vui lòng giữ nguyên khuôn mặt</p>}
-                  {faceStatus === 'success' && <p className="status-text text-success">✔️ Nhận dạng thành công! Đang chuyển hướng...</p>}
-                  {faceStatus === 'error' && <p className="status-text text-error">❌ Nhận dạng thất bại. Hãy thử lại dưới điều kiện đủ ánh sáng.</p>}
+                  {faceStatus === 'idle' && <p className="status-text text-idle"><T>Chụp ảnh khuôn mặt đã đăng ký để đăng nhập</T></p>}
+                  {faceStatus === 'scanning' && <p className="status-text text-scanning"><T>🔄 Đang nhận diện... Vui lòng giữ nguyên khuôn mặt</T></p>}
+                  {faceStatus === 'success' && <p className="status-text text-success"><T>✔️ Nhận dạng thành công! Đang chuyển hướng...</T></p>}
+                  {faceStatus === 'error' && <p className="status-text text-error"><T>❌ Nhận dạng thất bại. Hãy thử lại dưới điều kiện đủ ánh sáng.</T></p>}
                 </div>
               </div>
             )}
 
             <div className="login-footer" style={{ marginTop: '20px', textAlign: 'center', fontSize: '14px' }}>
-              <span>Chưa có tài khoản? </span>
+              <span><T>Chưa có tài khoản?</T> </span>
               <button
                 className="login-toggle-btn"
                 onClick={() => { setIsRegistering(true); setError(''); }}
               >
-                Đăng ký ngay
+                <T>Đăng ký ngay</T>
               </button>
             </div>
           </>
@@ -244,11 +247,11 @@ export default function Login({ onLoginSuccess }) {
           <>
             <form className="login-form" onSubmit={handleRegister}>
               <div className="input-group">
-                <label>Tên tài khoản (Username) *</label>
-                <input 
-                  type="text" 
+                <label><T>Tên tài khoản (Username) *</T></label>
+                <input
+                  type="text"
                   name="user_id"
-                  placeholder="Nhập username đăng nhập..." 
+                  placeholder={t('login.ph.username_login', { defaultValue: 'Nhập username đăng nhập...' })}
                   value={regForm.user_id}
                   onChange={handleRegChange}
                   disabled={loading}
@@ -256,11 +259,11 @@ export default function Login({ onLoginSuccess }) {
                 />
               </div>
               <div className="input-group">
-                <label>Họ và tên *</label>
-                <input 
-                  type="text" 
+                <label><T>Họ và tên *</T></label>
+                <input
+                  type="text"
                   name="name"
-                  placeholder="Nhập họ tên đầy đủ..." 
+                  placeholder={t('login.ph.full_name', { defaultValue: 'Nhập họ tên đầy đủ...' })}
                   value={regForm.name}
                   onChange={handleRegChange}
                   disabled={loading}
@@ -268,22 +271,22 @@ export default function Login({ onLoginSuccess }) {
                 />
               </div>
               <div className="input-group">
-                <label>Địa chỉ Email</label>
-                <input 
-                  type="email" 
+                <label><T>Địa chỉ Email</T></label>
+                <input
+                  type="email"
                   name="email"
-                  placeholder="Nhập email (ví dụ: name@gmail.com)..." 
+                  placeholder={t('login.ph.email', { defaultValue: 'Nhập email (ví dụ: name@gmail.com)...' })}
                   value={regForm.email}
                   onChange={handleRegChange}
                   disabled={loading}
                 />
               </div>
               <div className="input-group">
-                <label>Mật khẩu *</label>
-                <input 
-                  type="password" 
+                <label><T>Mật khẩu *</T></label>
+                <input
+                  type="password"
                   name="password"
-                  placeholder="Thiết lập mật khẩu..." 
+                  placeholder={t('login.ph.set_password', { defaultValue: 'Thiết lập mật khẩu...' })}
                   value={regForm.password}
                   onChange={handleRegChange}
                   disabled={loading}
@@ -291,40 +294,40 @@ export default function Login({ onLoginSuccess }) {
                 />
               </div>
               <div className="input-group">
-                <label>Khoa / Bộ phận</label>
-                <input 
-                  type="text" 
+                <label><T>Khoa / Bộ phận</T></label>
+                <input
+                  type="text"
                   name="department"
-                  placeholder="Nhập khoa hoặc phòng ban..." 
+                  placeholder={t('login.ph.department', { defaultValue: 'Nhập khoa hoặc phòng ban...' })}
                   value={regForm.department}
                   onChange={handleRegChange}
                   disabled={loading}
                 />
               </div>
               <div className="input-group">
-                <label>Ảnh chụp khuôn mặt (Không bắt buộc)</label>
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  multiple 
+                <label><T>Ảnh chụp khuôn mặt (Không bắt buộc)</T></label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
                   onChange={handleRegFileChange}
                   disabled={loading}
                 />
-                <span className="login-helper-text">Không bắt buộc. Chọn ít nhất 1 ảnh rõ nét nếu muốn đăng nhập bằng khuôn mặt</span>
+                <span className="login-helper-text"><T>Không bắt buộc. Chọn ít nhất 1 ảnh rõ nét nếu muốn đăng nhập bằng khuôn mặt</T></span>
               </div>
-              
+
               <button type="submit" className="login-submit-btn" disabled={loading}>
-                {loading ? 'Đang tạo tài khoản...' : 'Đăng ký tài khoản'}
+                {loading ? <T>Đang tạo tài khoản...</T> : <T>Đăng ký tài khoản</T>}
               </button>
             </form>
 
             <div className="login-footer" style={{ marginTop: '20px', textAlign: 'center', fontSize: '14px' }}>
-              <span>Đã có tài khoản? </span>
+              <span><T>Đã có tài khoản?</T> </span>
               <button
                 className="login-toggle-btn"
                 onClick={() => { setIsRegistering(false); setError(''); }}
               >
-                Đăng nhập
+                <T>Đăng nhập</T>
               </button>
             </div>
           </>

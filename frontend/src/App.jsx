@@ -405,9 +405,9 @@ function App() {
                 <button
                   className="theme-toggle-btn"
                   onClick={toggleTheme}
-                  title={isDarkMode ? 'Chuyển sang Chế độ sáng' : 'Chuyển sang Chế độ tối'}
+                  title={isDarkMode ? <T>Chuyển sang Chế độ sáng</T> : <T>Chuyển sang Chế độ tối</T>}
                 >
-                  {isDarkMode ? '☀️ Sáng' : '🌙 Tối'}
+                  {isDarkMode ? <><T>☀️ Sáng</T></> : <><T>🌙 Tối</T></>}
                 </button>
               </div>
             </header>
