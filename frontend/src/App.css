@@ -397,8 +397,8 @@ html, body {
 }
 
 .sidebar-logout-btn:hover {
-  color: #f87171;
-  background: rgba(239, 68, 68, 0.1);
+  color: var(--accent-danger);
+  background: var(--status-error-bg);
 }
 
 /* ══════════════════════════════════════════════════════
@@ -485,8 +485,8 @@ html, body {
 }
 
 .theme-toggle-btn:hover {
-  border-color: #6366f1;
-  color: #6366f1;
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
   background: rgba(99, 102, 241, 0.08);
   transform: translateY(-1px);
 }
@@ -643,7 +643,7 @@ input[type="number"]:focus,
 select:focus,
 textarea:focus {
   outline: none;
-  border-color: #6366f1;
+  border-color: var(--accent-primary);
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
 }
 
