@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import './Feed.css';
 import { resolveBackendOrigin } from '../../lib/apiBase';
 import * as api from '../../services/api';
 import CameraBox from '../../components/CameraBox';
 import CommentSection from '../../components/Comments/CommentSection';
+import T from '../../i18n/T';
 import { useBookmarks } from '../../lib/BookmarksContext';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -21,6 +23,7 @@ const POST_REACTION_EMOJIS = [
 ];
 
 export default function Feed({ currentUser, onNavigate }) {
+  const { t } = useTranslation();
   const { isBookmarked: isBmPost, toggle: toggleBmPost } = useBookmarks();
 
 
@@ -326,7 +329,7 @@ export default function Feed({ currentUser, onNavigate }) {
         {/* BẢNG TIN MỚI NHẤT */}
         <section className="dashboard-card feed-card-section">
           <div className="card-title-header">
-            <h3>Feed Mới Nhất</h3>
+            <h3><T>Feed Mới Nhất</T></h3>
           </div>
 
           <div className="dashboard-posts-list">
@@ -386,7 +389,7 @@ export default function Feed({ currentUser, onNavigate }) {
                             alt="Game Icon"
                             style={{ width: '16px', height: '16px', display: 'inline-block', verticalAlign: 'middle', marginRight: '6px', borderRadius: '3px' }}
                           />
-                          Chơi trực tuyến: {post.title}
+                          <T>Chơi trực tuyến</T>: {post.title}
                         </button>
                       </div>
                     )}
@@ -414,23 +417,23 @@ export default function Feed({ currentUser, onNavigate }) {
                         className="post-comment-btn"
                         onClick={() => setCommentModalPost(post)}
                       >
-                        💬 Bình luận
+                        💬 <T>Bình luận</T>
                       </button>
                       <button
                         type="button"
                         className={`post-bookmark-btn ${isBmPost('post', post.id) ? 'filled' : ''}`}
                         onClick={() => toggleBmPost('post', post.id)}
-                        title={isBmPost('post', post.id) ? 'Bỏ lưu' : 'Lưu bài đăng'}
-                        aria-label={isBmPost('post', post.id) ? 'Bỏ lưu' : 'Lưu bài đăng'}
+                        title={isBmPost('post', post.id) ? <T>Bỏ lưu</T> : <T>Lưu bài đăng</T>}
+                        aria-label={isBmPost('post', post.id) ? <T>Bỏ lưu</T> : <T>Lưu bài đăng</T>}
                       >
-                        {isBmPost('post', post.id) ? '🔖' : '⚪ Lưu'}
+                        {isBmPost('post', post.id) ? '🔖' : <><T>⚪ Lưu</T></>}
                       </button>
                     </div>
                   )}
                 </div>
               ))
             ) : (
-              <p className="no-data-text">Chưa có hoạt động nào được đăng.</p>
+              <p className="no-data-text"><T>Chưa có hoạt động nào được đăng.</T></p>
             )}
           </div>
         </section>
@@ -438,7 +441,7 @@ export default function Feed({ currentUser, onNavigate }) {
         {/* CHIA SẺ KIẾN THỨC NỔI BẬT */}
         <section className="dashboard-card knowledge-card-section">
           <div className="card-title-header">
-            <h3>Chia Sẻ Kiến Thức Nổi Bật</h3>
+            <h3><T>Chia Sẻ Kiến Thức Nổi Bật</T></h3>
           </div>
 
           <div className="dashboard-articles-grid">
@@ -448,7 +451,7 @@ export default function Feed({ currentUser, onNavigate }) {
                   <div className="article-badge-cat">{article.category}</div>
                   <h4>{article.title}</h4>
                   <p className="article-excerpt">{article.description}</p>
-                  
+
                   <div className="article-author-stats">
                     <span className="author-name">👤 {article.author}</span>
                     <div className="stats-group">
@@ -458,13 +461,13 @@ export default function Feed({ currentUser, onNavigate }) {
                   </div>
 
                   <div className="article-actions" onClick={(e) => e.stopPropagation()}>
-                    <button className="article-read-btn" onClick={() => setSelectedArticle(article)}>Đọc Thêm →</button>
-                    <button className="article-like-btn" onClick={() => handleLikeKnowledge(article.id)}>❤️ Thích</button>
+                    <button className="article-read-btn" onClick={() => setSelectedArticle(article)}><T>Đọc Thêm →</T></button>
+                    <button className="article-like-btn" onClick={() => handleLikeKnowledge(article.id)}><T>❤️ Thích</T></button>
                   </div>
                 </div>
               ))
             ) : (
-              <p className="no-data-text">Không có bài viết kiến thức nào.</p>
+              <p className="no-data-text"><T>Không có bài viết kiến thức nào.</T></p>
             )}
           </div>
         </section>
@@ -475,7 +478,7 @@ export default function Feed({ currentUser, onNavigate }) {
         {currentUser && (
           <section className="dashboard-card feed-card-section">
             <div className="card-title-header">
-              <h3>👥 Hoạt động bạn bè</h3>
+              <h3><T>👥 Hoạt động bạn bè</T></h3>
             </div>
             <div className="dashboard-posts-list">
               {friendsActivity.length > 0 ? (
@@ -484,14 +487,14 @@ export default function Feed({ currentUser, onNavigate }) {
                   // Keeping this mapping local avoids loading a
                   // shared constants module just for three strings.
                   const verb = ({
-                    'knowledge|view': 'đã đọc',
-                    'knowledge|like': 'đã thích',
-                    'music|play': 'đã nghe',
-                    'music|like': 'đã thích',
-                    'game|view': 'đã xem',
-                    'game|like': 'đã thích',
-                    'post|like': 'đã thích',
-                    'post|view': 'đã xem',
+                    'knowledge|view': <T>đã đọc</T>,
+                    'knowledge|like': <T>đã thích</T>,
+                    'music|play': <T>đã nghe</T>,
+                    'music|like': <T>đã thích</T>,
+                    'game|view': <T>đã xem</T>,
+                    'game|like': <T>đã thích</T>,
+                    'post|like': <T>đã thích</T>,
+                    'post|view': <T>đã xem</T>,
                   })[`${ev.content_type}|${ev.event_type}`] || ev.event_type;
                   const icon = ({
                     'knowledge': '📚',
@@ -533,7 +536,7 @@ export default function Feed({ currentUser, onNavigate }) {
                   );
                 })
               ) : (
-                <p className="no-data-text">Bạn chưa theo dõi ai, hoặc bạn bè chưa có hoạt động nào gần đây.</p>
+                <p className="no-data-text"><T>Bạn chưa theo dõi ai, hoặc bạn bè chưa có hoạt động nào gần đây.</T></p>
               )}
             </div>
           </section>
@@ -547,22 +550,22 @@ export default function Feed({ currentUser, onNavigate }) {
         {/* BLOG GAME & TIN TỨC */}
         <section className="dashboard-card games-card-section">
           <div className="card-title-header">
-            <h3>Blog Game & Tin Tức</h3>
+            <h3><T>Blog Game & Tin Tức</T></h3>
           </div>
 
           <div className="games-dashboard-container">
             {/* Category Filter */}
             <div className="games-dash-sidebar">
-              <button 
-                className={activeGameCategory === 'all' ? 'active' : ''} 
+              <button
+                className={activeGameCategory === 'all' ? 'active' : ''}
                 onClick={() => setActiveGameCategory('all')}
               >
-                Tất Cả
+                <T>Tất Cả</T>
               </button>
               {gameCategories.map(cat => (
-                <button 
+                <button
                   key={cat}
-                  className={activeGameCategory === cat ? 'active' : ''} 
+                  className={activeGameCategory === cat ? 'active' : ''}
                   onClick={() => setActiveGameCategory(cat)}
                 >
                   {cat}
@@ -579,10 +582,10 @@ export default function Feed({ currentUser, onNavigate }) {
                       {game.image_url ? (
                         game.image_url
                       ) : (
-                        <img 
-                          src="/game-icon.png" 
-                          alt="Game Icon" 
-                          style={{ width: '28px', height: '28px', objectFit: 'contain' }} 
+                        <img
+                          src="/game-icon.png"
+                          alt="Game Icon"
+                          style={{ width: '28px', height: '28px', objectFit: 'contain' }}
                         />
                       )}
                     </div>
@@ -594,14 +597,14 @@ export default function Feed({ currentUser, onNavigate }) {
                         <span>❤️ {game.likes}</span>
                       </div>
                       <div className="game-item-actions" onClick={(e) => e.stopPropagation()}>
-                        <button className="btn-read" onClick={() => setSelectedGame(game)}>📖 Đọc</button>
-                        <button className="btn-like" onClick={() => handleLikeGame(game.id)}>❤️ Thích</button>
+                        <button className="btn-read" onClick={() => setSelectedGame(game)}>📖 <T>Đọc</T></button>
+                        <button className="btn-like" onClick={() => handleLikeGame(game.id)}><T>❤️ Thích</T></button>
                       </div>
                     </div>
                   </div>
                 ))
               ) : (
-                <p className="no-data-text" style={{ padding: '20px' }}>Không có bài viết game.</p>
+                <p className="no-data-text" style={{ padding: '20px' }}><T>Không có bài viết game.</T></p>
               )}
             </div>
           </div>
@@ -611,7 +614,7 @@ export default function Feed({ currentUser, onNavigate }) {
         {currentUser && currentUser.role === 'admin' && (
           <section className="dashboard-card statistics-card-section">
             <div className="card-title-header">
-              <h3>Thống Kê Người Dùng</h3>
+              <h3><T>Thống Kê Người Dùng</T></h3>
             </div>
 
             <div className="stats-dash-container">
@@ -621,8 +624,8 @@ export default function Feed({ currentUser, onNavigate }) {
                   <thead>
                     <tr>
                       <th>ID</th>
-                      <th>Tên</th>
-                      <th>Số ảnh</th>
+                      <th><T>Tên</T></th>
+                      <th><T>Số ảnh</T></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -641,19 +644,19 @@ export default function Feed({ currentUser, onNavigate }) {
               <div className="stats-chart-column" style={{ display: 'flex', flexDirection: 'column', width: '100%', minWidth: 0 }}>
                 {/* Tabs */}
                 <div className="chart-tabs-nav">
-                  <button 
+                  <button
                     type="button"
                     className={`chart-tab-btn ${activeTab === 'checkin' ? 'active' : ''}`}
                     onClick={() => setActiveTab('checkin')}
                   >
                     📊 Check-in
                   </button>
-                  <button 
+                  <button
                     type="button"
                     className={`chart-tab-btn ${activeTab === 'songs' ? 'active' : ''}`}
                     onClick={() => setActiveTab('songs')}
                   >
-                    🎵 Top 5 Nhạc
+                    🎵 <T>Top 5 Nhạc</T>
                   </button>
                 </div>
 
@@ -676,8 +679,8 @@ export default function Feed({ currentUser, onNavigate }) {
                         <YAxis stroke="#94a3b8" fontSize={9} allowDecimals={false} />
                         <Tooltip contentStyle={{ fontSize: '11px' }} />
                         <Legend iconSize={8} wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} />
-                        <Area type="monotone" dataKey="success" name="Thành công" stroke="#10b981" fillOpacity={1} fill="url(#colorSuccess)" strokeWidth={2} />
-                        <Area type="monotone" dataKey="failed" name="Thất bại" stroke="#ef4444" fillOpacity={1} fill="url(#colorFailed)" strokeWidth={2} />
+                        <Area type="monotone" dataKey="success" name={t('feed.legend.success', { defaultValue: 'Thành công' })} stroke="#10b981" fillOpacity={1} fill="url(#colorSuccess)" strokeWidth={2} />
+                        <Area type="monotone" dataKey="failed" name={t('feed.legend.failed', { defaultValue: 'Thất bại' })} stroke="#ef4444" fillOpacity={1} fill="url(#colorFailed)" strokeWidth={2} />
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
@@ -690,8 +693,8 @@ export default function Feed({ currentUser, onNavigate }) {
                         <YAxis dataKey="name" type="category" stroke="#94a3b8" fontSize={9} width={70} />
                         <Tooltip contentStyle={{ fontSize: '11px' }} />
                         <Legend iconSize={8} wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} />
-                        <Bar dataKey="plays" name="Lượt nghe" fill="#06b6d4" radius={[0, 4, 4, 0]} barSize={10} />
-                        <Bar dataKey="likes" name="Thích" fill="#ec4899" radius={[0, 4, 4, 0]} barSize={10} />
+                        <Bar dataKey="plays" name={t('feed.legend.plays', { defaultValue: 'Lượt nghe' })} fill="#06b6d4" radius={[0, 4, 4, 0]} barSize={10} />
+                        <Bar dataKey="likes" name={t('feed.legend.likes', { defaultValue: 'Thích' })} fill="#ec4899" radius={[0, 4, 4, 0]} barSize={10} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -711,14 +714,14 @@ export default function Feed({ currentUser, onNavigate }) {
           <div className="game-modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="game-modal-header">
               <h2>
-                <img 
-                  src="/game-icon.png" 
-                  alt="Game" 
-                  style={{ width: '22px', height: '22px', display: 'inline-block', verticalAlign: 'middle', marginRight: '8px', borderRadius: '4px' }} 
+                <img
+                  src="/game-icon.png"
+                  alt="Game"
+                  style={{ width: '22px', height: '22px', display: 'inline-block', verticalAlign: 'middle', marginRight: '8px', borderRadius: '4px' }}
                 />
                 {activeGameUrl.title}
               </h2>
-              <button className="close-game-btn" onClick={() => setActiveGameUrl(null)}>✕ Đóng</button>
+              <button className="close-game-btn" onClick={() => setActiveGameUrl(null)}>✕ <T>Đóng</T></button>
             </div>
             <div className="game-modal-body">
               {(() => {
@@ -733,7 +736,7 @@ export default function Feed({ currentUser, onNavigate }) {
                 if (!isTrusted) {
                   return (
                     <div className="feed-error-text">
-                      ⚠️ Không thể mở game từ nguồn không đáng tin cậy: {fullUrl}
+                      ⚠️ <T>Không thể mở game từ nguồn không đáng tin cậy</T>: {fullUrl}
                       {/* Cookie migration done: the JWT now lives in an
                           httpOnly cookie the iframe can't read, so this
                           URL guard is the only remaining defense for
@@ -767,10 +770,10 @@ export default function Feed({ currentUser, onNavigate }) {
             <div className="modal-header-detail">
               <h2>{selectedArticle.title}</h2>
               <div className="modal-meta">
-                <span>📁 Chủ đề: <strong>{selectedArticle.category}</strong></span>
-                <span>👤 Tác giả: <strong>{selectedArticle.author}</strong></span>
-                <span>👁️ {selectedArticle.views} lượt xem</span>
-                <span>❤️ {selectedArticle.likes} lượt thích</span>
+                <span>📁 <T>Chủ đề</T>: <strong>{selectedArticle.category}</strong></span>
+                <span>👤 <T>Tác giả</T>: <strong>{selectedArticle.author}</strong></span>
+                <span>👁️ {selectedArticle.views} <T>lượt xem</T></span>
+                <span>❤️ {selectedArticle.likes} <T>lượt thích</T></span>
               </div>
             </div>
             <div className="modal-body">
@@ -790,10 +793,10 @@ export default function Feed({ currentUser, onNavigate }) {
                 }}
                 className="action-btn feed-action-btn-danger"
               >
-                ❤️ Thích bài viết
+                ❤️ <T>Thích bài viết</T>
               </button>
               <button onClick={() => setSelectedArticle(null)} className="action-btn" style={{ maxWidth: '100px' }}>
-                Đóng
+                <T>Đóng</T>
               </button>
             </div>
           </div>
@@ -810,8 +813,8 @@ export default function Feed({ currentUser, onNavigate }) {
             <div className="modal-header-detail">
               <h2>{commentModalPost.title}</h2>
               <div className="modal-meta">
-                <span>👤 Tác giả: <strong>@{commentModalPost.user_id}</strong></span>
-                <span>📁 Loại: <strong>{commentModalPost.post_type}</strong></span>
+                <span>👤 <T>Tác giả</T>: <strong>@{commentModalPost.user_id}</strong></span>
+                <span>📁 <T>Loại</T>: <strong>{commentModalPost.post_type}</strong></span>
               </div>
             </div>
             <div className="modal-body">
@@ -827,7 +830,7 @@ export default function Feed({ currentUser, onNavigate }) {
             </div>
             <div className="modal-footer">
               <button onClick={() => setCommentModalPost(null)} className="action-btn" style={{ maxWidth: '100px' }}>
-                Đóng
+                <T>Đóng</T>
               </button>
             </div>
           </div>
@@ -842,26 +845,26 @@ export default function Feed({ currentUser, onNavigate }) {
             <div className="modal-header-detail">
               <h2>{selectedGame.title}</h2>
               <div className="modal-meta">
-                <span>📁 Thể loại: <strong>{selectedGame.category}</strong></span>
-                <span>👁️ {selectedGame.views + 1} lượt xem</span>
-                <span>❤️ {selectedGame.likes} lượt thích</span>
+                <span>📁 <T>Thể loại</T>: <strong>{selectedGame.category}</strong></span>
+                <span>👁️ {selectedGame.views + 1} <T>lượt xem</T></span>
+                <span>❤️ {selectedGame.likes} <T>lượt thích</T></span>
               </div>
             </div>
             <div className="modal-body">
               <p style={{ whiteSpace: 'pre-line' }}>{selectedGame.content || selectedGame.description}</p>
             </div>
             <div className="modal-footer">
-              <button 
+              <button
                 onClick={() => {
                   handleLikeGame(selectedGame.id);
                   setSelectedGame(prev => ({ ...prev, likes: prev.likes + 1 }));
-                }} 
+                }}
                 className="action-btn feed-action-btn-danger"
               >
-                ❤️ Thích bài viết
+                ❤️ <T>Thích bài viết</T>
               </button>
               <button onClick={() => setSelectedGame(null)} className="action-btn" style={{ maxWidth: '100px' }}>
-                Đóng
+                <T>Đóng</T>
               </button>
             </div>
           </div>
