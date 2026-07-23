@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import * as api from '../../services/api';
 import { useBookmarks } from '../../lib/BookmarksContext';
+import T from '../../i18n/T';
 import './Bookmarks.css';
 
 // The dedupe tag in the page title — also matches the navbar label.
@@ -82,30 +83,30 @@ export default function Bookmarks({ onNavigate }) {
   return (
     <div className="bookmarks-container">
       <header className="bookmarks-header">
-        <h1>{PAGE_TITLE}</h1>
-        <p className="bookmarks-subtitle">Những bài viết và bài đăng bạn đã lưu để xem lại sau.</p>
+        <h1><T>{PAGE_TITLE}</T></h1>
+        <p className="bookmarks-subtitle"><T>Những bài viết và bài đăng bạn đã lưu để xem lại sau.</T></p>
       </header>
 
       <div className="bookmarks-filters">
         <button className={`bookmarks-filter ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')}>
-          Tất cả ({counts.all})
+          <T>Tất cả</T> ({counts.all})
         </button>
         <button className={`bookmarks-filter ${filter === 'knowledge' ? 'active' : ''}`} onClick={() => setFilter('knowledge')}>
-          📚 Bài viết ({counts.knowledge})
+          📚 <T>Bài viết</T> ({counts.knowledge})
         </button>
         <button className={`bookmarks-filter ${filter === 'post' ? 'active' : ''}`} onClick={() => setFilter('post')}>
-          📰 Bài đăng ({counts.post})
+          📰 <T>Bài đăng</T> ({counts.post})
         </button>
         <button className={`bookmarks-filter ${filter === 'music' ? 'active' : ''}`} onClick={() => setFilter('music')}>
-          🎵 Bài hát ({counts.music})
+          🎵 <T>Bài hát</T> ({counts.music})
         </button>
         <button className={`bookmarks-filter ${filter === 'game' ? 'active' : ''}`} onClick={() => setFilter('game')}>
-          🎮 Trò chơi ({counts.game})
+          🎮 <T>Trò chơi</T> ({counts.game})
         </button>
       </div>
 
       {loading && (
-        <div className="bookmarks-status">Đang tải...</div>
+        <div className="bookmarks-status"><T>Đang tải...</T></div>
       )}
 
       {error && !loading && (
@@ -115,10 +116,10 @@ export default function Bookmarks({ onNavigate }) {
       {!loading && !error && items.length === 0 && (
         <div className="bookmarks-empty">
           <div className="bookmarks-empty-icon">🔖</div>
-          <h3>Bạn chưa lưu nội dung nào</h3>
-          <p>Nhấn 🔖 trên bài viết Knowledge hoặc trên bài đăng trong Bảng tin để lưu lại xem sau.</p>
+          <h3><T>Bạn chưa lưu nội dung nào</T></h3>
+          <p><T>Nhấn 🔖 trên bài viết Knowledge hoặc trên bài đăng trong Bảng tin để lưu lại xem sau.</T></p>
           <button className="bookmarks-empty-cta" onClick={() => onNavigate?.('feed')}>
-            Đi tới Bảng tin →
+            <T>Đi tới Bảng tin →</T>
           </button>
         </div>
       )}
@@ -151,9 +152,14 @@ export default function Bookmarks({ onNavigate }) {
                 <div className="bookmarks-card-body">
                   <div className="bookmarks-card-meta">
                     <span className="bookmarks-card-type">
-                      {item.content_type === 'knowledge' ? '📚 Bài viết' :
-                       item.content_type === 'post' ? '📰 Bài đăng' :
-                       item.content_type === 'music' ? '🎵 Bài hát' : '🎮 Trò chơi'}
+                      {item.content_type === 'knowledge' ? '📚 ' :
+                       item.content_type === 'post' ? '📰 ' :
+                       item.content_type === 'music' ? '🎵 ' : '🎮 '}
+                      <T>
+                        {item.content_type === 'knowledge' ? 'Bài viết' :
+                         item.content_type === 'post' ? 'Bài đăng' :
+                         item.content_type === 'music' ? 'Bài hát' : 'Trò chơi'}
+                      </T>
                     </span>
                     {item.category && <span className="bookmarks-card-cat">{item.category}</span>}
                     {item.artist && <span className="bookmarks-card-cat">{item.artist}</span>}
@@ -167,7 +173,8 @@ export default function Bookmarks({ onNavigate }) {
                     <button
                       className={`bookmarks-unsave ${filled ? 'filled' : ''}`}
                       onClick={(e) => handleUnsave(item, e)}
-                      title="Bỏ lưu"
+                      title={filled ? <T>Bỏ lưu</T> : <T>Lưu</T>}
+                      aria-label={filled ? <T>Bỏ lưu</T> : <T>Lưu</T>}
                       type="button"
                     >
                       {filled ? '🔖' : '⚪'}
