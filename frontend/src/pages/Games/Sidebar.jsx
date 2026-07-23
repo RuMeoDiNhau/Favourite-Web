@@ -1,4 +1,5 @@
 import React from 'react';
+import T from '../../i18n/T';
 
 export default function Sidebar({ selectedLibrary, onSelectLibrary, stats, categories = [] }) {
   const getCategoryEmoji = (cat) => {
@@ -15,14 +16,14 @@ export default function Sidebar({ selectedLibrary, onSelectLibrary, stats, categ
   return (
     <div className="games-sidebar">
       <div className="sidebar-header">
-        <h3>📰 CHỦ ĐỀ BLOG</h3>
+        <h3>📰 <T>CHỦ ĐỀ BLOG</T></h3>
       </div>
       <nav className="sidebar-menu">
         <button
           className={`menu-item ${selectedLibrary === 'all' ? 'active' : ''}`}
           onClick={() => onSelectLibrary('all')}
         >
-          📚 Tất Cả Bài Viết
+          📚 <T>Tất Cả Bài Viết</T>
         </button>
         {categories.map(cat => (
           <button
@@ -37,8 +38,8 @@ export default function Sidebar({ selectedLibrary, onSelectLibrary, stats, categ
 
       <div className="sidebar-footer">
         <div className="stats">
-          <p>✍️ Thể loại bài viết: {stats?.totalCategories || 0}</p>
-          <p>📰 Tổng số bài viết: {stats?.totalPosts || 0}</p>
+          <p>✍️ <T>Thể loại bài viết:</T> {stats?.totalCategories || 0}</p>
+          <p>📰 <T>Tổng số bài viết:</T> {stats?.totalPosts || 0}</p>
         </div>
       </div>
     </div>

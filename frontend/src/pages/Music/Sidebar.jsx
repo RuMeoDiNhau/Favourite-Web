@@ -1,18 +1,19 @@
 import React from 'react';
+import T from '../../i18n/T';
 
 export default function Sidebar({ selectedCategory, onSelectCategory, stats }) {
   const menuItems = [
-    { id: 'all', label: '🎵 Tất Cả', icon: '🎵' },
-    { id: 'library', label: '📚 Thư Viện', icon: '📚' },
-    { id: 'playlist', label: '📋 Danh Sách Phát', icon: '📋' },
-    { id: 'favorite', label: '❤️ Yêu Thích', icon: '❤️' },
-    { id: 'recent', label: '⏰ Gần Đây', icon: '⏰' },
+    { id: 'all', labelKey: 'Tất Cả', icon: '🎵' },
+    { id: 'library', labelKey: 'Thư Viện', icon: '📚' },
+    { id: 'playlist', labelKey: 'Danh Sách Phát', icon: '📋' },
+    { id: 'favorite', labelKey: 'Yêu Thích', icon: '❤️' },
+    { id: 'recent', labelKey: 'Gần Đây', icon: '⏰' },
   ];
 
   return (
     <div className="music-sidebar">
       <div className="sidebar-header">
-        <h3>🎵 THƯ VIỆN ÂM NHẠC</h3>
+        <h3>🎵 <T>THƯ VIỆN ÂM NHẠC</T></h3>
       </div>
       <nav className="sidebar-menu">
         {menuItems.map(item => (
@@ -21,16 +22,16 @@ export default function Sidebar({ selectedCategory, onSelectCategory, stats }) {
             className={`menu-item ${selectedCategory === item.id ? 'active' : ''}`}
             onClick={() => onSelectCategory(item.id)}
           >
-            {item.label}
+            {item.icon} <T>{item.labelKey}</T>
           </button>
         ))}
       </nav>
 
       <div className="sidebar-footer">
         <div className="stats">
-          <p>🎵 Bài Hát: {stats?.totalSongs || 0}</p>
-          <p>📋 Danh Sách: {stats?.totalPlaylists || 0}</p>
-          <p>⏱️ Thời Gian: {stats?.totalDuration || '0h 00m'}</p>
+          <p>🎵 <T>Bài Hát:</T> {stats?.totalSongs || 0}</p>
+          <p>📋 <T>Danh Sách:</T> {stats?.totalPlaylists || 0}</p>
+          <p>⏱️ <T>Thời Gian:</T> {stats?.totalDuration || '0h 00m'}</p>
         </div>
       </div>
     </div>

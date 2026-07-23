@@ -3,8 +3,11 @@ import Sidebar from './Sidebar';
 import './Games.css';
 import * as api from '../../services/api';
 import { useBookmarks } from '../../lib/BookmarksContext';
+import { useTranslation } from 'react-i18next';
+import T from '../../i18n/T';
 
 export default function Games({ searchOpenGameId = null, onConsumeSearchOpen }) {
+  const { t } = useTranslation();
   const { isBookmarked: isBm, toggle: toggleBm } = useBookmarks();
   const [selectedLibrary, setSelectedLibrary] = useState('all');
   const [games, setGames] = useState([]);
@@ -63,7 +66,7 @@ export default function Games({ searchOpenGameId = null, onConsumeSearchOpen }) 
       setGames(response.data || []);
     } catch (err) {
       console.error('Error loading games:', err);
-      setError('Failed to load games');
+      setError(t('games.err.load', { defaultValue: 'Failed to load games' }));
     } finally {
       setLoading(false);
     }
@@ -75,7 +78,7 @@ export default function Games({ searchOpenGameId = null, onConsumeSearchOpen }) 
       await api.viewGame(game.id);
       setSelectedGame(game);
       // Cập nhật lại số lượt xem trên UI bằng cách cộng thêm 1 hoặc load lại danh sách
-      setGames(prevGames => 
+      setGames(prevGames =>
         prevGames.map(g => g.id === game.id ? { ...g, views: g.views + 1 } : g)
       );
     } catch (err) {
@@ -112,34 +115,34 @@ export default function Games({ searchOpenGameId = null, onConsumeSearchOpen }) 
 
   return (
     <div className="games-container">
-      <Sidebar 
-        selectedLibrary={selectedLibrary} 
-        onSelectLibrary={setSelectedLibrary} 
-        stats={stats} 
-        categories={categories} 
+      <Sidebar
+        selectedLibrary={selectedLibrary}
+        onSelectLibrary={setSelectedLibrary}
+        stats={stats}
+        categories={categories}
       />
       <div className="games-main">
         <div className="games-header">
           <h1>
-            <img 
-              src="/game-icon.png" 
-              alt="Games Icon" 
-              style={{ width: '42px', height: '42px', display: 'inline-block', verticalAlign: 'middle', marginRight: '10px', borderRadius: '8px' }} 
+            <img
+              src="/game-icon.png"
+              alt={t('games.alt.icon', { defaultValue: 'Games Icon' })}
+              style={{ width: '42px', height: '42px', display: 'inline-block', verticalAlign: 'middle', marginRight: '10px', borderRadius: '8px' }}
             />
-            Tin Tức & Blog Game
+            <T>Tin Tức & Blog Game</T>
           </h1>
-          <p>Cập nhật những bài viết, hướng dẫn và mẹo chơi game mới nhất</p>
+          <p><T>Cập nhật những bài viết, hướng dẫn và mẹo chơi game mới nhất</T></p>
         </div>
 
         <div className="games-content">
           {loading ? (
-            <p style={{ textAlign: 'center', color: 'white' }}>Đang tải danh sách bài viết...</p>
+            <p style={{ textAlign: 'center', color: 'white' }}><T>Đang tải danh sách bài viết...</T></p>
           ) : error ? (
             <p className="games-error-text">{error}</p>
           ) : (
             <>
               <section className="games-section">
-                <h2>{selectedLibrary === 'all' ? '📰 Tất Cả Bài Viết' : `📁 Thể loại: ${selectedLibrary}`}</h2>
+                <h2>{selectedLibrary === 'all' ? <>📰 <T>Tất Cả Bài Viết</T></> : <>📁 <T>{`Thể loại: ${selectedLibrary}`}</T></>}</h2>
                 <div className="games-grid">
                   {games.length > 0 ? (
                     games.map(game => (
@@ -148,17 +151,17 @@ export default function Games({ searchOpenGameId = null, onConsumeSearchOpen }) 
                         <h3>{game.title}</h3>
                         <p>{game.description}</p>
                         <div className="game-stats">
-                          <span>👁️ {game.views} lượt xem</span>
-                          <span>❤️ {game.likes} thích</span>
+                          <span>👁️ {game.views} <T>lượt xem</T></span>
+                          <span>❤️ {game.likes} <T>thích</T></span>
                         </div>
                         <div className="game-actions" onClick={(e) => e.stopPropagation()}>
-                          <button onClick={() => handleViewGame(game)} className="action-btn">📖 Đọc bài</button>
-                          <button onClick={() => handleLikeGame(game.id)} className="action-btn">❤️ Thích</button>
+                          <button onClick={() => handleViewGame(game)} className="action-btn">📖 <T>Đọc bài</T></button>
+                          <button onClick={() => handleLikeGame(game.id)} className="action-btn">❤️ <T>Thích</T></button>
                           <button
                             onClick={() => toggleBm('game', game.id)}
                             className={`action-btn ${isBm('game', game.id) ? 'bookmark-active' : ''}`}
-                            title={isBm('game', game.id) ? 'Bỏ lưu' : 'Lưu bài viết'}
-                            aria-label={isBm('game', game.id) ? 'Bỏ lưu' : 'Lưu bài viết'}
+                            title={isBm('game', game.id) ? t('games.unbookmark', { defaultValue: 'Bỏ lưu' }) : t('games.bookmark', { defaultValue: 'Lưu bài viết' })}
+                            aria-label={isBm('game', game.id) ? t('games.unbookmark', { defaultValue: 'Bỏ lưu' }) : t('games.bookmark', { defaultValue: 'Lưu bài viết' })}
                           >
                             {isBm('game', game.id) ? '🔖' : '⚪'}
                           </button>
@@ -167,7 +170,7 @@ export default function Games({ searchOpenGameId = null, onConsumeSearchOpen }) 
                     ))
                   ) : (
                     <p className="games-empty-text">
-                      Không có bài viết nào
+                      <T>Không có bài viết nào</T>
                     </p>
                   )}
                 </div>
@@ -185,9 +188,9 @@ export default function Games({ searchOpenGameId = null, onConsumeSearchOpen }) 
             <div className="modal-header-detail">
               <h2>{selectedGame.title}</h2>
               <div className="modal-meta">
-                <span>📁 Thể loại: <strong>{selectedGame.category}</strong></span>
-                <span>👁️ {selectedGame.views + 1} lượt xem</span>
-                <span>❤️ {selectedGame.likes} lượt thích</span>
+                <span>📁 <T>Thể loại:</T> <strong>{selectedGame.category}</strong></span>
+                <span>👁️ {selectedGame.views + 1} <T>lượt xem</T></span>
+                <span>❤️ {selectedGame.likes} <T>lượt thích</T></span>
               </div>
             </div>
             <div className="modal-body">
@@ -198,18 +201,18 @@ export default function Games({ searchOpenGameId = null, onConsumeSearchOpen }) 
                 onClick={() => handleLikeGame(selectedGame.id)}
                 className="action-btn games-action-btn-danger"
               >
-                ❤️ Thích bài viết
+                ❤️ <T>Thích bài viết</T>
               </button>
               <button
                 onClick={() => toggleBm('game', selectedGame.id)}
                 className={`action-btn ${isBm('game', selectedGame.id) ? 'bookmark-active' : ''}`}
                 style={{ maxWidth: '120px' }}
-                title={isBm('game', selectedGame.id) ? 'Bỏ lưu' : 'Lưu bài viết'}
+                title={isBm('game', selectedGame.id) ? t('games.unbookmark', { defaultValue: 'Bỏ lưu' }) : t('games.bookmark', { defaultValue: 'Lưu bài viết' })}
               >
-                {isBm('game', selectedGame.id) ? '🔖 Đã lưu' : '⚪ Lưu bài viết'}
+                {isBm('game', selectedGame.id) ? <>🔖 <T>Đã lưu</T></> : <>⚪ <T>Lưu bài viết</T></>}
               </button>
               <button onClick={handleCloseModal} className="action-btn" style={{ maxWidth: '100px' }}>
-                Đóng
+                <T>Đóng</T>
               </button>
             </div>
           </div>
