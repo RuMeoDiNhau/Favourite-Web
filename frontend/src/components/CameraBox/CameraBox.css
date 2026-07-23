@@ -1,8 +1,11 @@
-/* CameraBox container styles */
+/* CameraBox scanner — always-dark UI (face recognition HUD).
+   Uses --scanner-bg/border/text tokens so it stays dark when page
+   flips to light theme (intentional contrast for video overlay). */
+
 .video-box {
   position: relative;
-  background: #0f172a;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--scanner-bg);
+  border: 1px solid var(--scanner-border);
   border-radius: 12px;
   padding: 16px;
   display: flex;
@@ -16,7 +19,7 @@
 .video-box h3 {
   margin: 0;
   font-size: 1.1rem;
-  color: #94a3b8;
+  color: var(--scanner-text-muted);
   align-self: flex-start;
   font-weight: 600;
   letter-spacing: 0.05em;
@@ -24,6 +27,7 @@
 }
 
 /* Wrapper for video and overlay layer */
+
 .camera-wrapper {
   position: relative;
   width: 100%;
@@ -31,7 +35,7 @@
   max-width: 480px;
   border-radius: 8px;
   overflow: hidden;
-  border: 2px solid #334155;
+  border: 2px solid var(--scanner-frame);
   background: #020617;
 }
 
@@ -43,6 +47,7 @@
 }
 
 /* Cyber HUD Scanning Overlay */
+
 .hud-overlay {
   position: absolute;
   top: 0;
@@ -61,6 +66,7 @@
 }
 
 /* Color schemes for status */
+
 .hud-overlay.hud-idle {
   border-color: rgba(148, 163, 184, 0.2);
 }
@@ -81,6 +87,7 @@
 }
 
 /* Corner HUD Target brackets */
+
 .hud-corners::before,
 .hud-corners::after,
 .hud-corners-bottom::before,
@@ -94,6 +101,7 @@
 }
 
 /* Top Left */
+
 .hud-corners::before {
   top: 12px;
   left: 12px;
@@ -102,6 +110,7 @@
 }
 
 /* Top Right */
+
 .hud-corners::after {
   top: 12px;
   right: 12px;
@@ -110,6 +119,7 @@
 }
 
 /* Bottom Left */
+
 .hud-corners-bottom::before {
   bottom: 12px;
   left: 12px;
@@ -118,6 +128,7 @@
 }
 
 /* Bottom Right */
+
 .hud-corners-bottom::after {
   bottom: 12px;
   right: 12px;
@@ -126,6 +137,7 @@
 }
 
 /* Link border color to parent's status */
+
 .hud-overlay.hud-idle .hud-corners::before,
 .hud-overlay.hud-idle .hud-corners::after,
 .hud-overlay.hud-idle .hud-corners-bottom::before,
@@ -158,6 +170,7 @@
 }
 
 /* Target Face Reticle (futuristic central grid) */
+
 .hud-face-reticle {
   position: absolute;
   top: 50%;
@@ -218,6 +231,7 @@
 }
 
 /* Horizontal Scanning Line (Laser Grid) */
+
 .hud-scan-line {
   position: absolute;
   top: 0;
@@ -254,6 +268,7 @@
 }
 
 /* Tech Header metadata */
+
 .hud-header {
   display: flex;
   justify-content: space-between;
@@ -277,6 +292,7 @@
 }
 
 /* Tech Footer / Status text */
+
 .hud-footer {
   width: 100%;
   display: flex;
@@ -296,7 +312,7 @@
   font-weight: 700;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  color: #94a3b8;
+  color: var(--scanner-text-muted);
   transition: all 0.3s ease;
 }
 
@@ -320,6 +336,7 @@
 }
 
 /* Animations */
+
 @keyframes scanMove {
   0% {
     top: 5%;
@@ -351,14 +368,15 @@
 }
 
 /* Adjust general video box styles to align nicely */
+
 .video-box .button {
   width: 100%;
   max-width: 480px;
   padding: 10px 16px;
   font-weight: 600;
   border-radius: 8px;
-  background: #4f46e5;
-  color: white;
+  background: var(--accent-primary-2);
+  color: var(--text-on-accent);
   border: none;
   cursor: pointer;
   transition: background 0.2s;
@@ -373,8 +391,8 @@
 }
 
 .video-box .button:disabled {
-  background: #334155;
-  color: #64748b;
+  background: var(--scanner-frame);
+  color: var(--scanner-text-muted);
   cursor: not-allowed;
 }
 

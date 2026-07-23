@@ -74,8 +74,11 @@ html, body {
   --accent-purple-2:   #7c3aed;
 
   /* ── Camera / scanner dark surface (always dark) ── */
-  --scanner-bg:        #0f172a;
-  --scanner-text:      #94a3b8;
+  --scanner-bg:         #0f172a;
+  --scanner-border:     rgba(255, 255, 255, 0.1);
+  --scanner-frame:      #334155;
+  --scanner-text:       #94a3b8;
+  --scanner-text-muted: #94a3b8;
 
   /* ── Sidebar tokens (theme-aware: matches current theme) ── */
   --sidebar-bg:           #ffffff;

@@ -1,0 +1,44 @@
+/* ResultCard — renders status + message from face recognition result. */
+
+.result-card {
+  margin-top: 16px;
+  padding: 14px 18px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: var(--shadow-card);
+  color: var(--text-main);
+}
+
+.result-card strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-title);
+  margin-bottom: 4px;
+}
+
+.result-card p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-main);
+  line-height: 1.5;
+}
+
+.result-card--idle strong {
+  color: var(--text-muted);
+}
+
+.result-card--loading strong {
+  color: var(--accent-primary);
+}
+
+.result-card--success strong {
+  color: var(--accent-success);
+}
+
+.result-card--error strong {
+  color: var(--accent-danger);
+}
