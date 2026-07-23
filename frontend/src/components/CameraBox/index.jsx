@@ -1,7 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
+import T from '../../i18n/T';
+import { useTranslation } from 'react-i18next';
 import './CameraBox.css';
 
 function CameraBox({ onCapture, captureTrigger, status = 'idle' }) {
+  const { t } = useTranslation();
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const [streaming, setStreaming] = useState(false);
@@ -33,7 +36,7 @@ function CameraBox({ onCapture, captureTrigger, status = 'idle' }) {
         }
       } catch (err) {
         if (!cancelled) {
-          setError('Không thể mở camera. Vui lòng kiểm tra quyền truy cập.');
+          setError(t('dashboard.camera_error', { defaultValue: 'Không thể mở camera. Vui lòng kiểm tra quyền truy cập.' }));
         }
       }
     };
@@ -84,46 +87,46 @@ function CameraBox({ onCapture, captureTrigger, status = 'idle' }) {
   };
 
   const getStatusText = () => {
-    if (status === 'loading' || status === 'scanning') return 'Scanning...';
-    if (status === 'success') return 'Verified';
-    if (status === 'error') return 'Access Denied';
-    return 'Sys Active';
+    if (status === 'loading' || status === 'scanning') return t('dashboard.hud.scanning', { defaultValue: 'Scanning...' });
+    if (status === 'success') return t('dashboard.hud.verified', { defaultValue: 'Verified' });
+    if (status === 'error') return t('dashboard.hud.denied', { defaultValue: 'Access Denied' });
+    return t('dashboard.hud.active', { defaultValue: 'Sys Active' });
   };
 
   return (
     <div className="video-box">
-      <h3>Quét Khuôn Mặt</h3>
+      <h3><T>Quét Khuôn Mặt</T></h3>
       {error ? (
         <p>{error}</p>
       ) : (
         <div className="camera-wrapper">
           <video ref={videoRef} autoPlay muted playsInline />
-          
+
           {/* Tech HUD overlay layout */}
           <div className={`hud-overlay ${getHudClass()}`}>
             <div className="hud-corners" />
-            
+
             <div className="hud-header">
-              <span>FACE_ID v2.0</span>
-              <span>LOCK: {status === 'success' ? 'OK' : 'SEARCHING'}</span>
+              <span><T>FACE_ID v2.0</T></span>
+              <span><T>LOCK:</T> {status === 'success' ? <T>OK</T> : <T>SEARCHING</T>}</span>
             </div>
-            
+
             {/* Pulsing reticle and scanning laser */}
             <div className="hud-face-reticle">
               <div className="hud-face-box" />
             </div>
             <div className="hud-scan-line" />
-            
+
             <div className="hud-footer">
               <span className="hud-status-badge">{getStatusText()}</span>
             </div>
-            
+
             <div className="hud-corners-bottom" />
           </div>
         </div>
       )}
       <button className="button" onClick={handleCapture} disabled={!streaming}>
-        Chụp & Nhận Diện
+        <T>Chụp & Nhận Diện</T>
       </button>
     </div>
   );
