@@ -6,6 +6,7 @@ import * as api from '../../services/api';
 import { readJson } from '../../lib/safeStorage';
 import { getLikedSongIds, toggleLikedSong, isLikedSong } from '../../lib/likedSongs';
 import { useBookmarks } from '../../lib/BookmarksContext';
+import T from '../../i18n/T';
 
 export default function Music() {
   const user = readJson('user');
@@ -509,7 +510,7 @@ const handleFileChange = (e) => {
                 alt="Music Icon" 
                 style={{ width: '48px', height: '48px', marginRight: '15px', borderRadius: '8px' }} 
               />
-              Âm Nhạc Trực Tuyến
+              <T>Âm Nhạc Trực Tuyến</T>
             </h1>
             <p className="music-header-subtitle">Thưởng thức và thư giãn cùng các bài hát bản quyền đỉnh cao</p>
           </div>

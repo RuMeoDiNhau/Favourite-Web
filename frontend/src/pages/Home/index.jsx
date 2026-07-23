@@ -4,6 +4,7 @@ import {
   ResponsiveContainer, Legend,
 } from 'recharts';
 import * as api from '../../services/api';
+import T from '../../i18n/T';
 import './Home.css';
 
 const DAYS_OPTIONS = [7, 30];
@@ -144,7 +145,7 @@ function Home({ onNavigate }) {
     <div className="home-page">
       <header className="home-header">
         <div>
-          <h1 className="home-title">🏠 Trang chủ</h1>
+          <h1 className="home-title">🏠 <T>Trang chủ</T></h1>
           <p className="home-subtitle">
             {loading
               ? 'Đang tải...'
@@ -162,7 +163,7 @@ function Home({ onNavigate }) {
               className={days === d ? 'active' : ''}
               onClick={() => setDays(d)}
             >
-              {d} ngày
+              {d} <T>ngày</T>
             </button>
           ))}
         </div>
@@ -193,40 +194,20 @@ function Home({ onNavigate }) {
       {/* 4 stat cards. Skeleton placeholders during initial load so
           the layout doesn't jump when data arrives. */}
       <section className="home-stats">
-        <StatCard
-          icon="📚"
-          label="Bài viết đã đọc"
-          value={insights.totals.knowledge_views}
-          loading={loading}
-        />
-        <StatCard
-          icon="🎵"
-          label="Bài hát đã nghe"
-          value={insights.totals.music_plays}
-          loading={loading}
-        />
-        <StatCard
-          icon="🎮"
-          label="Trò chơi đã xem"
-          value={insights.totals.game_views}
-          loading={loading}
-        />
-        <StatCard
-          icon="❤️"
-          label="Bài đăng đã thích"
-          value={insights.totals.posts_liked}
-          loading={loading}
-        />
+        <StatCard icon="📚" label={<T>Bài viết đã đọc</T>} value={insights.totals.knowledge_views} loading={loading} />
+        <StatCard icon="🎵" label={<T>Bài hát đã nghe</T>} value={insights.totals.music_plays} loading={loading} />
+        <StatCard icon="🎮" label={<T>Trò chơi đã xem</T>} value={insights.totals.game_views} loading={loading} />
+        <StatCard icon="❤️" label={<T>Bài đăng đã thích</T>} value={insights.totals.posts_liked} loading={loading} />
       </section>
 
       {/* Line chart of activity over the period. Render the chart
           container unconditionally so Recharts has a stable parent
           to measure — we just feed it empty data when loading. */}
       <section className="home-chart-card">
-        <h2>Hoạt động {days} ngày gần nhất</h2>
+        <h2><T>Hoạt động {days} ngày gần nhất</T></h2>
         <div className="home-chart-wrapper">
           {chartData.length === 0 ? (
-            <div className="home-chart-empty">Chưa có dữ liệu</div>
+            <div className="home-chart-empty"><T>Chưa có dữ liệu</T></div>
           ) : (
             <ResponsiveContainer width="100%" height={260}>
               <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -243,30 +224,9 @@ function Home({ onNavigate }) {
                   labelStyle={{ color: '#f8fafc' }}
                 />
                 <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
-                <Line
-                  type="monotone"
-                  dataKey="knowledge"
-                  name="Bài viết"
-                  stroke="#6366f1"
-                  strokeWidth={2}
-                  dot={{ r: 3 }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="music"
-                  name="Nhạc"
-                  stroke="#ec4899"
-                  strokeWidth={2}
-                  dot={{ r: 3 }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="game"
-                  name="Game"
-                  stroke="#10b981"
-                  strokeWidth={2}
-                  dot={{ r: 3 }}
-                />
+                <Line type="monotone" dataKey="knowledge" name="Bài viết" stroke="#6366f1" strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="music" name="Nhạc" stroke="#ec4899" strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="game" name="Game" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />
               </LineChart>
             </ResponsiveContainer>
           )}
@@ -276,7 +236,7 @@ function Home({ onNavigate }) {
       <section className="home-bottom-grid">
         {/* Left: recent articles the user has touched */}
         <div className="home-card">
-          <h2>Bạn đã đọc gần đây</h2>
+          <h2><T>Bạn đã đọc gần đây</T></h2>
           {loading ? (
             <Skeleton lines={3} />
           ) : insights.recent_articles.length === 0 ? (
@@ -300,7 +260,7 @@ function Home({ onNavigate }) {
 
         {/* Right: recent raw activity events (mixed types) */}
         <div className="home-card">
-          <h2>Hoạt động gần đây</h2>
+          <h2><T>Hoạt động gần đây</T></h2>
           {loading ? (
             <Skeleton lines={4} />
           ) : recent.length === 0 ? (
@@ -328,7 +288,7 @@ function Home({ onNavigate }) {
           users don't need a "no categories" section cluttering the UI. */}
       {!loading && insights.top_categories.length > 0 && (
         <section className="home-card home-top-cats">
-          <h2>Chủ đề bạn quan tâm</h2>
+          <h2><T>Chủ đề bạn quan tâm</T></h2>
           <div className="home-cat-chips">
             {insights.top_categories.map(([cat, count]) => (
               <span key={cat} className="home-chip">
@@ -344,12 +304,12 @@ function Home({ onNavigate }) {
           guide the populated case. */}
       {!loading && !hasActivity && (
         <section className="home-quick-links">
-          <h2>Bắt đầu từ đâu?</h2>
+          <h2><T>Bắt đầu từ đâu?</T></h2>
           <div className="home-quick-grid">
-            <button onClick={() => onNavigate?.('knowledge')}>📚 Đọc bài</button>
-            <button onClick={() => onNavigate?.('music')}>🎵 Nghe nhạc</button>
-            <button onClick={() => onNavigate?.('games')}>🎮 Chơi game</button>
-            <button onClick={() => onNavigate?.('feed')}>📰 Xem bảng tin</button>
+            <button onClick={() => onNavigate?.('knowledge')}>📚 <T>Đọc bài</T></button>
+            <button onClick={() => onNavigate?.('music')}>🎵 <T>Nghe nhạc</T></button>
+            <button onClick={() => onNavigate?.('games')}>🎮 <T>Chơi game</T></button>
+            <button onClick={() => onNavigate?.('feed')}>📰 <T>Xem bảng tin</T></button>
           </div>
         </section>
       )}

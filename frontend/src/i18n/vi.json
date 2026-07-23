@@ -1,0 +1,1 @@
+{ "_comment": "Vietnamese is the source language. <T> renders the original text via fallback so this file is intentionally minimal — the lookup table is empty and <T> falls back to the source child string when no translation is registered." }
