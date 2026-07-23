@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import * as api from '../../services/api';
+import { useTranslation } from 'react-i18next';
+import T from '../../i18n/T';
 import './UserProfile.css';
 
 // Public-facing profile page. Reached by clicking a username in a
@@ -14,6 +16,7 @@ import './UserProfile.css';
 // in the header, and tabs at the bottom show the actual lists —
 // fetched lazily the first time each tab is opened.
 export default function UserProfile({ userId, currentUser, onNavigate }) {
+  const { t } = useTranslation();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -37,14 +40,16 @@ export default function UserProfile({ userId, currentUser, onNavigate }) {
       } catch (err) {
         if (!cancelled) {
           const status = err?.response?.status;
-          setError(status === 404 ? 'Người dùng không tồn tại.' : 'Không thể tải hồ sơ.');
+          setError(status === 404
+            ? t('profile.err.not_found', { defaultValue: 'Người dùng không tồn tại.' })
+            : t('profile.err.load', { defaultValue: 'Không thể tải hồ sơ.' }));
         }
       } finally {
         if (!cancelled) setLoading(false);
       }
     })();
     return () => { cancelled = true; };
-  }, [userId]);
+  }, [userId, t]);
 
   // Reset the lazy follow-list cache when the profile target changes
   // — otherwise we'd briefly show the previous user's followers.
@@ -75,14 +80,14 @@ export default function UserProfile({ userId, currentUser, onNavigate }) {
   }, [profile, tab, userId]);
 
   if (loading) {
-    return <div className="userprofile-container"><div className="userprofile-status">Đang tải hồ sơ...</div></div>;
+    return <div className="userprofile-container"><div className="userprofile-status"><T>Đang tải hồ sơ...</T></div></div>;
   }
 
   if (error) {
     return (
       <div className="userprofile-container">
         <div className="userprofile-status userprofile-error">{error}</div>
-        <button className="userprofile-back" onClick={() => onNavigate?.('feed')}>← Về Bảng tin</button>
+        <button className="userprofile-back" onClick={() => onNavigate?.('feed')}><T>← Về Bảng tin</T></button>
       </div>
     );
   }
@@ -98,7 +103,7 @@ export default function UserProfile({ userId, currentUser, onNavigate }) {
   const isSelf = currentUser && currentUser.user_id === profile.user_id;
   const canFollow = !!currentUser && !isSelf;
   const joinDate = profile.created_at
-    ? new Date(profile.created_at).toLocaleDateString('vi-VN')
+    ? new Date(profile.created_at).toLocaleDateString()
     : null;
   // Cosmetic: render the avatar as a colored initial if the user
   // never registered face images (and so avatar_url is null).
@@ -146,7 +151,7 @@ export default function UserProfile({ userId, currentUser, onNavigate }) {
 
   return (
     <div className="userprofile-container">
-      <button className="userprofile-back" onClick={() => onNavigate?.('feed')}>← Quay lại</button>
+      <button className="userprofile-back" onClick={() => onNavigate?.('feed')}><T>← Quay lại</T></button>
 
       <div className="userprofile-card">
         <div className="userprofile-avatar">
@@ -162,15 +167,15 @@ export default function UserProfile({ userId, currentUser, onNavigate }) {
             <span>@{profile.user_id}</span>
             {profile.role === 'admin' && <span className="userprofile-badge">Admin</span>}
             {profile.department && <span>🏢 {profile.department}</span>}
-            {joinDate && <span>📅 Tham gia {joinDate}</span>}
+            {joinDate && <span>📅 <T>Tham gia</T> {joinDate}</span>}
           </div>
           <div className="userprofile-follow-row">
             <span className="userprofile-follow-count">
-              <strong>{follow.followers}</strong> người theo dõi
+              <strong>{follow.followers}</strong> <T>người theo dõi</T>
             </span>
             <span className="userprofile-follow-dot">·</span>
             <span className="userprofile-follow-count">
-              <strong>{follow.following}</strong> đang theo dõi
+              <strong>{follow.following}</strong> <T>đang theo dõi</T>
             </span>
           </div>
         </div>
@@ -180,7 +185,7 @@ export default function UserProfile({ userId, currentUser, onNavigate }) {
             onClick={handleToggleFollow}
             disabled={followBusy}
           >
-            {isFollowing ? '✓ Đang theo dõi' : '+ Theo dõi'}
+            {isFollowing ? <>✓ <T>Đang theo dõi</T></> : <>+ <T>Theo dõi</T></>}
           </button>
         )}
       </div>
@@ -188,19 +193,19 @@ export default function UserProfile({ userId, currentUser, onNavigate }) {
       <div className="userprofile-stats">
         <div className="userprofile-stat">
           <div className="userprofile-stat-value">{stats.articles_owned || 0}</div>
-          <div className="userprofile-stat-label">Bài viết đã đăng</div>
+          <div className="userprofile-stat-label"><T>Bài viết đã đăng</T></div>
         </div>
         <div className="userprofile-stat">
           <div className="userprofile-stat-value">{stats.total_likes || 0}</div>
-          <div className="userprofile-stat-label">Lượt thích nhận</div>
+          <div className="userprofile-stat-label"><T>Lượt thích nhận</T></div>
         </div>
         <div className="userprofile-stat">
           <div className="userprofile-stat-value">{stats.posts_authored || 0}</div>
-          <div className="userprofile-stat-label">Bài đăng Feed</div>
+          <div className="userprofile-stat-label"><T>Bài đăng Feed</T></div>
         </div>
         <div className="userprofile-stat">
           <div className="userprofile-stat-value">{stats.comments_written || 0}</div>
-          <div className="userprofile-stat-label">Bình luận</div>
+          <div className="userprofile-stat-label"><T>Bình luận</T></div>
         </div>
       </div>
 
@@ -210,21 +215,21 @@ export default function UserProfile({ userId, currentUser, onNavigate }) {
             className={`userprofile-network-tab ${tab === 'followers' ? 'active' : ''}`}
             onClick={() => setTab('followers')}
           >
-            Người theo dõi ({follow.followers})
+            <T>Người theo dõi</T> ({follow.followers})
           </button>
           <button
             className={`userprofile-network-tab ${tab === 'following' ? 'active' : ''}`}
             onClick={() => setTab('following')}
           >
-            Đang theo dõi ({follow.following})
+            <T>Đang theo dõi</T> ({follow.following})
           </button>
         </div>
         <div className="userprofile-network-list">
           {followListLoading ? (
-            <div className="userprofile-status">Đang tải...</div>
+            <div className="userprofile-status"><T>Đang tải...</T></div>
           ) : followList.length === 0 ? (
             <div className="userprofile-status">
-              {tab === 'followers' ? 'Chưa có người theo dõi.' : 'Chưa theo dõi ai.'}
+              {tab === 'followers' ? <T>Chưa có người theo dõi.</T> : <T>Chưa theo dõi ai.</T>}
             </div>
           ) : (
             <ul>
@@ -250,7 +255,7 @@ export default function UserProfile({ userId, currentUser, onNavigate }) {
       </div>
 
       {isSelf && (
-        <div className="userprofile-self-hint">Đây là hồ sơ của bạn.</div>
+        <div className="userprofile-self-hint"><T>Đây là hồ sơ của bạn.</T></div>
       )}
     </div>
   );

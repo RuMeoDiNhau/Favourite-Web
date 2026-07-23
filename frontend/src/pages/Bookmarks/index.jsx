@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import * as api from '../../services/api';
 import { useBookmarks } from '../../lib/BookmarksContext';
+import { useTranslation } from 'react-i18next';
 import T from '../../i18n/T';
 import './Bookmarks.css';
 
@@ -17,6 +18,7 @@ function snippet(s, max = 120) {
 }
 
 export default function Bookmarks({ onNavigate }) {
+  const { t } = useTranslation();
   const { isBookmarked, toggle } = useBookmarks();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -35,7 +37,7 @@ export default function Bookmarks({ onNavigate }) {
       setItems(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('[Bookmarks] load failed', err);
-      setError(err.response?.data?.detail || 'Không thể tải danh sách đã lưu.');
+      setError(err.response?.data?.detail || t('bookmarks.err.load', { defaultValue: 'Không thể tải danh sách đã lưu.' }));
     } finally {
       setLoading(false);
     }
@@ -168,7 +170,7 @@ export default function Bookmarks({ onNavigate }) {
                   {item.snippet && <p className="bookmarks-card-snippet">{snippet(item.snippet)}</p>}
                   <div className="bookmarks-card-footer">
                     <span className="bookmarks-card-time">
-                      {new Date(item.created_at).toLocaleDateString('vi-VN')}
+                      {new Date(item.created_at).toLocaleDateString()}
                     </span>
                     <button
                       className={`bookmarks-unsave ${filled ? 'filled' : ''}`}

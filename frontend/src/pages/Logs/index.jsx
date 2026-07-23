@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { fetchLogs } from '../../services/api';
+import T from '../../i18n/T';
 
 function Logs() {
   const [logs, setLogs] = useState([]);
@@ -22,17 +23,17 @@ function Logs() {
     <section className="page">
       <h2>Logs / History</h2>
       {loading ? (
-        <p>Đang tải lịch sử...</p>
+        <p><T>Đang tải lịch sử...</T></p>
       ) : (
         <table className="user-table">
           <thead>
             <tr>
               <th>Log ID</th>
               <th>User ID</th>
-              <th>Tên</th>
-              <th>Trạng thái</th>
-              <th>Thời gian</th>
-              <th>Ảnh</th>
+              <th><T>Tên</T></th>
+              <th><T>Trạng thái</T></th>
+              <th><T>Thời gian</T></th>
+              <th><T>Ảnh</T></th>
             </tr>
           </thead>
           <tbody>
@@ -47,17 +48,17 @@ function Logs() {
                   <td>
                     {log.captured_image_url ? (
                       <a href={log.captured_image_url} target="_blank" rel="noreferrer">
-                        Xem
+                        <T>Xem</T>
                       </a>
                     ) : (
-                      'Không có'
+                      <T>Không có</T>
                     )}
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan="6">Không có lịch sử quét nào.</td>
+                <td colSpan="6"><T>Không có lịch sử quét nào.</T></td>
               </tr>
             )}
           </tbody>
