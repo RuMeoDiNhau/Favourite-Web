@@ -753,6 +753,26 @@ const handleFileChange = (e) => {
                               ❤️
                             </button>
 
+                            {/* Bookmark — same pattern as the playlist
+                                detail view (line ~600). Tapping toggles
+                                the per-user bookmark via the shared
+                                BookmarksContext; the icon swaps between
+                                filled and outlined to reflect state.
+                                Bookmarks are per-user so this only shows
+                                to authenticated users. */}
+                            {user && (
+                              <button
+                                onClick={() => toggleBm('music', song.id)}
+                                className={`play-btn ${isBm('music', song.id) ? 'bookmark-active' : ''}`}
+                                style={{ marginLeft: '8px' }}
+                                title={isBm('music', song.id) ? 'Bỏ lưu' : 'Lưu bài hát'}
+                                aria-label={isBm('music', song.id) ? 'Bỏ lưu' : 'Lưu bài hát'}
+                                aria-pressed={isBm('music', song.id)}
+                              >
+                                {isBm('music', song.id) ? '🔖' : '⚪'}
+                              </button>
+                            )}
+
                             {/* Dropdown Popover để thêm vào Playlist */}
                             {user && (
                               <div className="playlist-popover-container" style={{ position: 'relative', marginLeft: '8px' }}>
