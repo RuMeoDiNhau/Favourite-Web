@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import * as api from '../../services/api';
+import { useTranslation } from 'react-i18next';
+import T from '../../i18n/T';
 import './NotificationBell.css';
 
 // Polling cadence for the unread-count badge. 30 s is short enough
@@ -21,6 +23,7 @@ const TYPE_ICONS = {
 };
 
 export default function NotificationBell({ onSelectItem }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -82,11 +85,11 @@ export default function NotificationBell({ onSelectItem }) {
       setUnreadCount(data.unread_count ?? 0);
     } catch (err) {
       console.warn('[NotificationBell] fetch list failed', err);
-      setError('Không tải được thông báo.');
+      setError(t('notif.err.load', { defaultValue: 'Không tải được thông báo.' }));
     } finally {
       setLoading(false);
     }
-  }, [unreadOnly]);
+  }, [unreadOnly, t]);
 
   // Refresh the list when the dropdown opens or the filter flips.
   // Using the unread-count from the same response keeps the badge
@@ -139,7 +142,7 @@ export default function NotificationBell({ onSelectItem }) {
       <button
         className="notif-bell-btn"
         onClick={() => setOpen((v) => !v)}
-        aria-label="Thông báo"
+        aria-label={t('notif.title', { defaultValue: 'Thông báo' })}
         aria-expanded={open}
       >
         <span className="notif-bell-icon">🔔</span>
@@ -149,14 +152,14 @@ export default function NotificationBell({ onSelectItem }) {
       {open && (
         <div className="notif-dropdown" role="menu">
           <div className="notif-dropdown-header">
-            <span className="notif-dropdown-title">Thông báo</span>
+            <span className="notif-dropdown-title"><T>Thông báo</T></span>
             {unreadCount > 0 && (
               <button
                 className="notif-mark-all-btn"
                 onClick={handleMarkAllRead}
                 type="button"
               >
-                Đánh dấu tất cả đã đọc
+                <T>Đánh dấu tất cả đã đọc</T>
               </button>
             )}
           </div>
@@ -167,14 +170,14 @@ export default function NotificationBell({ onSelectItem }) {
               onClick={() => setUnreadOnly(false)}
               type="button"
             >
-              Tất cả
+              <T>Tất cả</T>
             </button>
             <button
               className={`notif-tab ${unreadOnly ? 'active' : ''}`}
               onClick={() => setUnreadOnly(true)}
               type="button"
             >
-              Chưa đọc {unreadCount > 0 && <span className="notif-tab-badge">{unreadCount}</span>}
+              <T>Chưa đọc</T> {unreadCount > 0 && <span className="notif-tab-badge">{unreadCount}</span>}
             </button>
           </div>
 
@@ -182,10 +185,10 @@ export default function NotificationBell({ onSelectItem }) {
 
           <div className="notif-list">
             {loading ? (
-              <div className="notif-status">Đang tải...</div>
+              <div className="notif-status"><T>Đang tải...</T></div>
             ) : notifications.length === 0 ? (
               <div className="notif-status">
-                {unreadOnly ? '🔔 Không có thông báo chưa đọc.' : '🔔 Bạn chưa có thông báo nào.'}
+                {unreadOnly ? <T>🔔 Không có thông báo chưa đọc.</T> : <T>🔔 Bạn chưa có thông báo nào.</T>}
               </div>
             ) : (
               notifications.map((n) => (
@@ -200,7 +203,7 @@ export default function NotificationBell({ onSelectItem }) {
                     <span className="notif-item-message">{n.message}</span>
                     <span className="notif-item-meta">
                       <span className="notif-item-time">{formatRelative(n.created_at)}</span>
-                      {!n.read && <span className="notif-item-dot" aria-label="Chưa đọc" />}
+                      {!n.read && <span className="notif-item-dot" aria-label={t('notif.unread_dot', { defaultValue: 'Chưa đọc' })} />}
                     </span>
                   </span>
                 </button>
@@ -221,12 +224,12 @@ function formatRelative(iso) {
   if (Number.isNaN(t)) return '';
   const diff = Math.max(0, Date.now() - t);
   const sec = Math.floor(diff / 1000);
-  if (sec < 60) return 'vừa xong';
+  if (sec < 60) return 'just now';
   const min = Math.floor(sec / 60);
-  if (min < 60) return `${min} phút trước`;
+  if (min < 60) return `${min}m ago`;
   const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr} giờ trước`;
+  if (hr < 24) return `${hr}h ago`;
   const day = Math.floor(hr / 24);
-  if (day < 30) return `${day} ngày trước`;
-  return new Date(iso).toLocaleDateString('vi-VN');
+  if (day < 30) return `${day}d ago`;
+  return new Date(iso).toLocaleDateString();
 }

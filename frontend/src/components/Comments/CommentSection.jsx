@@ -1,22 +1,32 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import * as api from '../../services/api';
+import { useTranslation } from 'react-i18next';
+import T from '../../i18n/T';
 import './Comments.css';
 
 // The 5 reaction emojis the user can pick from. The set here must
 // match backend `comments_service.ALLOWED_EMOJIS` — the BE will
 // 400 on anything else, but matching client-side lets us render
 // the bar without waiting for a roundtrip.
+const REACTION_LABELS = {
+  like: 'Thích',
+  love: 'Yêu thích',
+  fire: 'Tuyệt vời',
+  laugh: 'Haha',
+  wow: 'Wow',
+};
 const REACTION_EMOJIS = [
-  { key: 'like',  icon: '👍', label: 'Thích' },
-  { key: 'love',  icon: '❤️', label: 'Yêu thích' },
-  { key: 'fire',  icon: '🔥', label: 'Tuyệt vời' },
-  { key: 'laugh', icon: '😂', label: 'Haha' },
-  { key: 'wow',   icon: '😮', label: 'Wow' },
+  { key: 'like',  icon: '👍' },
+  { key: 'love',  icon: '❤️' },
+  { key: 'fire',  icon: '🔥' },
+  { key: 'laugh', icon: '😂' },
+  { key: 'wow',   icon: '😮' },
 ];
 
 const MAX_BODY = 2000;
 
 export default function CommentSection({ contentType, contentId, currentUser, onNavigate }) {
+  const { t } = useTranslation();
   const [comments, setComments] = useState([]);
   const [reactions, setReactions] = useState({ counts: {}, my_emoji: null });
   const [newBody, setNewBody] = useState('');
@@ -41,11 +51,11 @@ export default function CommentSection({ contentType, contentId, currentUser, on
       setError(null);
     } catch (err) {
       console.warn('[CommentSection] load failed', err);
-      setError('Không tải được bình luận');
+      setError(t('comments.err.load', { defaultValue: 'Không tải được bình luận' }));
     } finally {
       setLoading(false);
     }
-  }, [contentType, contentId]);
+  }, [contentType, contentId, t]);
 
   useEffect(() => {
     loadAll();
@@ -118,7 +128,7 @@ export default function CommentSection({ contentType, contentId, currentUser, on
         setComments((prev) => prev.filter((c) => c.id !== tempId));
       }
       console.warn('[CommentSection] post failed', err);
-      setError('Không gửi được bình luận. Vui lòng thử lại.');
+      setError(t('comments.err.send', { defaultValue: 'Không gửi được bình luận. Vui lòng thử lại.' }));
     } finally {
       pendingRef.current.delete(tempId);
       setSubmitting(false);
@@ -137,7 +147,7 @@ export default function CommentSection({ contentType, contentId, currentUser, on
       removeCommentFromTree(comment.id);
     } catch (err) {
       console.warn('[CommentSection] delete failed', err);
-      setError('Không xóa được bình luận.');
+      setError(t('comments.err.delete', { defaultValue: 'Không xóa được bình luận.' }));
     }
   };
 
@@ -216,7 +226,7 @@ export default function CommentSection({ contentType, contentId, currentUser, on
     } catch (err) {
       console.warn('[CommentSection] reaction failed', err);
       setReactions(prev);
-      setError('Không lưu được reaction.');
+      setError(t('comments.err.reaction', { defaultValue: 'Không lưu được reaction.' }));
     }
   };
 
@@ -228,7 +238,7 @@ export default function CommentSection({ contentType, contentId, currentUser, on
   return (
     <div className="comment-section">
       <h3 className="comment-section-title">
-        💬 Bình luận ({totalComments})
+        💬 <T>Bình luận</T> ({totalComments})
       </h3>
 
       <div className="reaction-bar">
@@ -241,7 +251,8 @@ export default function CommentSection({ contentType, contentId, currentUser, on
               type="button"
               className={`reaction-btn ${isMine ? 'reaction-btn-active' : ''}`}
               onClick={() => handleReaction(r.key)}
-              title={r.label}
+              title={REACTION_LABELS[r.key]}
+              aria-label={REACTION_LABELS[r.key]}
               aria-pressed={isMine}
             >
               <span className="reaction-icon">{r.icon}</span>
@@ -254,12 +265,12 @@ export default function CommentSection({ contentType, contentId, currentUser, on
       <form className="comment-form" onSubmit={handleSubmit}>
         {replyTo && (
           <div className="comment-reply-indicator">
-            <span>Đang trả lời <strong>@{replyTo.name}</strong></span>
+            <span><T>Đang trả lời</T> <strong>@{replyTo.name}</strong></span>
             <button
               type="button"
               onClick={() => setReplyTo(null)}
               className="comment-reply-cancel"
-              aria-label="Hủy trả lời"
+              aria-label={t('comments.cancel_reply', { defaultValue: 'Hủy trả lời' })}
             >
               ✕
             </button>
@@ -267,7 +278,9 @@ export default function CommentSection({ contentType, contentId, currentUser, on
         )}
         <textarea
           className="comment-input"
-          placeholder={replyTo ? `Trả lời @${replyTo.name}...` : 'Viết bình luận...'}
+          placeholder={replyTo
+            ? t('comments.ph.reply', { name: replyTo.name, defaultValue: `Trả lời @${replyTo.name}...` })
+            : t('comments.ph.write', { defaultValue: 'Viết bình luận...' })}
           value={newBody}
           onChange={(e) => setNewBody(e.target.value.slice(0, MAX_BODY))}
           rows={3}
@@ -280,7 +293,7 @@ export default function CommentSection({ contentType, contentId, currentUser, on
             className="comment-submit"
             disabled={!newBody.trim() || submitting}
           >
-            {submitting ? 'Đang gửi...' : replyTo ? 'Trả lời' : 'Gửi'}
+            {submitting ? <T>Đang gửi...</T> : replyTo ? <T>Trả lời</T> : <T>Gửi</T>}
           </button>
         </div>
       </form>
@@ -288,9 +301,9 @@ export default function CommentSection({ contentType, contentId, currentUser, on
       {error && <div className="comment-error">{error}</div>}
 
       {loading ? (
-        <div className="comment-status">Đang tải bình luận...</div>
+        <div className="comment-status"><T>Đang tải bình luận...</T></div>
       ) : comments.length === 0 ? (
-        <div className="comment-status">Chưa có bình luận nào. Hãy là người đầu tiên!</div>
+        <div className="comment-status"><T>Chưa có bình luận nào. Hãy là người đầu tiên!</T></div>
       ) : (
         <ul className="comment-list">
           {comments.map((c) => (
@@ -371,8 +384,8 @@ function CommentNode({ comment, currentUser, onReply, onDelete, onUpdate, onProf
             {comment.user_name || comment.user_id}
           </span>
           <span className="comment-time">{formatRelative(comment.created_at)}</span>
-          {comment.updated_at && <span className="comment-edited" title={`Đã chỉnh sửa ${formatRelative(comment.updated_at)}`}>(đã chỉnh sửa)</span>}
-          {isPending && <span className="comment-pending">đang gửi…</span>}
+          {comment.updated_at && <span className="comment-edited" title={`Edited ${formatRelative(comment.updated_at)}`}>(edited)</span>}
+          {isPending && <span className="comment-pending">sending…</span>}
         </div>
         {editing ? (
           <div className="comment-edit">
@@ -393,7 +406,7 @@ function CommentNode({ comment, currentUser, onReply, onDelete, onUpdate, onProf
                   onClick={cancelEdit}
                   disabled={saving}
                 >
-                  Hủy
+                  <T>Hủy</T>
                 </button>
                 <button
                   type="button"
@@ -401,7 +414,7 @@ function CommentNode({ comment, currentUser, onReply, onDelete, onUpdate, onProf
                   onClick={saveEdit}
                   disabled={!editBody.trim() || saving}
                 >
-                  {saving ? 'Đang lưu...' : 'Lưu'}
+                  {saving ? <T>Đang lưu...</T> : <T>Lưu</T>}
                 </button>
               </div>
             </div>
@@ -411,16 +424,16 @@ function CommentNode({ comment, currentUser, onReply, onDelete, onUpdate, onProf
         )}
         <div className="comment-actions">
           <button type="button" className="comment-action-btn" onClick={() => onReply(comment)}>
-            ↩ Trả lời
+            ↩ <T>Trả lời</T>
           </button>
           {canModify && !editing && !isPending && (
             <button type="button" className="comment-action-btn" onClick={startEdit}>
-              ✏️ Sửa
+              ✏️ <T>Sửa</T>
             </button>
           )}
           {canDelete && !editing && (
             <button type="button" className="comment-action-btn comment-action-delete" onClick={() => onDelete(comment)}>
-              🗑 Xóa
+              🗑 <T>Xóa</T>
             </button>
           )}
         </div>
@@ -444,8 +457,8 @@ function CommentNode({ comment, currentUser, onReply, onDelete, onUpdate, onProf
   );
 }
 
-// Format a timestamp as "vừa xong / 5 phút trước / 2 giờ trước / 3 ngày trước".
-// We bound the output at "X ngày trước" to avoid noise — exact dates
+// Format a timestamp as "just now / 5m ago / 2h ago / 3d ago".
+// We bound the output at "Xd ago" to avoid noise — exact dates
 // are available in the API response if a user wants them.
 function formatRelative(iso) {
   if (!iso) return '';
@@ -453,12 +466,12 @@ function formatRelative(iso) {
   const now = Date.now();
   const diff = Math.max(0, now - t);
   const sec = Math.floor(diff / 1000);
-  if (sec < 60) return 'vừa xong';
+  if (sec < 60) return 'just now';
   const min = Math.floor(sec / 60);
-  if (min < 60) return `${min} phút trước`;
+  if (min < 60) return `${min}m ago`;
   const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr} giờ trước`;
+  if (hr < 24) return `${hr}h ago`;
   const day = Math.floor(hr / 24);
-  if (day < 30) return `${day} ngày trước`;
-  return new Date(iso).toLocaleDateString('vi-VN');
+  if (day < 30) return `${day}d ago`;
+  return new Date(iso).toLocaleDateString();
 }
