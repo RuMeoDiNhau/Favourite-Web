@@ -413,7 +413,7 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
                 <div key={article.id} className="knowledge-card">
                   <div className="card-header">
                     <div className="card-image">📝</div>
-                    <div className="card-badge">{article.category}</div>
+                    <div className="card-badge">{categoryLabel(article.category)}</div>
                     {article.status && article.status !== 'published' && (
                       <div className={`card-status card-status-${article.status}`}>
                         {article.status === 'draft' ? <>📝 {t('knowledge.draft')}</> : <>⏰ {t('knowledge.scheduled')}</>}
@@ -480,7 +480,7 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
           >
             <div className="article-modal-header">
               <div>
-                <span className="card-badge">{selectedArticle.category}</span>
+                <span className="card-badge">{categoryLabel(selectedArticle.category)}</span>
                 <h2>{selectedArticle.title}</h2>
                 <div className="article-modal-meta">
                   <span>👤 {selectedArticle.author}</span>
