@@ -5,7 +5,6 @@ import { resolveBackendOrigin } from '../../lib/apiBase';
 import * as api from '../../services/api';
 import CameraBox from '../../components/CameraBox';
 import CommentSection from '../../components/Comments/CommentSection';
-import T from '../../i18n/T';
 import { useBookmarks } from '../../lib/BookmarksContext';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -21,6 +20,27 @@ const POST_REACTION_EMOJIS = [
   { key: 'laugh', icon: '😂' },
   { key: 'wow',   icon: '😮' },
 ];
+
+// Verb mapping for the friends-activity feed. Keys combine
+// content_type + event_type so a single lookup covers the
+// reasonable (type, action) pairs the BE emits.
+const FRIEND_VERB_KEY = {
+  'knowledge|view': 'feed.friendAction.viewKnowledge',
+  'knowledge|like': 'feed.friendAction.likeKnowledge',
+  'music|play':     'feed.friendAction.playMusic',
+  'music|like':     'feed.friendAction.likeMusic',
+  'game|view':      'feed.friendAction.viewGame',
+  'game|like':      'feed.friendAction.likeGame',
+  'post|like':      'feed.friendAction.likePost',
+  'post|view':      'feed.friendAction.viewPost',
+};
+
+const CONTENT_TYPE_ICON = {
+  knowledge: '📚',
+  music: '🎵',
+  game: '🎮',
+  post: '📰',
+};
 
 export default function Feed({ currentUser, onNavigate }) {
   const { t } = useTranslation();
@@ -58,12 +78,12 @@ export default function Feed({ currentUser, onNavigate }) {
   // 4. Camera/Check-in state
   const [isCameraOn, setIsCameraOn] = useState(true);
   const [status, setStatus] = useState('idle');
-  const [message, setMessage] = useState('Chưa có kết quả');
+  const [message, setMessage] = useState(t('dashboard.idle'));
   const [preview, setPreview] = useState(null);
   const [autoScan, setAutoScan] = useState(true);
   const [captureTrigger, setCaptureTrigger] = useState(0);
-  const [scanLogs, setScanLogs] = useState([
-    { id: 1, text: 'Thiết bị sẵn sàng', type: 'info' }
+  const [scanLogs, setScanLogs] = useState(() => [
+    { id: 1, text: t('feed.scanLog.ready'), type: 'info' }
   ]);
 
   // 5. Article & Game Popups / Overlays
@@ -110,7 +130,7 @@ export default function Feed({ currentUser, onNavigate }) {
       success: 0,
       failed: 0
     }));
-    
+
     logs.forEach(log => {
       if (log.timestamp) {
         try {
@@ -126,7 +146,7 @@ export default function Feed({ currentUser, onNavigate }) {
         }
       }
     });
-    
+
     const activeHours = hours.filter(h => h.success > 0 || h.failed > 0);
     if (activeHours.length === 0) {
       return [
@@ -216,7 +236,7 @@ export default function Feed({ currentUser, onNavigate }) {
 
     } catch (err) {
       console.error('Error loading dashboard data:', err);
-      setError('Không thể tải dữ liệu Dashboard. Vui lòng đăng nhập lại.');
+      setError(t('feed.loadFail'));
     } finally {
       setLoading(false);
     }
@@ -228,11 +248,11 @@ export default function Feed({ currentUser, onNavigate }) {
   const handleCapture = async (file) => {
     setPreview(URL.createObjectURL(file));
     setStatus('loading');
-    setMessage('Đang xử lý ảnh...');
-    
+    setMessage(t('dashboard.processing'));
+
     // Add scanning indicator to logs
     setScanLogs(prev => [
-      { id: Date.now(), text: '⏳ Đang quét...', type: 'scanning' },
+      { id: Date.now(), text: t('feed.scanLog.scanning'), type: 'scanning' },
       ...prev.slice(0, 2)
     ]);
 
@@ -244,19 +264,19 @@ export default function Feed({ currentUser, onNavigate }) {
         const data = response.data;
         setStatus('success');
         setMessage(`${data.message} - ${data.data.name}`);
-        
+
         // Add success to logs
         setScanLogs(prev => [
-          { id: Date.now(), text: `✅ Thành công: ${data.data.name}`, type: 'success' },
+          { id: Date.now(), text: t('feed.scanLog.success', { name: data.data.name }), type: 'success' },
           ...prev.slice(0, 2)
         ]);
       } catch (error) {
         setStatus('error');
-        setMessage('Không nhận diện được khuôn mặt.');
-        
+        setMessage(t('feed.notRecognized'));
+
         // Add error to logs
         setScanLogs(prev => [
-          { id: Date.now(), text: '❌ Không nhận diện được', type: 'error' },
+          { id: Date.now(), text: t('feed.scanLog.error'), type: 'error' },
           ...prev.slice(0, 2)
         ]);
       }
@@ -314,10 +334,18 @@ export default function Feed({ currentUser, onNavigate }) {
   const formatDate = (dateStr) => {
     try {
       const d = new Date(dateStr);
-      return d.toLocaleDateString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+      return d.toLocaleDateString(undefined, { hour: '2-digit', minute: '2-digit' });
     } catch {
       return dateStr;
     }
+  };
+
+  // Helper: resolve the localized verb for a friend-activity row. If
+  // we don't have a mapping for the (content_type, event_type) pair,
+  // fall back to the raw event_type so we never render empty space.
+  const verbForEvent = (ev) => {
+    const key = FRIEND_VERB_KEY[`${ev.content_type}|${ev.event_type}`];
+    return key ? t(key) : ev.event_type;
   };
 
   return (
@@ -325,11 +353,11 @@ export default function Feed({ currentUser, onNavigate }) {
 
       {/* ==================== CỘT GIỮA: FEED & KIẾN THỨC ==================== */}
       <div className="dashboard-col center-col">
-        
+
         {/* BẢNG TIN MỚI NHẤT */}
         <section className="dashboard-card feed-card-section">
           <div className="card-title-header">
-            <h3><T>Feed Mới Nhất</T></h3>
+            <h3>{t('feed.title')}</h3>
           </div>
 
           <div className="dashboard-posts-list">
@@ -389,7 +417,7 @@ export default function Feed({ currentUser, onNavigate }) {
                             alt="Game Icon"
                             style={{ width: '16px', height: '16px', display: 'inline-block', verticalAlign: 'middle', marginRight: '6px', borderRadius: '3px' }}
                           />
-                          <T>Chơi trực tuyến</T>: {post.title}
+                          {t('feed.playOnline')}: {post.title}
                         </button>
                       </div>
                     )}
@@ -417,23 +445,23 @@ export default function Feed({ currentUser, onNavigate }) {
                         className="post-comment-btn"
                         onClick={() => setCommentModalPost(post)}
                       >
-                        💬 <T>Bình luận</T>
+                        💬 {t('feed.comment')}
                       </button>
                       <button
                         type="button"
                         className={`post-bookmark-btn ${isBmPost('post', post.id) ? 'filled' : ''}`}
                         onClick={() => toggleBmPost('post', post.id)}
-                        title={isBmPost('post', post.id) ? <T>Bỏ lưu</T> : <T>Lưu bài đăng</T>}
-                        aria-label={isBmPost('post', post.id) ? <T>Bỏ lưu</T> : <T>Lưu bài đăng</T>}
+                        title={isBmPost('post', post.id) ? t('feed.unsave') : t('feed.savePost')}
+                        aria-label={isBmPost('post', post.id) ? t('feed.unsave') : t('feed.savePost')}
                       >
-                        {isBmPost('post', post.id) ? '🔖' : <><T>⚪ Lưu</T></>}
+                        {isBmPost('post', post.id) ? '🔖' : t('feed.save')}
                       </button>
                     </div>
                   )}
                 </div>
               ))
             ) : (
-              <p className="no-data-text"><T>Chưa có hoạt động nào được đăng.</T></p>
+              <p className="no-data-text">{t('feed.noPosts')}</p>
             )}
           </div>
         </section>
@@ -441,7 +469,7 @@ export default function Feed({ currentUser, onNavigate }) {
         {/* CHIA SẺ KIẾN THỨC NỔI BẬT */}
         <section className="dashboard-card knowledge-card-section">
           <div className="card-title-header">
-            <h3><T>Chia Sẻ Kiến Thức Nổi Bật</T></h3>
+            <h3>{t('feed.knowledgeSection')}</h3>
           </div>
 
           <div className="dashboard-articles-grid">
@@ -461,13 +489,13 @@ export default function Feed({ currentUser, onNavigate }) {
                   </div>
 
                   <div className="article-actions" onClick={(e) => e.stopPropagation()}>
-                    <button className="article-read-btn" onClick={() => setSelectedArticle(article)}><T>Đọc Thêm →</T></button>
-                    <button className="article-like-btn" onClick={() => handleLikeKnowledge(article.id)}><T>❤️ Thích</T></button>
+                    <button className="article-read-btn" onClick={() => setSelectedArticle(article)}>{t('feed.readMore')}</button>
+                    <button className="article-like-btn" onClick={() => handleLikeKnowledge(article.id)}>{t('feed.like')}</button>
                   </div>
                 </div>
               ))
             ) : (
-              <p className="no-data-text"><T>Không có bài viết kiến thức nào.</T></p>
+              <p className="no-data-text">{t('feed.noKnowledge')}</p>
             )}
           </div>
         </section>
@@ -478,30 +506,13 @@ export default function Feed({ currentUser, onNavigate }) {
         {currentUser && (
           <section className="dashboard-card feed-card-section">
             <div className="card-title-header">
-              <h3><T>👥 Hoạt động bạn bè</T></h3>
+              <h3>{t('feed.friendsActivity')}</h3>
             </div>
             <div className="dashboard-posts-list">
               {friendsActivity.length > 0 ? (
                 friendsActivity.map((ev) => {
-                  // Friendly action verb per (content_type, event_type).
-                  // Keeping this mapping local avoids loading a
-                  // shared constants module just for three strings.
-                  const verb = ({
-                    'knowledge|view': <T>đã đọc</T>,
-                    'knowledge|like': <T>đã thích</T>,
-                    'music|play': <T>đã nghe</T>,
-                    'music|like': <T>đã thích</T>,
-                    'game|view': <T>đã xem</T>,
-                    'game|like': <T>đã thích</T>,
-                    'post|like': <T>đã thích</T>,
-                    'post|view': <T>đã xem</T>,
-                  })[`${ev.content_type}|${ev.event_type}`] || ev.event_type;
-                  const icon = ({
-                    'knowledge': '📚',
-                    'music': '🎵',
-                    'game': '🎮',
-                    'post': '📰',
-                  })[ev.content_type] || '✨';
+                  const verb = verbForEvent(ev);
+                  const icon = CONTENT_TYPE_ICON[ev.content_type] || '✨';
                   return (
                     <div key={ev.id} className="dash-post-item friends-activity-item">
                       <div className="post-item-meta">
@@ -536,7 +547,7 @@ export default function Feed({ currentUser, onNavigate }) {
                   );
                 })
               ) : (
-                <p className="no-data-text"><T>Bạn chưa theo dõi ai, hoặc bạn bè chưa có hoạt động nào gần đây.</T></p>
+                <p className="no-data-text">{t('feed.noFriends')}</p>
               )}
             </div>
           </section>
@@ -546,11 +557,11 @@ export default function Feed({ currentUser, onNavigate }) {
 
       {/* ==================== CỘT PHẢI: GAMES & THỐNG KÊ ==================== */}
       <div className="dashboard-col right-col">
-        
+
         {/* BLOG GAME & TIN TỨC */}
         <section className="dashboard-card games-card-section">
           <div className="card-title-header">
-            <h3><T>Blog Game & Tin Tức</T></h3>
+            <h3>{t('feed.gameBlogSection')}</h3>
           </div>
 
           <div className="games-dashboard-container">
@@ -560,7 +571,7 @@ export default function Feed({ currentUser, onNavigate }) {
                 className={activeGameCategory === 'all' ? 'active' : ''}
                 onClick={() => setActiveGameCategory('all')}
               >
-                <T>Tất Cả</T>
+                {t('feed.allCategory')}
               </button>
               {gameCategories.map(cat => (
                 <button
@@ -597,14 +608,14 @@ export default function Feed({ currentUser, onNavigate }) {
                         <span>❤️ {game.likes}</span>
                       </div>
                       <div className="game-item-actions" onClick={(e) => e.stopPropagation()}>
-                        <button className="btn-read" onClick={() => setSelectedGame(game)}>📖 <T>Đọc</T></button>
-                        <button className="btn-like" onClick={() => handleLikeGame(game.id)}><T>❤️ Thích</T></button>
+                        <button className="btn-read" onClick={() => setSelectedGame(game)}>📖 {t('feed.read')}</button>
+                        <button className="btn-like" onClick={() => handleLikeGame(game.id)}>{t('feed.like')}</button>
                       </div>
                     </div>
                   </div>
                 ))
               ) : (
-                <p className="no-data-text" style={{ padding: '20px' }}><T>Không có bài viết game.</T></p>
+                <p className="no-data-text" style={{ padding: '20px' }}>{t('feed.noGames')}</p>
               )}
             </div>
           </div>
@@ -614,7 +625,7 @@ export default function Feed({ currentUser, onNavigate }) {
         {currentUser && currentUser.role === 'admin' && (
           <section className="dashboard-card statistics-card-section">
             <div className="card-title-header">
-              <h3><T>Thống Kê Người Dùng</T></h3>
+              <h3>{t('feed.userStatsSection')}</h3>
             </div>
 
             <div className="stats-dash-container">
@@ -624,8 +635,8 @@ export default function Feed({ currentUser, onNavigate }) {
                   <thead>
                     <tr>
                       <th>ID</th>
-                      <th><T>Tên</T></th>
-                      <th><T>Số ảnh</T></th>
+                      <th>{t('feed.statName')}</th>
+                      <th>{t('feed.statPhotos')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -649,14 +660,14 @@ export default function Feed({ currentUser, onNavigate }) {
                     className={`chart-tab-btn ${activeTab === 'checkin' ? 'active' : ''}`}
                     onClick={() => setActiveTab('checkin')}
                   >
-                    📊 Check-in
+                    📊 {t('feed.checkinTab')}
                   </button>
                   <button
                     type="button"
                     className={`chart-tab-btn ${activeTab === 'songs' ? 'active' : ''}`}
                     onClick={() => setActiveTab('songs')}
                   >
-                    🎵 <T>Top 5 Nhạc</T>
+                    🎵 {t('feed.statTopSongs')}
                   </button>
                 </div>
 
@@ -679,8 +690,8 @@ export default function Feed({ currentUser, onNavigate }) {
                         <YAxis stroke="#94a3b8" fontSize={9} allowDecimals={false} />
                         <Tooltip contentStyle={{ fontSize: '11px' }} />
                         <Legend iconSize={8} wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} />
-                        <Area type="monotone" dataKey="success" name={t('feed.legend.success', { defaultValue: 'Thành công' })} stroke="#10b981" fillOpacity={1} fill="url(#colorSuccess)" strokeWidth={2} />
-                        <Area type="monotone" dataKey="failed" name={t('feed.legend.failed', { defaultValue: 'Thất bại' })} stroke="#ef4444" fillOpacity={1} fill="url(#colorFailed)" strokeWidth={2} />
+                        <Area type="monotone" dataKey="success" name={t('feed.legend.success')} stroke="#10b981" fillOpacity={1} fill="url(#colorSuccess)" strokeWidth={2} />
+                        <Area type="monotone" dataKey="failed" name={t('feed.legend.failed')} stroke="#ef4444" fillOpacity={1} fill="url(#colorFailed)" strokeWidth={2} />
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
@@ -693,8 +704,8 @@ export default function Feed({ currentUser, onNavigate }) {
                         <YAxis dataKey="name" type="category" stroke="#94a3b8" fontSize={9} width={70} />
                         <Tooltip contentStyle={{ fontSize: '11px' }} />
                         <Legend iconSize={8} wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} />
-                        <Bar dataKey="plays" name={t('feed.legend.plays', { defaultValue: 'Lượt nghe' })} fill="#06b6d4" radius={[0, 4, 4, 0]} barSize={10} />
-                        <Bar dataKey="likes" name={t('feed.legend.likes', { defaultValue: 'Thích' })} fill="#ec4899" radius={[0, 4, 4, 0]} barSize={10} />
+                        <Bar dataKey="plays" name={t('feed.legend.plays')} fill="#06b6d4" radius={[0, 4, 4, 0]} barSize={10} />
+                        <Bar dataKey="likes" name={t('feed.legend.likes')} fill="#ec4899" radius={[0, 4, 4, 0]} barSize={10} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -721,7 +732,7 @@ export default function Feed({ currentUser, onNavigate }) {
                 />
                 {activeGameUrl.title}
               </h2>
-              <button className="close-game-btn" onClick={() => setActiveGameUrl(null)}>✕ <T>Đóng</T></button>
+              <button className="close-game-btn" onClick={() => setActiveGameUrl(null)}>✕ {t('feed.modalClose')}</button>
             </div>
             <div className="game-modal-body">
               {(() => {
@@ -736,7 +747,7 @@ export default function Feed({ currentUser, onNavigate }) {
                 if (!isTrusted) {
                   return (
                     <div className="feed-error-text">
-                      ⚠️ <T>Không thể mở game từ nguồn không đáng tin cậy</T>: {fullUrl}
+                      ⚠️ {t('feed.untrustedGame')}: {fullUrl}
                       {/* Cookie migration done: the JWT now lives in an
                           httpOnly cookie the iframe can't read, so this
                           URL guard is the only remaining defense for
@@ -770,10 +781,10 @@ export default function Feed({ currentUser, onNavigate }) {
             <div className="modal-header-detail">
               <h2>{selectedArticle.title}</h2>
               <div className="modal-meta">
-                <span>📁 <T>Chủ đề</T>: <strong>{selectedArticle.category}</strong></span>
-                <span>👤 <T>Tác giả</T>: <strong>{selectedArticle.author}</strong></span>
-                <span>👁️ {selectedArticle.views} <T>lượt xem</T></span>
-                <span>❤️ {selectedArticle.likes} <T>lượt thích</T></span>
+                <span>📁 {t('feed.modalCategory')}: <strong>{selectedArticle.category}</strong></span>
+                <span>👤 {t('feed.modalAuthor')}: <strong>{selectedArticle.author}</strong></span>
+                <span>👁️ {selectedArticle.views} {t('feed.viewsLabel')}</span>
+                <span>❤️ {selectedArticle.likes} {t('feed.likesLabel')}</span>
               </div>
             </div>
             <div className="modal-body">
@@ -793,10 +804,10 @@ export default function Feed({ currentUser, onNavigate }) {
                 }}
                 className="action-btn feed-action-btn-danger"
               >
-                ❤️ <T>Thích bài viết</T>
+                ❤️ {t('feed.modalLikeArticle')}
               </button>
               <button onClick={() => setSelectedArticle(null)} className="action-btn" style={{ maxWidth: '100px' }}>
-                <T>Đóng</T>
+                {t('feed.modalClose')}
               </button>
             </div>
           </div>
@@ -813,8 +824,8 @@ export default function Feed({ currentUser, onNavigate }) {
             <div className="modal-header-detail">
               <h2>{commentModalPost.title}</h2>
               <div className="modal-meta">
-                <span>👤 <T>Tác giả</T>: <strong>@{commentModalPost.user_id}</strong></span>
-                <span>📁 <T>Loại</T>: <strong>{commentModalPost.post_type}</strong></span>
+                <span>👤 {t('feed.modalAuthor')}: <strong>@{commentModalPost.user_id}</strong></span>
+                <span>📁 {t('feed.modalType')}: <strong>{commentModalPost.post_type}</strong></span>
               </div>
             </div>
             <div className="modal-body">
@@ -830,7 +841,7 @@ export default function Feed({ currentUser, onNavigate }) {
             </div>
             <div className="modal-footer">
               <button onClick={() => setCommentModalPost(null)} className="action-btn" style={{ maxWidth: '100px' }}>
-                <T>Đóng</T>
+                {t('feed.modalClose')}
               </button>
             </div>
           </div>
@@ -845,9 +856,9 @@ export default function Feed({ currentUser, onNavigate }) {
             <div className="modal-header-detail">
               <h2>{selectedGame.title}</h2>
               <div className="modal-meta">
-                <span>📁 <T>Thể loại</T>: <strong>{selectedGame.category}</strong></span>
-                <span>👁️ {selectedGame.views + 1} <T>lượt xem</T></span>
-                <span>❤️ {selectedGame.likes} <T>lượt thích</T></span>
+                <span>📁 {t('feed.modalCategory')}: <strong>{selectedGame.category}</strong></span>
+                <span>👁️ {selectedGame.views + 1} {t('feed.viewsLabel')}</span>
+                <span>❤️ {selectedGame.likes} {t('feed.likesLabel')}</span>
               </div>
             </div>
             <div className="modal-body">
@@ -861,10 +872,10 @@ export default function Feed({ currentUser, onNavigate }) {
                 }}
                 className="action-btn feed-action-btn-danger"
               >
-                ❤️ <T>Thích bài viết</T>
+                ❤️ {t('feed.modalLikeArticle')}
               </button>
               <button onClick={() => setSelectedGame(null)} className="action-btn" style={{ maxWidth: '100px' }}>
-                <T>Đóng</T>
+                {t('feed.modalClose')}
               </button>
             </div>
           </div>

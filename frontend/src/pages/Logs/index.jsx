@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchLogs } from '../../services/api';
-import T from '../../i18n/T';
 
 function Logs() {
+  const { t } = useTranslation();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -21,19 +22,19 @@ function Logs() {
 
   return (
     <section className="page">
-      <h2>Logs / History</h2>
+      <h2>{t('logs.title')}</h2>
       {loading ? (
-        <p><T>Đang tải lịch sử...</T></p>
+        <p>{t('logs.loading')}</p>
       ) : (
         <table className="user-table">
           <thead>
             <tr>
-              <th>Log ID</th>
-              <th>User ID</th>
-              <th><T>Tên</T></th>
-              <th><T>Trạng thái</T></th>
-              <th><T>Thời gian</T></th>
-              <th><T>Ảnh</T></th>
+              <th>{t('logs.logId')}</th>
+              <th>{t('logs.userId')}</th>
+              <th>{t('logs.name')}</th>
+              <th>{t('logs.status')}</th>
+              <th>{t('logs.time')}</th>
+              <th>{t('logs.photo')}</th>
             </tr>
           </thead>
           <tbody>
@@ -48,17 +49,17 @@ function Logs() {
                   <td>
                     {log.captured_image_url ? (
                       <a href={log.captured_image_url} target="_blank" rel="noreferrer">
-                        <T>Xem</T>
+                        {t('logs.view')}
                       </a>
                     ) : (
-                      <T>Không có</T>
+                      t('logs.none')
                     )}
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan="6"><T>Không có lịch sử quét nào.</T></td>
+                <td colSpan="6">{t('logs.empty')}</td>
               </tr>
             )}
           </tbody>

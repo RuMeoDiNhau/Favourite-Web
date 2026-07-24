@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import * as api from '../../services/api';
 import { useTranslation } from 'react-i18next';
-import T from '../../i18n/T';
 import './NotificationBell.css';
 
 // Polling cadence for the unread-count badge. 30 s is short enough
@@ -85,7 +84,7 @@ export default function NotificationBell({ onSelectItem }) {
       setUnreadCount(data.unread_count ?? 0);
     } catch (err) {
       console.warn('[NotificationBell] fetch list failed', err);
-      setError(t('notif.err.load', { defaultValue: 'Không tải được thông báo.' }));
+      setError(t('notif.err.load'));
     } finally {
       setLoading(false);
     }
@@ -142,7 +141,7 @@ export default function NotificationBell({ onSelectItem }) {
       <button
         className="notif-bell-btn"
         onClick={() => setOpen((v) => !v)}
-        aria-label={t('notif.title', { defaultValue: 'Thông báo' })}
+        aria-label={t('notif.ariaBell')}
         aria-expanded={open}
       >
         <span className="notif-bell-icon">🔔</span>
@@ -152,14 +151,14 @@ export default function NotificationBell({ onSelectItem }) {
       {open && (
         <div className="notif-dropdown" role="menu">
           <div className="notif-dropdown-header">
-            <span className="notif-dropdown-title"><T>Thông báo</T></span>
+            <span className="notif-dropdown-title">{t('notif.title')}</span>
             {unreadCount > 0 && (
               <button
                 className="notif-mark-all-btn"
                 onClick={handleMarkAllRead}
                 type="button"
               >
-                <T>Đánh dấu tất cả đã đọc</T>
+                {t('notif.markAllRead')}
               </button>
             )}
           </div>
@@ -170,14 +169,14 @@ export default function NotificationBell({ onSelectItem }) {
               onClick={() => setUnreadOnly(false)}
               type="button"
             >
-              <T>Tất cả</T>
+              {t('notif.allTab')}
             </button>
             <button
               className={`notif-tab ${unreadOnly ? 'active' : ''}`}
               onClick={() => setUnreadOnly(true)}
               type="button"
             >
-              <T>Chưa đọc</T> {unreadCount > 0 && <span className="notif-tab-badge">{unreadCount}</span>}
+              {t('notif.unreadTab')} {unreadCount > 0 && <span className="notif-tab-badge">{unreadCount}</span>}
             </button>
           </div>
 
@@ -185,10 +184,10 @@ export default function NotificationBell({ onSelectItem }) {
 
           <div className="notif-list">
             {loading ? (
-              <div className="notif-status"><T>Đang tải...</T></div>
+              <div className="notif-status">{t('notif.loading')}</div>
             ) : notifications.length === 0 ? (
               <div className="notif-status">
-                {unreadOnly ? <T>🔔 Không có thông báo chưa đọc.</T> : <T>🔔 Bạn chưa có thông báo nào.</T>}
+                {unreadOnly ? t('notif.emptyUnread') : t('notif.empty')}
               </div>
             ) : (
               notifications.map((n) => (
@@ -203,7 +202,7 @@ export default function NotificationBell({ onSelectItem }) {
                     <span className="notif-item-message">{n.message}</span>
                     <span className="notif-item-meta">
                       <span className="notif-item-time">{formatRelative(n.created_at)}</span>
-                      {!n.read && <span className="notif-item-dot" aria-label={t('notif.unread_dot', { defaultValue: 'Chưa đọc' })} />}
+                      {!n.read && <span className="notif-item-dot" aria-label={t('notif.unreadDot')} />}
                     </span>
                   </span>
                 </button>

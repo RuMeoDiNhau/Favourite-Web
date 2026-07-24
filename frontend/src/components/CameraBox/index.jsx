@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import T from '../../i18n/T';
 import { useTranslation } from 'react-i18next';
 import './CameraBox.css';
 
@@ -36,7 +35,7 @@ function CameraBox({ onCapture, captureTrigger, status = 'idle' }) {
         }
       } catch (err) {
         if (!cancelled) {
-          setError(t('dashboard.camera_error', { defaultValue: 'Không thể mở camera. Vui lòng kiểm tra quyền truy cập.' }));
+          setError(t('dashboard.cameraError'));
         }
       }
     };
@@ -87,15 +86,15 @@ function CameraBox({ onCapture, captureTrigger, status = 'idle' }) {
   };
 
   const getStatusText = () => {
-    if (status === 'loading' || status === 'scanning') return t('dashboard.hud.scanning', { defaultValue: 'Scanning...' });
-    if (status === 'success') return t('dashboard.hud.verified', { defaultValue: 'Verified' });
-    if (status === 'error') return t('dashboard.hud.denied', { defaultValue: 'Access Denied' });
-    return t('dashboard.hud.active', { defaultValue: 'Sys Active' });
+    if (status === 'loading' || status === 'scanning') return t('dashboard.hudScanning');
+    if (status === 'success') return t('dashboard.hudVerified');
+    if (status === 'error') return t('dashboard.hudDenied');
+    return t('dashboard.hudActive');
   };
 
   return (
     <div className="video-box">
-      <h3><T>Quét Khuôn Mặt</T></h3>
+      <h3>{t('dashboard.altFaceTitle')}</h3>
       {error ? (
         <p>{error}</p>
       ) : (
@@ -107,8 +106,8 @@ function CameraBox({ onCapture, captureTrigger, status = 'idle' }) {
             <div className="hud-corners" />
 
             <div className="hud-header">
-              <span><T>FACE_ID v2.0</T></span>
-              <span><T>LOCK:</T> {status === 'success' ? <T>OK</T> : <T>SEARCHING</T>}</span>
+              <span>{t('dashboard.hudVersion')}</span>
+              <span>{t('dashboard.hudLock')} {status === 'success' ? t('dashboard.hudOK') : t('dashboard.hudSearching')}</span>
             </div>
 
             {/* Pulsing reticle and scanning laser */}
@@ -126,7 +125,7 @@ function CameraBox({ onCapture, captureTrigger, status = 'idle' }) {
         </div>
       )}
       <button className="button" onClick={handleCapture} disabled={!streaming}>
-        <T>Chụp & Nhận Diện</T>
+        {t('dashboard.captureBtn')}
       </button>
     </div>
   );

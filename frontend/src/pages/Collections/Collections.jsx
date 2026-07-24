@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import * as api from '../../services/api';
-import T from '../../i18n/T';
 import './Collections.css';
 
 // User-facing list of reading-list collections. Each row is a card
@@ -31,7 +30,7 @@ export default function Collections({ onNavigate }) {
       const data = await api.fetchMyCollections();
       setItems(data || []);
     } catch (err) {
-      setError(t('collections.err.load', { defaultValue: 'Không thể tải danh sách bộ sưu tập.' }));
+      setError(t('collections.err.load'));
     } finally {
       setLoading(false);
     }
@@ -53,7 +52,7 @@ export default function Collections({ onNavigate }) {
     } catch (err) {
       // Silent failure with inline hint — the form stays open so the
       // user can fix the name without retyping.
-      setError(t('collections.err.create', { defaultValue: 'Không thể tạo. Tên tối đa 255 ký tự và không được rỗng.' }));
+      setError(t('collections.err.create'));
     } finally {
       setSubmitting(false);
     }
@@ -61,7 +60,7 @@ export default function Collections({ onNavigate }) {
 
   const handleDelete = async (id, e) => {
     e.stopPropagation();
-    if (!window.confirm(t('collections.confirm.delete', { defaultValue: 'Xóa bộ sưu tập này?' }))) return;
+    if (!window.confirm(t('collections.confirm.delete'))) return;
     try {
       await api.deleteCollectionApi(id);
       setItems((prev) => prev.filter((c) => c.id !== id));
@@ -73,19 +72,19 @@ export default function Collections({ onNavigate }) {
   return (
     <div className="collections-container">
       <header className="collections-header">
-        <h1><T>📂 Bộ sưu tập của tôi</T></h1>
-        <p className="collections-subtitle"><T>Gom các bài viết Knowledge vào nhóm để đọc lại sau.</T></p>
+        <h1>{t('collections.myCollectionsTitle')}</h1>
+        <p className="collections-subtitle">{t('collections.subtitle')}</p>
       </header>
 
       {!creating ? (
         <button className="collections-create-btn" onClick={() => setCreating(true)}>
-          + <T>Tạo bộ sưu tập mới</T>
+          + {t('collections.addButton')}
         </button>
       ) : (
         <form className="collections-create-form" onSubmit={handleCreate}>
           <input
             className="collections-input"
-            placeholder={t('collections.ph.name', { defaultValue: 'Tên bộ sưu tập (bắt buộc)' })}
+            placeholder={t('collections.ph.name')}
             value={name}
             onChange={(e) => setName(e.target.value)}
             autoFocus
@@ -93,30 +92,30 @@ export default function Collections({ onNavigate }) {
           />
           <textarea
             className="collections-textarea"
-            placeholder={t('collections.ph.desc', { defaultValue: 'Mô tả (tuỳ chọn)' })}
+            placeholder={t('collections.ph.desc')}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             maxLength={1024}
           />
           <div className="collections-create-actions">
             <button type="submit" className="collections-submit" disabled={submitting || !name.trim()}>
-              {submitting ? <T>Đang tạo...</T> : <T>Tạo</T>}
+              {submitting ? t('collections.saving2') : t('collections.create')}
             </button>
             <button type="button" className="collections-cancel" onClick={() => { setCreating(false); setName(''); setDescription(''); }}>
-              <T>Huỷ</T>
+              {t('collections.cancel')}
             </button>
           </div>
         </form>
       )}
 
-      {loading && <div className="collections-status"><T>Đang tải...</T></div>}
+      {loading && <div className="collections-status">{t('collections.loading')}</div>}
       {error && !loading && <div className="collections-status collections-error">{error}</div>}
 
       {!loading && !error && items.length === 0 && (
         <div className="collections-empty">
           <div className="collections-empty-icon">📂</div>
-          <h3><T>Bạn chưa có bộ sưu tập nào</T></h3>
-          <p><T>Tạo bộ sưu tập đầu tiên rồi mở bài viết Knowledge → nhấn "📂 Thêm vào bộ sưu tập".</T></p>
+          <h3>{t('collections.empty')}</h3>
+          <p>{t('collections.emptyHint')}</p>
         </div>
       )}
 
@@ -135,12 +134,12 @@ export default function Collections({ onNavigate }) {
               {c.description && <div className="collections-card-desc">{c.description}</div>}
               <div className="collections-card-footer">
                 <span className="collections-card-count">
-                  📄 {c.item_count || 0} <T>bài viết</T>
+                  📄 {c.item_count || 0} {t('collections.articleCount')}
                 </span>
                 <button
                   className="collections-card-delete"
                   onClick={(e) => handleDelete(c.id, e)}
-                  title={<T>Xóa bộ sưu tập</T>}
+                  title={t('collections.delete')}
                   type="button"
                 >
                   🗑️

@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import * as api from '../../services/api';
 import { useTranslation } from 'react-i18next';
-import T from '../../i18n/T';
 import './UserProfile.css';
 
 // Public-facing profile page. Reached by clicking a username in a
@@ -41,8 +40,8 @@ export default function UserProfile({ userId, currentUser, onNavigate }) {
         if (!cancelled) {
           const status = err?.response?.status;
           setError(status === 404
-            ? t('profile.err.not_found', { defaultValue: 'Người dùng không tồn tại.' })
-            : t('profile.err.load', { defaultValue: 'Không thể tải hồ sơ.' }));
+            ? t('profile.err.notFound')
+            : t('profile.err.load'));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -80,14 +79,14 @@ export default function UserProfile({ userId, currentUser, onNavigate }) {
   }, [profile, tab, userId]);
 
   if (loading) {
-    return <div className="userprofile-container"><div className="userprofile-status"><T>Đang tải hồ sơ...</T></div></div>;
+    return <div className="userprofile-container"><div className="userprofile-status">{t('profile.loading')}</div></div>;
   }
 
   if (error) {
     return (
       <div className="userprofile-container">
         <div className="userprofile-status userprofile-error">{error}</div>
-        <button className="userprofile-back" onClick={() => onNavigate?.('feed')}><T>← Về Bảng tin</T></button>
+        <button className="userprofile-back" onClick={() => onNavigate?.('feed')}>{t('common.backToFeed')}</button>
       </div>
     );
   }
@@ -151,7 +150,7 @@ export default function UserProfile({ userId, currentUser, onNavigate }) {
 
   return (
     <div className="userprofile-container">
-      <button className="userprofile-back" onClick={() => onNavigate?.('feed')}><T>← Quay lại</T></button>
+      <button className="userprofile-back" onClick={() => onNavigate?.('feed')}>{t('profile.back')}</button>
 
       <div className="userprofile-card">
         <div className="userprofile-avatar">
@@ -165,17 +164,17 @@ export default function UserProfile({ userId, currentUser, onNavigate }) {
           <h1 className="userprofile-name">{profile.name || profile.user_id}</h1>
           <div className="userprofile-meta">
             <span>@{profile.user_id}</span>
-            {profile.role === 'admin' && <span className="userprofile-badge">Admin</span>}
+            {profile.role === 'admin' && <span className="userprofile-badge">{t('status.admin')}</span>}
             {profile.department && <span>🏢 {profile.department}</span>}
-            {joinDate && <span>📅 <T>Tham gia</T> {joinDate}</span>}
+            {joinDate && <span>📅 {t('profile.joinDate')} {joinDate}</span>}
           </div>
           <div className="userprofile-follow-row">
             <span className="userprofile-follow-count">
-              <strong>{follow.followers}</strong> <T>người theo dõi</T>
+              <strong>{follow.followers}</strong> {t('profile.followersCount')}
             </span>
             <span className="userprofile-follow-dot">·</span>
             <span className="userprofile-follow-count">
-              <strong>{follow.following}</strong> <T>đang theo dõi</T>
+              <strong>{follow.following}</strong> {t('profile.followingCount')}
             </span>
           </div>
         </div>
@@ -185,7 +184,7 @@ export default function UserProfile({ userId, currentUser, onNavigate }) {
             onClick={handleToggleFollow}
             disabled={followBusy}
           >
-            {isFollowing ? <>✓ <T>Đang theo dõi</T></> : <>+ <T>Theo dõi</T></>}
+            {isFollowing ? <>✓ {t('profile.following')}</> : <>+ {t('profile.follow')}</>}
           </button>
         )}
       </div>
@@ -193,19 +192,19 @@ export default function UserProfile({ userId, currentUser, onNavigate }) {
       <div className="userprofile-stats">
         <div className="userprofile-stat">
           <div className="userprofile-stat-value">{stats.articles_owned || 0}</div>
-          <div className="userprofile-stat-label"><T>Bài viết đã đăng</T></div>
+          <div className="userprofile-stat-label">{t('profile.statsArticles')}</div>
         </div>
         <div className="userprofile-stat">
           <div className="userprofile-stat-value">{stats.total_likes || 0}</div>
-          <div className="userprofile-stat-label"><T>Lượt thích nhận</T></div>
+          <div className="userprofile-stat-label">{t('profile.statsLikes')}</div>
         </div>
         <div className="userprofile-stat">
           <div className="userprofile-stat-value">{stats.posts_authored || 0}</div>
-          <div className="userprofile-stat-label"><T>Bài đăng Feed</T></div>
+          <div className="userprofile-stat-label">{t('profile.statsPosts')}</div>
         </div>
         <div className="userprofile-stat">
           <div className="userprofile-stat-value">{stats.comments_written || 0}</div>
-          <div className="userprofile-stat-label"><T>Bình luận</T></div>
+          <div className="userprofile-stat-label">{t('profile.statsComments')}</div>
         </div>
       </div>
 
@@ -215,21 +214,21 @@ export default function UserProfile({ userId, currentUser, onNavigate }) {
             className={`userprofile-network-tab ${tab === 'followers' ? 'active' : ''}`}
             onClick={() => setTab('followers')}
           >
-            <T>Người theo dõi</T> ({follow.followers})
+            {t('profile.tabFollowers')} ({follow.followers})
           </button>
           <button
             className={`userprofile-network-tab ${tab === 'following' ? 'active' : ''}`}
             onClick={() => setTab('following')}
           >
-            <T>Đang theo dõi</T> ({follow.following})
+            {t('profile.tabFollowing')} ({follow.following})
           </button>
         </div>
         <div className="userprofile-network-list">
           {followListLoading ? (
-            <div className="userprofile-status"><T>Đang tải...</T></div>
+            <div className="userprofile-status">{t('profile.loadingNetwork')}</div>
           ) : followList.length === 0 ? (
             <div className="userprofile-status">
-              {tab === 'followers' ? <T>Chưa có người theo dõi.</T> : <T>Chưa theo dõi ai.</T>}
+              {tab === 'followers' ? t('profile.emptyFollowers') : t('profile.emptyFollowing')}
             </div>
           ) : (
             <ul>
@@ -255,7 +254,7 @@ export default function UserProfile({ userId, currentUser, onNavigate }) {
       </div>
 
       {isSelf && (
-        <div className="userprofile-self-hint"><T>Đây là hồ sơ của bạn.</T></div>
+        <div className="userprofile-self-hint">{t('profile.selfHint')}</div>
       )}
     </div>
   );

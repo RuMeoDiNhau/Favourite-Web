@@ -6,7 +6,6 @@ import {
   pushSearchQuery,
   clearSearchHistory,
 } from '../../lib/searchHistory';
-import T from '../../i18n/T';
 import './SearchBar.css';
 
 // Display order of the result-type groups. Knowledge first because
@@ -14,21 +13,14 @@ import './SearchBar.css';
 // dropdown rows look like articles), then game, then user (admin).
 const TYPE_ORDER = ['knowledge', 'music', 'game', 'user'];
 
-const TYPE_LABELS = {
-  knowledge: 'Bài viết',
-  music: 'Bài hát',
-  game: 'Trò chơi',
-  user: 'Người dùng',
-};
-
 // t() keys for the per-type group header. Using dedicated keys (not
 // the hash approach) so the label is shared with the rest of the
 // app and translates consistently.
 const TYPE_LABEL_KEY = {
-  knowledge: 'Bài viết',
-  music: 'Bài hát',
-  game: 'Trò chơi',
-  user: 'Người dùng',
+  knowledge: 'search.typeArticle',
+  music: 'search.typeSong',
+  game: 'search.typeGame',
+  user: 'search.typeUser',
 };
 
 const TYPE_ICONS = {
@@ -164,8 +156,8 @@ export default function SearchBar({ onSelectItem, isAdmin = false, userId = null
     : mergedItems.length;
 
   // Pick a result and notify the parent. Saves the query to history
-  // (only on a real selection, not on a hover/keystroke). Closes
-  // the dropdown so the parent can navigate immediately.
+  // (only on a real selection, not on a hover/keystroke). Closes the
+  // dropdown so the parent can navigate immediately.
   const handleSelect = useCallback((type, item) => {
     pushSearchQuery(userId, query);
     setHistory(getSearchHistory(userId));
@@ -239,13 +231,13 @@ export default function SearchBar({ onSelectItem, isAdmin = false, userId = null
         <input
           className="searchbar-input"
           type="text"
-          placeholder={t('search.ph.placeholder', { defaultValue: 'Tìm kiếm bài viết, nhạc, game...' })}
+          placeholder={t('search.ph.placeholder')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => setOpen(true)}
           onKeyDown={handleKeyDown}
           ref={inputRef}
-          aria-label={t('search.label', { defaultValue: 'Tìm kiếm' })}
+          aria-label={t('search.label')}
           role="combobox"
           aria-expanded={open}
           aria-controls="searchbar-dropdown"
@@ -255,7 +247,7 @@ export default function SearchBar({ onSelectItem, isAdmin = false, userId = null
           <button
             className="searchbar-clear"
             onClick={() => { setQuery(''); setResults(null); }}
-            aria-label={t('search.clear', { defaultValue: 'Xóa' })}
+            aria-label={t('search.clear')}
             type="button"
           >
             ×
@@ -271,13 +263,13 @@ export default function SearchBar({ onSelectItem, isAdmin = false, userId = null
           {query.trim().length < MIN_QUERY_LEN && history.length > 0 && (
             <div className="searchbar-section">
               <div className="searchbar-section-header">
-                <span><T>Tìm gần đây</T></span>
+                <span>{t('search.recent')}</span>
                 <button
                   className="searchbar-history-clear"
                   onClick={() => { clearSearchHistory(userId); setHistory([]); }}
                   type="button"
                 >
-                  <T>Xóa lịch sử</T>
+                  {t('search.clearHistory')}
                 </button>
               </div>
               {history.slice(0, 5).map((h, i) => {
@@ -309,11 +301,11 @@ export default function SearchBar({ onSelectItem, isAdmin = false, userId = null
           {query.trim().length >= MIN_QUERY_LEN && (
             <div className="searchbar-section">
               {loading && (
-                <div className="searchbar-status"><T>Đang tìm...</T></div>
+                <div className="searchbar-status">{t('search.searching')}</div>
               )}
               {!loading && totalCount === 0 && (
                 <div className="searchbar-status">
-                  {t('search.no_results', { q: query.trim(), defaultValue: `Không tìm thấy kết quả cho "${query.trim()}"` })}
+                  {t('search.noResults', { q: query.trim() })}
                 </div>
               )}
               {!loading && totalCount > 0 && (
@@ -324,7 +316,7 @@ export default function SearchBar({ onSelectItem, isAdmin = false, userId = null
                     return (
                       <div key={t} className="searchbar-group">
                         <div className="searchbar-group-header">
-                          {TYPE_ICONS[t]} <T>{TYPE_LABEL_KEY[t]}</T>
+                          {TYPE_ICONS[t]} {t(TYPE_LABEL_KEY[t])}
                         </div>
                         {arr.map((item, idx) => {
                           const key = `${t}-${item.id ?? item.user_id ?? idx}`;
@@ -375,7 +367,7 @@ export default function SearchBar({ onSelectItem, isAdmin = false, userId = null
 
           {query.trim().length < MIN_QUERY_LEN && history.length === 0 && (
             <div className="searchbar-status">
-              <T>{`Gõ ít nhất ${MIN_QUERY_LEN} ký tự để tìm kiếm.`}</T>
+              {t('search.minHint', { n: MIN_QUERY_LEN })}
             </div>
           )}
         </div>

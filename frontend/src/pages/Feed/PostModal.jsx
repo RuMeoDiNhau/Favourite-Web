@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
 import './PostModal.css';
 import * as api from '../../services/api';
+import { useTranslation } from 'react-i18next';
 
 export default function PostModal({ onClose, onPostCreated }) {
+  const { t } = useTranslation();
   const [postType, setPostType] = useState('text'); // 'image', 'video', 'audio', 'game', 'text'
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  
+
   // File states
   const [mainFile, setMainFile] = useState(null);
   const [thumbnailFile, setThumbnailFile] = useState(null);
-  
+
   // Upload and loading states
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -33,25 +35,25 @@ export default function PostModal({ onClose, onPostCreated }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title.trim()) {
-      setError('Vui lòng nhập tiêu đề bài đăng.');
+      setError(t('post.err.titleRequired'));
       return;
     }
 
     // Validation for files based on post type
     if (postType === 'image' && !mainFile) {
-      setError('Vui lòng chọn một tệp hình ảnh.');
+      setError(t('post.err.imageRequired'));
       return;
     }
     if (postType === 'video' && !mainFile) {
-      setError('Vui lòng chọn một tệp video.');
+      setError(t('post.err.videoRequired'));
       return;
     }
     if (postType === 'audio' && !mainFile) {
-      setError('Vui lòng chọn một tệp âm thanh.');
+      setError(t('post.err.audioRequired'));
       return;
     }
     if (postType === 'game' && !mainFile) {
-      setError('Vui lòng chọn tệp Game (.zip).');
+      setError(t('post.err.gameRequired'));
       return;
     }
 
@@ -111,7 +113,7 @@ export default function PostModal({ onClose, onPostCreated }) {
 
     } catch (err) {
       console.error('Error creating post:', err);
-      setError(err.response?.data?.detail || 'Đã xảy ra lỗi trong quá trình đăng bài. Vui lòng thử lại.');
+      setError(err.response?.data?.detail || t('post.err.generic'));
       // Best-effort orphan cleanup. Safe to await sequentially because we
       // are already on the failure path; user is shown the error message.
       if (uploadedUrls.length) {
@@ -124,11 +126,11 @@ export default function PostModal({ onClose, onPostCreated }) {
 
   const getMainFileInputLabel = () => {
     switch (postType) {
-      case 'image': return 'Chọn tệp ảnh (JPG, PNG, GIF) *';
-      case 'video': return 'Chọn tệp video (MP4) *';
-      case 'audio': return 'Chọn tệp âm thanh (MP3, WAV) *';
-      case 'game': return 'Chọn tệp lưu trữ Game (.zip) *';
-      default: return 'Tệp đính kèm';
+      case 'image': return t('post.fileImage');
+      case 'video': return t('post.fileVideo');
+      case 'audio': return t('post.fileAudio');
+      case 'game': return t('post.fileGame');
+      default: return t('post.fileDefault');
     }
   };
 
@@ -146,73 +148,73 @@ export default function PostModal({ onClose, onPostCreated }) {
     <div className="post-modal-overlay" onClick={onClose}>
       <div className="post-modal-content" onClick={e => e.stopPropagation()}>
         <div className="post-modal-header">
-          <h2>➕ Tạo bài đăng mới</h2>
+          <h2>{t('post.modalTitle')}</h2>
           <button className="post-modal-close" onClick={onClose}>✕</button>
         </div>
 
         {error && <div className="post-error-banner">❌ {error}</div>}
-        {success && <div className="post-success-banner">✔️ Đăng bài viết thành công!</div>}
+        {success && <div className="post-success-banner">{t('post.success')}</div>}
 
         <form onSubmit={handleSubmit} className="post-form">
           {/* Post Type Tabs */}
           <div className="post-type-selector">
-            <button 
+            <button
               type="button"
-              className={postType === 'text' ? 'active' : ''} 
+              className={postType === 'text' ? 'active' : ''}
               onClick={() => { setPostType('text'); setMainFile(null); setThumbnailFile(null); setError(''); }}
               disabled={loading}
             >
-              📝 Bài viết
+              {t('post.typeText')}
             </button>
-            <button 
-              type="button" 
-              className={postType === 'image' ? 'active' : ''} 
+            <button
+              type="button"
+              className={postType === 'image' ? 'active' : ''}
               onClick={() => { setPostType('image'); setMainFile(null); setThumbnailFile(null); setError(''); }}
               disabled={loading}
             >
-              📸 Ảnh
+              {t('post.typeImage')}
             </button>
-            <button 
-              type="button" 
-              className={postType === 'video' ? 'active' : ''} 
+            <button
+              type="button"
+              className={postType === 'video' ? 'active' : ''}
               onClick={() => { setPostType('video'); setMainFile(null); setThumbnailFile(null); setError(''); }}
               disabled={loading}
             >
-              🎥 Video
+              {t('post.typeVideo')}
             </button>
-            <button 
-              type="button" 
-              className={postType === 'audio' ? 'active' : ''} 
+            <button
+              type="button"
+              className={postType === 'audio' ? 'active' : ''}
               onClick={() => { setPostType('audio'); setMainFile(null); setThumbnailFile(null); setError(''); }}
               disabled={loading}
             >
-              <img 
-                src="/music-icon.png" 
-                alt="Music" 
-                style={{ width: '16px', height: '16px', display: 'inline-block', verticalAlign: 'middle', marginRight: '6px', borderRadius: '3px' }} 
+              <img
+                src="/music-icon.png"
+                alt="Music"
+                style={{ width: '16px', height: '16px', display: 'inline-block', verticalAlign: 'middle', marginRight: '6px', borderRadius: '3px' }}
               />
-              Nhạc
+              {t('post.typeAudio')}
             </button>
-            <button 
-              type="button" 
-              className={postType === 'game' ? 'active' : ''} 
+            <button
+              type="button"
+              className={postType === 'game' ? 'active' : ''}
               onClick={() => { setPostType('game'); setMainFile(null); setThumbnailFile(null); setError(''); }}
               disabled={loading}
             >
-              <img 
-                src="/game-icon.png" 
-                alt="Game" 
-                style={{ width: '16px', height: '16px', display: 'inline-block', verticalAlign: 'middle', marginRight: '6px', borderRadius: '3px' }} 
+              <img
+                src="/game-icon.png"
+                alt="Game"
+                style={{ width: '16px', height: '16px', display: 'inline-block', verticalAlign: 'middle', marginRight: '6px', borderRadius: '3px' }}
               />
-              Game
+              {t('post.typeGame')}
             </button>
           </div>
 
           <div className="form-group">
-            <label>Tiêu đề bài đăng *</label>
-            <input 
-              type="text" 
-              placeholder="Nhập tiêu đề hấp dẫn..." 
+            <label>{t('post.titleLabel')}</label>
+            <input
+              type="text"
+              placeholder={t('post.titlePh')}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               disabled={loading}
@@ -221,9 +223,9 @@ export default function PostModal({ onClose, onPostCreated }) {
           </div>
 
           <div className="form-group">
-            <label>{postType === 'text' ? 'Nội dung bài viết' : 'Mô tả / Caption'}</label>
-            <textarea 
-              placeholder="Nội dung chi tiết..." 
+            <label>{postType === 'text' ? t('post.textContent') : t('post.descContent')}</label>
+            <textarea
+              placeholder={t('post.contentPh')}
               rows={postType === 'text' ? 8 : 4}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -234,9 +236,9 @@ export default function PostModal({ onClose, onPostCreated }) {
           {postType !== 'text' && (
             <div className="form-group file-group">
               <label>{getMainFileInputLabel()}</label>
-              <input 
-                type="file" 
-                accept={getMainFileAcceptType()} 
+              <input
+                type="file"
+                accept={getMainFileAcceptType()}
                 onChange={handleMainFileChange}
                 disabled={loading}
               />
@@ -247,10 +249,10 @@ export default function PostModal({ onClose, onPostCreated }) {
           {/* Conditional thumbnail for game or audio */}
           {(postType === 'audio' || postType === 'game') && (
             <div className="form-group file-group">
-              <label>Ảnh bìa / Cover Image (Tùy chọn)</label>
-              <input 
-                type="file" 
-                accept="image/*" 
+              <label>{t('post.coverImage')}</label>
+              <input
+                type="file"
+                accept="image/*"
                 onChange={handleThumbnailFileChange}
                 disabled={loading}
               />
@@ -262,13 +264,13 @@ export default function PostModal({ onClose, onPostCreated }) {
           {loading && (
             <div className="post-progress-container">
               <div className="progress-label">
-                {uploadStage === 'main' && `Đang tải tệp chính lên: ${progress}%`}
-                {uploadStage === 'thumbnail' && `Đang tải ảnh bìa lên: ${progress}%`}
-                {uploadStage === 'submitting' && 'Đang đồng bộ hóa dữ liệu & giải nén...'}
+                {uploadStage === 'main' && t('post.uploading', { percent: progress })}
+                {uploadStage === 'thumbnail' && t('post.uploadingThumb', { percent: progress })}
+                {uploadStage === 'submitting' && t('post.submitting')}
               </div>
               <div className="progress-bar-bg">
-                <div 
-                  className="progress-bar-fill" 
+                <div
+                  className="progress-bar-fill"
                   style={{ width: `${uploadStage === 'submitting' ? 100 : progress}%` }}
                 />
               </div>
@@ -276,20 +278,20 @@ export default function PostModal({ onClose, onPostCreated }) {
           )}
 
           <div className="post-form-actions">
-            <button 
-              type="button" 
-              className="btn-cancel" 
+            <button
+              type="button"
+              className="btn-cancel"
               onClick={onClose}
               disabled={loading}
             >
-              Hủy
+              {t('post.cancel')}
             </button>
-            <button 
-              type="submit" 
-              className="btn-submit" 
+            <button
+              type="submit"
+              className="btn-submit"
               disabled={loading}
             >
-              {loading ? 'Đang xử lý...' : 'Đăng bài'}
+              {loading ? t('post.submitting2') : t('post.submit')}
             </button>
           </div>
         </form>

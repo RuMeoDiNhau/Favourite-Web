@@ -14,7 +14,7 @@ import FaceSetupModal from './components/FaceSetupModal';
 import SearchBar from './components/SearchBar';
 import NotificationBell from './components/NotificationBell';
 import LanguageSwitcher from './components/LanguageSwitcher';
-import T from './i18n/T';
+import { useTranslation } from 'react-i18next';
 import Bookmarks from './pages/Bookmarks';
 import UserProfile from './pages/UserProfile';
 import Collections from './pages/Collections/Collections';
@@ -61,6 +61,7 @@ const viewToPath = (viewName, detail) => {
 };
 
 function App() {
+  const { t } = useTranslation();
   // `user` lives in React state only (not localStorage). The BE
   // sets the auth cookie; on page reload we rebuild this object
   // via /auth/me. The old localStorage pattern was a second
@@ -272,16 +273,16 @@ function App() {
   // Single source of truth for nav items so desktop <nav> and mobile drawer
   // can't drift. `adminOnly` is gated against the current user's role.
   const NAV_ITEMS = [
-    { name: 'home',        icon: '🏠', labelKey: 'Trang chủ' },
-    { name: 'feed',        icon: '📰', labelKey: 'Bảng tin' },
-    { name: 'bookmarks',   icon: '🔖', labelKey: 'Đã lưu' },
-    { name: 'collections', icon: '📂', labelKey: 'Bộ sưu tập' },
-    { name: 'dashboard',   icon: '📷', labelKey: 'Quét khuôn mặt' },
-    { name: 'users',       icon: '👥', labelKey: 'Users', adminOnly: true },
-    { name: 'logs',        icon: '📋', labelKey: 'Logs',  adminOnly: true },
-    { name: 'games',       icon: '🎮', labelKey: 'Games' },
-    { name: 'music',       icon: '🎵', labelKey: 'Music' },
-    { name: 'knowledge',   icon: '📚', labelKey: 'Knowledge' },
+    { name: 'home',        icon: '🏠', labelKey: 'nav.home' },
+    { name: 'feed',        icon: '📰', labelKey: 'nav.feed' },
+    { name: 'bookmarks',   icon: '🔖', labelKey: 'nav.bookmarks' },
+    { name: 'collections', icon: '📂', labelKey: 'nav.collections' },
+    { name: 'dashboard',   icon: '📷', labelKey: 'nav.dashboard' },
+    { name: 'users',       icon: '👥', labelKey: 'nav.users', adminOnly: true },
+    { name: 'logs',        icon: '📋', labelKey: 'nav.logs',  adminOnly: true },
+    { name: 'games',       icon: '🎮', labelKey: 'nav.games' },
+    { name: 'music',       icon: '🎵', labelKey: 'nav.music' },
+    { name: 'knowledge',   icon: '📚', labelKey: 'nav.knowledge' },
   ];
   const visibleNav = NAV_ITEMS.filter((it) => !it.adminOnly || user.role === 'admin');
 
@@ -291,7 +292,7 @@ function App() {
       className={view === item.name ? 'active' : ''}
       onClick={() => setView(item.name)}
     >
-      <T>{item.labelKey}</T>
+      {t(item.labelKey)}
     </button>
   );
 
@@ -300,7 +301,7 @@ function App() {
       <div className={`App ${isDarkMode ? 'dark-theme' : ''}`}>
         <div className="app-shell">
 
-          {/* â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• 
+          {/* â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â•
               SIDEBAR (fixed left column)
               ════════════════════════════════════════════════════════════════ */}
           <aside className={`sidebar${sidebarOpen ? ' open' : ''}`}>
@@ -309,7 +310,7 @@ function App() {
             <div className="sidebar-header">
               <div className="sidebar-logo" onClick={() => window.location.href = '/'}>
                 <span className="sidebar-logo-icon">🌐</span>
-                <span className="sidebar-logo-text">Fav Web</span>
+                <span className="sidebar-logo-text">{t('auth.portalShort')}</span>
               </div>
               <div className="sidebar-search">
                 <SearchBar
@@ -329,7 +330,7 @@ function App() {
                   onClick={() => { setView(item.name); setSidebarOpen(false); }}
                 >
                   <span className="sidebar-nav-icon">{item.icon}</span>
-                  <T>{item.labelKey}</T>
+                  {t(item.labelKey)}
                 </button>
               ))}
             </nav>
@@ -340,7 +341,7 @@ function App() {
                 className="sidebar-post-btn"
                 onClick={() => setShowPostModal(true)}
               >
-                ✏️ <T>Đăng bài mới</T>
+                ✏️ {t('nav.postNew')}
               </button>
 
               {/* Language pill — sits between the post button and the
@@ -368,7 +369,7 @@ function App() {
                 <button
                   className="sidebar-logout-btn"
                   onClick={handleLogout}
-                  title="Đăng xuất"
+                  title={t('nav.signOut')}
                 >
                   ⏻
                 </button>
@@ -405,9 +406,9 @@ function App() {
                 <button
                   className="theme-toggle-btn"
                   onClick={toggleTheme}
-                  title={isDarkMode ? <T>Chuyển sang Chế độ sáng</T> : <T>Chuyển sang Chế độ tối</T>}
+                  title={isDarkMode ? t('nav.themeLight') : t('nav.themeDark')}
                 >
-                  {isDarkMode ? <><T>☀️ Sáng</T></> : <><T>🌙 Tối</T></>}
+                  {isDarkMode ? t('nav.lightShort') : t('nav.darkShort')}
                 </button>
               </div>
             </header>
@@ -419,10 +420,10 @@ function App() {
                   <span style={{ fontSize: '18px' }}>🔐</span>
                   <div>
                     <span style={{ fontWeight: 600, fontSize: '0.88rem', color: '#a5b4fc' }}>
-                      <T>Bạn chưa kích hoạt Face ID.</T>
+                      {t('dashboard.banner.inactive')}
                     </span>
                     <span style={{ fontSize: '0.82rem', color: '#64748b', marginLeft: '8px' }}>
-                      <T>Đăng ký khuôn mặt để đăng nhập nhanh hơn bằng camera.</T>
+                      {t('dashboard.banner.cta')}
                     </span>
                   </div>
                 </div>
@@ -430,7 +431,7 @@ function App() {
                   className="face-id-activate-btn"
                   onClick={() => setShowFaceSetup(true)}
                 >
-                  📷 <T>Kích hoạt Face ID ngay</T>
+                  📷 {t('dashboard.banner.activate')}
                 </button>
               </div>
             )}

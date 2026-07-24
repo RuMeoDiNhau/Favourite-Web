@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { fetchUsers, enrollUser } from '../../services/api';
 import { useTranslation } from 'react-i18next';
-import T from '../../i18n/T';
 
 function Users() {
   const { t } = useTranslation();
@@ -40,7 +39,7 @@ function Users() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    setMessage(t('users.enrolling', { defaultValue: 'Đang đăng ký người dùng...' }));
+    setMessage(t('users.enrolling'));
     try {
       const imagesBase64 = await Promise.all(
         files.map((file) =>
@@ -61,18 +60,18 @@ function Users() {
         department: form.department,
         images_base64: imagesBase64,
       });
-      setMessage(response.data.message || t('users.enrolled_ok', { defaultValue: 'Đăng ký thành công' }));
+      setMessage(response.data.message || t('users.ok.enrolled'));
       setForm({ user_id: '', name: '', email: '', password: '', department: '' });
       setFiles([]);
       loadUsers();
     } catch (error) {
-      setMessage(error.response?.data?.detail || t('users.enrolled_err', { defaultValue: 'Đăng ký thất bại.' }));
+      setMessage(error.response?.data?.detail || t('users.fail.enrolled'));
     }
   };
 
   return (
     <section className="page">
-      <h2><T>Quản lý Người dùng</T></h2>
+      <h2>{t('users.title')}</h2>
       <form onSubmit={handleSubmit} style={{ marginBottom: '20px' }}>
         <div style={{ display: 'grid', gap: '12px', marginBottom: '12px' }}>
           <input
@@ -80,7 +79,7 @@ function Users() {
             name="user_id"
             value={form.user_id}
             onChange={handleChange}
-            placeholder={t('users.ph.username', { defaultValue: 'Username (Mã nhân viên / sinh viên)' })}
+            placeholder={t('users.ph.username')}
             required
           />
           <input
@@ -88,7 +87,7 @@ function Users() {
             name="name"
             value={form.name}
             onChange={handleChange}
-            placeholder={t('users.ph.full_name', { defaultValue: 'Tên đầy đủ' })}
+            placeholder={t('users.ph.full_name')}
             required
           />
           <input
@@ -96,45 +95,45 @@ function Users() {
             name="email"
             value={form.email}
             onChange={handleChange}
-            placeholder={t('users.ph.email', { defaultValue: 'Địa chỉ Email' })}
+            placeholder={t('users.ph.email')}
           />
           <input
             type="password"
             name="password"
             value={form.password}
             onChange={handleChange}
-            placeholder={t('users.ph.password', { defaultValue: 'Mật khẩu đăng nhập' })}
+            placeholder={t('users.ph.password')}
           />
           <input
             type="text"
             name="department"
             value={form.department}
             onChange={handleChange}
-            placeholder={t('users.ph.department', { defaultValue: 'Khoa / Bộ phận' })}
+            placeholder={t('users.ph.department')}
           />
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <label style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-              <T>Ảnh đăng ký khuôn mặt (Tùy chọn - Dùng cho Face ID):</T>
+              {t('users.photoLabel')}
             </label>
             <input type="file" accept="image/*" multiple onChange={handleFileChange} />
           </div>
           <button className="button" type="submit">
-            <T>Đăng ký tài khoản mới</T>
+            {t('users.enrollBtn')}
           </button>
         </div>
         {message && <p>{message}</p>}
       </form>
 
       {loading ? (
-        <p><T>Đang tải dữ liệu...</T></p>
+        <p>{t('users.loading')}</p>
       ) : (
         <table className="user-table">
           <thead>
             <tr>
               <th>ID</th>
-              <th><T>Tên</T></th>
-              <th><T>Số ảnh</T></th>
-              <th><T>Ngày tạo</T></th>
+              <th>{t('users.nameCol')}</th>
+              <th>{t('users.photoCount')}</th>
+              <th>{t('users.createdAt')}</th>
             </tr>
           </thead>
           <tbody>
@@ -149,7 +148,7 @@ function Users() {
               ))
             ) : (
               <tr>
-                <td colSpan="4"><T>Không có người dùng nào.</T></td>
+                <td colSpan="4">{t('users.noUsers')}</td>
               </tr>
             )}
           </tbody>

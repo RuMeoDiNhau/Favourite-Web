@@ -5,7 +5,6 @@ import {
 } from 'recharts';
 import { useTranslation } from 'react-i18next';
 import * as api from '../../services/api';
-import T from '../../i18n/T';
 import './Home.css';
 
 const DAYS_OPTIONS = [7, 30];
@@ -24,27 +23,24 @@ const EMOJI_FOR_TYPE = {
   post: '📝',
 };
 
-const TYPE_LABEL = {
-  knowledge: 'bài viết',
-  music: 'bài hát',
-  game: 'trò chơi',
-  post: 'bài đăng',
-};
-
-const EVENT_LABEL = {
-  view: 'đã đọc',
-  play: 'đã nghe',
-  like: 'đã thích',
+// Translation keys for the small label that appears when a recent
+// activity item has no `title` field (e.g. a removed article). Used
+// as the fallback so we never render a raw `content_type` enum.
+const TYPE_LABEL_KEY = {
+  knowledge: 'home.typeLabel.knowledge',
+  music: 'home.typeLabel.music',
+  game: 'home.typeLabel.game',
+  post: 'home.typeLabel.post',
 };
 
 // Translation keys for the "Bạn X · time ago" small line under each
 // recent activity entry. Using dedicated keys (instead of the <T>
-// hash-of-template approach) because the {action} placeholder is
+// hash-of-template approach) because the {time} placeholder is
 // resolved per event_type at render time.
 const EVENT_KEY = {
-  view: 'home.event.view',  // "Bạn đã đọc · {time}"
-  play: 'home.event.play',  // "Bạn đã nghe · {time}"
-  like: 'home.event.like',  // "Bạn đã thích · {time}"
+  view: 'home.event.view',
+  play: 'home.event.play',
+  like: 'home.event.like',
 };
 
 function Home({ onNavigate }) {
@@ -85,7 +81,7 @@ function Home({ onNavigate }) {
       } catch (err) {
         if (cancelled) return;
         console.error('Error loading dashboard:', err);
-        setError('Không tải được dữ liệu. Vui lòng thử lại.');
+        setError(t('home.loadFail'));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -93,7 +89,7 @@ function Home({ onNavigate }) {
     loadRef.current = load;
     load();
     return () => { cancelled = true; };
-  }, [days]);
+  }, [days, t]);
 
   // Re-fetch when the user comes back to this tab after reacting
   // or commenting in another (Knowledge/Feed) tab. Without this, the
@@ -157,25 +153,16 @@ function Home({ onNavigate }) {
     <div className="home-page">
       <header className="home-header">
         <div>
-          <h1 className="home-title">🏠 <T>Trang chủ</T></h1>
+          <h1 className="home-title">🏠 {t('home.title')}</h1>
           <p className="home-subtitle">
             {loading ? (
-              <T>Đang tải...</T>
+              t('common.loading')
             ) : hasActivity ? (
-              // Interpolation: t() renders the {n} placeholder from
-              // the English template "You're on a {n}-day streak!
-              // Keep going." `<T>` would re-hash the resolved string
-              // each render, which never matches a single JSON entry,
-              // so we bypass the hash for this one and let i18next
-              // interpolate directly.
               <span>
-                {t('home.streak', {
-                  n: insights.streak_days,
-                  defaultValue: `Bạn đang có chuỗi ${insights.streak_days} ngày liên tiếp! Hãy tiếp tục nhé.`,
-                })}
+                {t('home.streak', { n: insights.streak_days })}
               </span>
             ) : (
-              <T>Khám phá nội dung để bắt đầu ghi dấu hoạt động của bạn.</T>
+              t('home.noActivity')
             )}
           </p>
         </div>
@@ -188,7 +175,7 @@ function Home({ onNavigate }) {
               className={days === d ? 'active' : ''}
               onClick={() => setDays(d)}
             >
-              {d} <T>ngày</T>
+              {d} {t('home.daysLabel')}
             </button>
           ))}
         </div>
@@ -198,7 +185,7 @@ function Home({ onNavigate }) {
             className="home-export-btn"
             onClick={() => onExport('csv')}
             disabled={exporting}
-            title={<T>Tải file CSV</T>}
+            title={t('home.exportCsv')}
           >
             ⬇️ CSV
           </button>
@@ -207,7 +194,7 @@ function Home({ onNavigate }) {
             className="home-export-btn"
             onClick={() => onExport('json')}
             disabled={exporting}
-            title={<T>Tải file JSON</T>}
+            title={t('home.exportJson')}
           >
             ⬇️ JSON
           </button>
@@ -219,20 +206,20 @@ function Home({ onNavigate }) {
       {/* 4 stat cards. Skeleton placeholders during initial load so
           the layout doesn't jump when data arrives. */}
       <section className="home-stats">
-        <StatCard icon="📚" label={<T>Bài viết đã đọc</T>} value={insights.totals.knowledge_views} loading={loading} />
-        <StatCard icon="🎵" label={<T>Bài hát đã nghe</T>} value={insights.totals.music_plays} loading={loading} />
-        <StatCard icon="🎮" label={<T>Trò chơi đã xem</T>} value={insights.totals.game_views} loading={loading} />
-        <StatCard icon="❤️" label={<T>Bài đăng đã thích</T>} value={insights.totals.posts_liked} loading={loading} />
+        <StatCard icon="📚" label={t('home.statArticles')} value={insights.totals.knowledge_views} loading={loading} />
+        <StatCard icon="🎵" label={t('home.statSongs')} value={insights.totals.music_plays} loading={loading} />
+        <StatCard icon="🎮" label={t('home.statGames')} value={insights.totals.game_views} loading={loading} />
+        <StatCard icon="❤️" label={t('home.statPosts')} value={insights.totals.posts_liked} loading={loading} />
       </section>
 
       {/* Line chart of activity over the period. Render the chart
           container unconditionally so Recharts has a stable parent
           to measure — we just feed it empty data when loading. */}
       <section className="home-chart-card">
-        <h2><T>Hoạt động {days} ngày gần nhất</T></h2>
+        <h2>{t('home.daysActivity', { days })}</h2>
         <div className="home-chart-wrapper">
           {chartData.length === 0 ? (
-            <div className="home-chart-empty"><T>Chưa có dữ liệu</T></div>
+            <div className="home-chart-empty">{t('home.chartEmpty')}</div>
           ) : (
             <ResponsiveContainer width="100%" height={260}>
               <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -249,9 +236,9 @@ function Home({ onNavigate }) {
                   labelStyle={{ color: '#f8fafc' }}
                 />
                 <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
-                <Line type="monotone" dataKey="knowledge" name={t('legend.knowledge', { defaultValue: 'Bài viết' })} stroke="#6366f1" strokeWidth={2} dot={{ r: 3 }} />
-                <Line type="monotone" dataKey="music" name={t('legend.music', { defaultValue: 'Nhạc' })} stroke="#ec4899" strokeWidth={2} dot={{ r: 3 }} />
-                <Line type="monotone" dataKey="game" name={t('legend.game', { defaultValue: 'Game' })} stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="knowledge" name={t('home.legend.knowledge')} stroke="#6366f1" strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="music" name={t('home.legend.music')} stroke="#ec4899" strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="game" name={t('home.legend.game')} stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />
               </LineChart>
             </ResponsiveContainer>
           )}
@@ -261,14 +248,14 @@ function Home({ onNavigate }) {
       <section className="home-bottom-grid">
         {/* Left: recent articles the user has touched */}
         <div className="home-card">
-          <h2><T>Bạn đã đọc gần đây</T></h2>
+          <h2>{t('home.recentlyRead')}</h2>
           {loading ? (
             <Skeleton lines={3} />
           ) : insights.recent_articles.length === 0 ? (
             <p className="home-empty-text">
-              <T>Chưa có bài viết nào. Hãy mở </T>
-              <a href="#" onClick={(e) => { e.preventDefault(); onNavigate?.('knowledge'); }}><T>Knowledge</T></a>
-              <T> để bắt đầu.</T>
+              {t('home.noRecentArticles')}
+              <a href="#" onClick={(e) => { e.preventDefault(); onNavigate?.('knowledge'); }}>{t('nav.knowledge')}</a>
+              {t('home.noRecentArticlesAfter')}
             </p>
           ) : (
             <ul className="home-recent-list">
@@ -287,22 +274,21 @@ function Home({ onNavigate }) {
 
         {/* Right: recent raw activity events (mixed types) */}
         <div className="home-card">
-          <h2><T>Hoạt động gần đây</T></h2>
+          <h2>{t('home.recentActivity')}</h2>
           {loading ? (
             <Skeleton lines={4} />
           ) : recent.length === 0 ? (
-            <p className="home-empty-text"><T>Chưa có hoạt động nào.</T></p>
+            <p className="home-empty-text">{t('home.noActivity')}</p>
           ) : (
             <ul className="home-recent-list">
               {recent.map((r) => (
                 <li key={r.id}>
                   <span className="home-recent-icon">{EMOJI_FOR_TYPE[r.content_type] || '•'}</span>
                   <div className="home-recent-meta">
-                    <strong>{r.title || TYPE_LABEL[r.content_type] || r.content_type}</strong>
+                    <strong>{r.title || (TYPE_LABEL_KEY[r.content_type] ? t(TYPE_LABEL_KEY[r.content_type]) : r.content_type)}</strong>
                     <small>
                       {t(EVENT_KEY[r.event_type] || 'home.event.unknown', {
-                        time: formatRelative(r.created_at),
-                        defaultValue: `Bạn ${EVENT_LABEL[r.event_type] || r.event_type} · ${formatRelative(r.created_at)}`,
+                        time: formatRelative(r.created_at, t),
                       })}
                     </small>
                   </div>
@@ -317,7 +303,7 @@ function Home({ onNavigate }) {
           users don't need a "no categories" section cluttering the UI. */}
       {!loading && insights.top_categories.length > 0 && (
         <section className="home-card home-top-cats">
-          <h2><T>Chủ đề bạn quan tâm</T></h2>
+          <h2>{t('home.topCategories')}</h2>
           <div className="home-cat-chips">
             {insights.top_categories.map(([cat, count]) => (
               <span key={cat} className="home-chip">
@@ -333,12 +319,12 @@ function Home({ onNavigate }) {
           guide the populated case. */}
       {!loading && !hasActivity && (
         <section className="home-quick-links">
-          <h2><T>Bắt đầu từ đâu?</T></h2>
+          <h2>{t('home.whereToStart')}</h2>
           <div className="home-quick-grid">
-            <button onClick={() => onNavigate?.('knowledge')}>📚 <T>Đọc bài</T></button>
-            <button onClick={() => onNavigate?.('music')}>🎵 <T>Nghe nhạc</T></button>
-            <button onClick={() => onNavigate?.('games')}>🎮 <T>Chơi game</T></button>
-            <button onClick={() => onNavigate?.('feed')}>📰 <T>Xem bảng tin</T></button>
+            <button onClick={() => onNavigate?.('knowledge')}>📚 {t('home.quickRead')}</button>
+            <button onClick={() => onNavigate?.('music')}>🎵 {t('home.quickListen')}</button>
+            <button onClick={() => onNavigate?.('games')}>🎮 {t('home.quickPlay')}</button>
+            <button onClick={() => onNavigate?.('feed')}>📰 {t('home.quickFeed')}</button>
           </div>
         </section>
       )}
@@ -372,20 +358,18 @@ function Skeleton({ lines }) {
   );
 }
 
-function formatRelative(iso) {
+function formatRelative(iso, t) {
   // Best-effort relative time. The server gives us ISO with no Z;
   // we treat it as local-naive (the rest of the app also writes
   // datetime.utcnow without TZ). For an MVP this is good enough —
   // production should switch to timezone-aware datetimes server-side.
-  // Returns a Vietnamese-formatted string directly because the only
-  // caller composes it into another translation key's {time} slot.
   try {
-    const t = new Date(iso + (iso.endsWith('Z') ? '' : 'Z'));
-    const diff = Math.floor((Date.now() - t.getTime()) / 1000);
-    if (diff < 60) return 'vừa xong';
-    if (diff < 3600) return `${Math.floor(diff / 60)} phút trước`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)} giờ trước`;
-    return `${Math.floor(diff / 86400)} ngày trước`;
+    const d = new Date(iso + (iso.endsWith('Z') ? '' : 'Z'));
+    const diff = Math.floor((Date.now() - d.getTime()) / 1000);
+    if (diff < 60) return t('time.justNow');
+    if (diff < 3600) return t('time.minutesAgo', { n: Math.floor(diff / 60) });
+    if (diff < 86400) return t('time.hoursAgo', { n: Math.floor(diff / 3600) });
+    return t('time.daysAgo', { n: Math.floor(diff / 86400) });
   } catch {
     return iso;
   }

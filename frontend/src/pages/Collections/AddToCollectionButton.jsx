@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import * as api from '../../services/api';
-import T from '../../i18n/T';
+import { useTranslation } from 'react-i18next';
 import './Collections.css';
 
 // Button + modal combo. Clicking the button opens a picker dialog
@@ -12,6 +12,7 @@ import './Collections.css';
 // knowledge items — keeps the wiring future-proof for when posts /
 // games get added to collections.
 export default function AddToCollectionButton({ contentType, contentId }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [collections, setCollections] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -80,23 +81,23 @@ export default function AddToCollectionButton({ contentType, contentId }) {
       <button
         className="action-btn"
         onClick={() => setOpen(true)}
-        title={<T>Thêm vào bộ sưu tập</T>}
+        title={t('collections.addToCollection')}
         type="button"
       >
-        📂 <T>Thêm vào bộ sưu tập</T>
+        📂 {t('collections.addToCollection')}
       </button>
       {open && (
         <div className="collections-picker-overlay" onClick={() => setOpen(false)}>
           <div className="collections-picker" onClick={(e) => e.stopPropagation()}>
             <div className="collections-picker-header">
-              <span><T>Thêm vào bộ sưu tập</T></span>
+              <span>{t('collections.addToCollection')}</span>
               <button className="collections-picker-close" onClick={() => setOpen(false)} type="button">×</button>
             </div>
             <div className="collections-picker-list">
               {loading ? (
-                <div className="collections-picker-empty"><T>Đang tải...</T></div>
+                <div className="collections-picker-empty">{t('collections.loading')}</div>
               ) : collections.length === 0 ? (
-                <div className="collections-picker-empty"><T>Bạn chưa có bộ sưu tập nào. Hãy vào "Bộ sưu tập của tôi" để tạo.</T></div>
+                <div className="collections-picker-empty">{t('collections.pickEmpty')}</div>
               ) : (
                 collections.map((c) => {
                   const isAdded = addedIds.has(c.id);
@@ -107,7 +108,7 @@ export default function AddToCollectionButton({ contentType, contentId }) {
                       onClick={() => handleToggle(c)}
                     >
                       <span>{c.name}</span>
-                      <span>{isAdded ? <>✓ <T>Đã thêm</T></> : <>+ <T>Thêm</T></>}</span>
+                      <span>{isAdded ? <>✓ {t('collections.added')}</> : <>+ {t('collections.addToCollection')}</>}</span>
                     </div>
                   );
                 })
