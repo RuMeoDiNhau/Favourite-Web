@@ -7,8 +7,11 @@ import { readJson } from '../../lib/safeStorage';
 import { getLikedSongIds, toggleLikedSong, isLikedSong } from '../../lib/likedSongs';
 import { useBookmarks } from '../../lib/BookmarksContext';
 
-export default function Music() {
-  const user = readJson('user');
+export default function Music({ currentUser }) {
+  // Use prop from App.jsx (React state from /auth/me) as source of truth.
+  // localStorage.user was removed from the codebase, so readJson('user') returns null.
+  const user = currentUser;
+  const isAdmin = Boolean(user && user.role === 'admin');
   const { isBookmarked: isBm, toggle: toggleBm } = useBookmarks();
 
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -522,12 +525,27 @@ const handleFileChange = (e) => {
                 ➕ Tạo Playlist
               </button>
             )}
-            {user && user.role === 'admin' && (
+            {isAdmin && (
               <button 
                 className="upload-music-btn"
                 onClick={() => setShowUploadModal(true)}
+                style={{
+                  padding: '12px 24px',
+                  backgroundColor: '#8b5cf6',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '10px',
+                  fontWeight: '700',
+                  fontSize: '15px',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 4px 15px rgba(139, 92, 246, 0.6)',
+                  whiteSpace: 'nowrap'
+                }}
               >
-                ➕ Thêm Nhạc
+                ➕ Thêm Nhạc (POST /music)
               </button>
             )}
           </div>
@@ -615,7 +633,7 @@ const handleFileChange = (e) => {
                           </button>
                         )}
 
-                        {user && user.role === 'admin' && (
+                        {isAdmin && (
                           <button 
                             onClick={() => handleDeleteSong(song.id)} 
                             className="play-btn delete-song-btn" 
@@ -656,7 +674,7 @@ const handleFileChange = (e) => {
                           <div className="playlist-image">{playlist.image_url || '🎵'}</div>
                           <h3>{playlist.name}</h3>
                           <p>{playlist.song_count} bài hát</p>
-                          {user && user.role === 'admin' && (
+                          {isAdmin && (
                             <button
                               className="playlist-card-delete-btn"
                               onClick={(e) => {
@@ -706,7 +724,7 @@ const handleFileChange = (e) => {
                             <div className="playlist-image">{playlist.image_url || '🎵'}</div>
                             <h3>{playlist.name}</h3>
                             <p>{playlist.song_count} bài hát</p>
-                            {user && user.role === 'admin' && (
+                            {isAdmin && (
                               <button
                                 className="playlist-card-delete-btn"
                                 onClick={(e) => {
@@ -795,7 +813,7 @@ const handleFileChange = (e) => {
                               </div>
                             )}
 
-                            {user && user.role === 'admin' && (
+                            {isAdmin && (
                               <button 
                                 onClick={() => handleDeleteSong(song.id)} 
                                 className="play-btn delete-song-btn" 

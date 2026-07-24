@@ -445,7 +445,7 @@ function App() {
                   onConsumeSearchOpen={consumeSearchOpenGame}
                 />
               )}
-              {view === 'music' && <Music />}
+              {view === 'music' && <Music currentUser={user} />}
               {view === 'knowledge' && (
                 <Knowledge
                   searchOpenKnowledgeId={searchOpenKnowledgeId}

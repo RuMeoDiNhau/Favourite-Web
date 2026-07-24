@@ -1,72 +1,119 @@
-# AWS System Architecture Diagram
+# AWS System Architecture Diagram - Fav Web Portal
 
-This document presents the system architecture for deploying the **Fav_Web** application (comprising Frontend React/Vite, FastAPI Backend, SQLite-to-RDS PostgreSQL Database, and Face Recognition AI) on AWS.
+Tài liệu này mô tả chi tiết Kiến trúc Hệ thống Điện toán Đám mây **Amazon Web Services (AWS)** cho ứng dụng **Fav Web Portal** (Hệ thống Cổng thông tin đa phương tiện tích hợp AI Nhận diện khuôn mặt Face ID).
 
-## Architecture Diagram
+---
+
+## 1. Kiến trúc Thực tế Triển khai (Actual Workshop Architecture)
+
+Dưới đây là sơ đồ kiến trúc thực tế được triển khai thành công trong bài thực hành (Workshop) của chương trình FCAJ:
 
 ```mermaid
 graph TB
     %% Nodes
     User["User Browser (Client)"]
-    Route53["Route 53 (DNS)"]
-    CloudFront["CloudFront (CDN)"]
-    S3Frontend["S3 Bucket (Static Frontend Host)"]
-    ALB["Application Load Balancer (ALB)"]
+    
+    subgraph S3Layer ["AWS S3 Static Web Layer"]
+        S3Frontend["S3 Bucket: fav-web-frontend-bucket<br>(Static Website Hosting)"]
+    end
     
     subgraph VPC ["AWS VPC (Virtual Private Cloud)"]
         subgraph PublicSubnet ["Public Subnet (Internet Facing)"]
-            ALB
+            EC2["EC2 Instance (Ubuntu 22.04 LTS)<br>Docker Container: backend-service (Port 80:8000)<br>FastAPI + AI Face Model"]
         end
         
-        subgraph PrivateSubnet ["Private Subnet (App & DB Layer)"]
-            ECS["ECS Fargate (FastAPI Backend App)"]
-            RDS["RDS PostgreSQL (Primary Database)"]
+        subgraph PrivateSubnet ["Database Layer"]
+            RDS["AWS RDS PostgreSQL / SQLite Volume"]
         end
     end
     
-    S3Storage["S3 Bucket (User Images & Log Photos)"]
-    IAM["AWS IAM (Access Management)"]
-    CloudWatch["CloudWatch (Monitoring & Logs)"]
+    S3Storage["S3 Bucket: fav-web-storage-bucket<br>(User Photos, Log Captures & .npy Embeddings)"]
+    IAM["AWS IAM (Access Roles & Keys)"]
+    CloudWatch["AWS CloudWatch<br>(Log Group /fav-web/backend & CPU Alarm)"]
 
     %% Connections
-    User -->|1. Request DNS| Route53
-    User -->|2. Get Frontend Assets| CloudFront
-    CloudFront -->|Sync| S3Frontend
+    User -->|1. HTTP Get Static Web| S3Frontend
+    User -->|2. REST API /api/v1 (JSON/Auth)| EC2
     
-    User -->|3. Send API Requests /api/v1| ALB
-    ALB -->|Forward Traffic| ECS
+    EC2 -->|3. Query & Persist Data| RDS
+    EC2 -->|4. Upload/Download Media & Vectors| S3Storage
     
-    ECS -->|4. Query Data| RDS
-    ECS -->|5. Store/Retrieve Face Images| S3Storage
-    
-    ECS -.->|Role Permissions| IAM
-    ECS -.->|Send Application Logs| CloudWatch
-    
+    EC2 -.->|SDK boto3 Permissions| IAM
+    EC2 -.->|Stream Logs via Watchtower| CloudWatch
+
     %% Styling
     style User fill:#f9f,stroke:#333,stroke-width:2px
+    style S3Frontend fill:#ffc,stroke:#333,stroke-width:2px
+    style EC2 fill:#bbf,stroke:#333,stroke-width:2px
     style RDS fill:#9cf,stroke:#333,stroke-width:2px
-    style S3Frontend fill:#ffc,stroke:#333,stroke-width:1px
-    style S3Storage fill:#ffc,stroke:#333,stroke-width:1px
+    style S3Storage fill:#ffc,stroke:#333,stroke-width:2px
+    style CloudWatch fill:#fcf,stroke:#333,stroke-width:1px
 ```
 
-## Communication Flow Explanation
+### Chi tiết Luồng xử lý Kỹ thuật (Communication Flow):
 
-### 1. Static Frontend Delivery
-* **Amazon CloudFront** acts as the Content Delivery Network (CDN) caching the compiled frontend files (HTML, CSS, JS, images) closest to the user.
-* The source of these files is an **Amazon S3 Bucket** configured for static website hosting.
+1. **Static Frontend Hosting (Amazon S3):**
+   - Ứng dụng React/Vite được đóng gói tối ưu (`dist/`) và đẩy lên **Amazon S3 Bucket** với tính năng *Static Website Hosting*.
+   - Trình duyệt Client tải trực tiếp HTML, CSS, JS bundle từ URL S3 Bucket.
 
-### 2. API Traffic routing
-* All API requests targeting `/api/v1/*` are sent to the **Application Load Balancer (ALB)**.
-* The ALB terminates SSL/TLS certificates and distributes traffic to active containers.
+2. **API Backend & AI Processing (Amazon EC2 + Docker):**
+   - Các yêu cầu HTTP REST API (`/api/v1/*`) từ trình duyệt được gửi trực tiếp tới địa chỉ IP Public của **Amazon EC2 Instance** (Ubuntu).
+   - Máy chủ EC2 chạy một **Docker Container** (`backend-service`) vận hành Python FastAPI + Uvicorn server.
+   - Thuật toán AI trích xuất vector khuôn mặt (`facenet-pytorch`/`insightface`) và RAM Caching được thực thi trực tiếp bên trong Container.
 
-### 3. Application Execution (FastAPI Backend & AI Model)
-* The FastAPI backend is packaged as a Docker image and runs on **AWS ECS Fargate**.
-* Fargate is serverless, meaning AWS manages the underlying server infrastructure, scaling the containers based on CPU and Memory usage.
-* The face recognition inference (using the AI model in `backend/ai_core`) executes directly within the container instance.
+3. **Data & Storage Layer (AWS RDS & Amazon S3 Storage):**
+   - Dữ liệu quan hệ (Người dùng, Bài viết, Nhạc, Game, Log) được lưu trữ tại **AWS RDS PostgreSQL** (hoặc SQLite Persist Volume Mount).
+   - Ảnh đại diện, ảnh webcam chụp từ Face ID và các tệp numpy vector `.npy` được tự động tải lên **Amazon S3 Storage Bucket** thông qua thư viện `boto3`.
 
-### 4. Relational Database Layer
-* While development uses local SQLite (`app.db`), production uses **Amazon RDS (PostgreSQL/MySQL)** inside a private subnet.
-* This ensures data safety, automated backups, and database replication/scaling.
+4. **Security & Monitoring (CORS, CSP, IAM & CloudWatch):**
+   - **Bảo mật:** Sử dụng cơ chế JWT Dual Authentication (HttpOnly Cookie + Bearer Token Fallback) kết hợp CORS Whitelist và CSP Meta tag.
+   - **Giám sát:** Module `watchtower` gửi log thời gian thực về **AWS CloudWatch Logs** (`/fav-web/backend`) và cấu hình **CloudWatch Alarm** cảnh báo khi CPU EC2 vượt ngưỡng 80%.
 
-### 5. Media & Logs Storage
-* User images uploaded during enrollment and photos captured from webcam logs are stored securely in an **Amazon S3 Bucket (Storage)** instead of the container's local file system. This allows backend containers to remain stateless and scale horizontally.
+---
+
+## 2. Mô hình Mở rộng Sản xuất (Target Production Architecture)
+
+Khi ứng dụng mở rộng cho lượng người dùng lớn trong môi trường Production, hệ thống có thể nâng cấp lên mô hình Serverless / Container Orchestration hoàn chỉnh:
+
+```mermaid
+graph TB
+    User["User Browser (Client)"]
+    Route53["Route 53 (DNS Domain)"]
+    CloudFront["CloudFront (CDN + HTTPS)"]
+    S3Frontend["S3 Bucket (Static Web Source)"]
+    ALB["Application Load Balancer (ALB)"]
+    
+    subgraph VPC ["AWS VPC"]
+        subgraph PublicSubnet ["Public Subnet"]
+            ALB
+        end
+        subgraph PrivateSubnet ["Private Subnet"]
+            ECS["ECS Fargate Auto-Scaling Clusters"]
+            RDS["RDS PostgreSQL Multi-AZ Primary/Standby"]
+        end
+    end
+    
+    S3Storage["S3 Bucket (Media Storage)"]
+    CloudWatch["AWS CloudWatch"]
+
+    User -->|DNS Lookup| Route53
+    User -->|HTTPS Requests| CloudFront
+    CloudFront -->|Origin Static| S3Frontend
+    CloudFront -->|Origin API /api/v1| ALB
+    ALB -->|Auto-Scale Traffic| ECS
+    ECS -->|Query DB| RDS
+    ECS -->|Store Media| S3Storage
+    ECS -.->|Logs & Metrics| CloudWatch
+```
+
+---
+
+## 3. Bảng Tổng hợp Dịch vụ AWS Sử dụng
+
+| Dịch vụ AWS | Vai trò trong Hệ thống | Ghi chú Triển khai |
+| --- | --- | --- |
+| **Amazon S3** | Static Website Hosting & Object Storage | `fav-web-frontend-bucket` & `fav-web-storage-bucket` |
+| **Amazon EC2** | Máy chủ Virtual Server chạy Backend Docker | Ubuntu 22.04 LTS, Docker Engine, Port 80/8000 |
+| **Amazon RDS** | Relational Database Managed Service | PostgreSQL DB Instance (Free Tier) |
+| **Amazon CloudWatch** | Giám sát Log & Cảnh báo tài nguyên | Log Group `/fav-web/backend` & CPU Metric Alarm |
+| **AWS IAM** | Quản lý Quyền truy cập & Security Keys | Access Keys & Policy S3/CloudWatch Access |
