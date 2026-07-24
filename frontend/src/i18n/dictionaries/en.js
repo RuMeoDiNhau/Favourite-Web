@@ -241,6 +241,14 @@ const en = {
     draftCreated: 'Draft saved',
     scheduledCreated: 'Scheduled successfully',
     cancelCreate: 'Cancel',
+    categories: {
+      'Lập Trình': 'Programming',
+      'Kỹ Năng': 'Skills',
+      'Thiết Kế': 'Design',
+      'Kinh Doanh': 'Business',
+      'Phát Triển': 'Development',
+      'Tài Chính': 'Finance',
+    },
     ph: {
       title: 'e.g. Mastering React Hooks',
       category: 'e.g. Programming',

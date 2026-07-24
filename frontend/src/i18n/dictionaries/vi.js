@@ -247,6 +247,14 @@ const vi = {
     draftCreated: 'Lưu nháp thành công',
     scheduledCreated: 'Đã hẹn giờ thành công',
     cancelCreate: 'Huỷ',
+    categories: {
+      'Lập Trình': 'Lập Trình',
+      'Kỹ Năng': 'Kỹ Năng',
+      'Thiết Kế': 'Thiết Kế',
+      'Kinh Doanh': 'Kinh Doanh',
+      'Phát Triển': 'Phát Triển',
+      'Tài Chính': 'Tài Chính',
+    },
     ph: {
       title: 'Ví dụ: Học React Hooks nâng cao',
       category: 'Ví dụ: Lập Trình',

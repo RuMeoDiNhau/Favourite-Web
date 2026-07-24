@@ -9,6 +9,17 @@ import { useTranslation } from 'react-i18next';
 export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearchOpen, currentUser, onNavigate }) {
   const { t } = useTranslation();
   const { isBookmarked: isBmKnowledge, toggle: toggleBm } = useBookmarks();
+
+  // Category labels come from the backend as raw Vietnamese strings
+  // (e.g. "Lập Trình"). To localize the filter buttons, map each
+  // known value to a translation key. Unknown categories fall back
+  // to the raw value so newly-added categories still render
+  // instead of disappearing.
+  const categoryLabel = (cat) => {
+    const key = `knowledge.categories.${cat}`;
+    const translated = t(key);
+    return translated === key ? cat : translated;
+  };
   // Multi-select category filter. Empty array = "All categories"
   // (no filter). Selecting multiple is an OR match — show articles
   // that belong to any of the selected categories. This lets a user
@@ -350,7 +361,7 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
                   onClick={() => toggleCategory(cat)}
                   aria-pressed={active}
                 >
-                  {cat}
+                  {categoryLabel(cat)}
                 </button>
               );
             })}
