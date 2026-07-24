@@ -1,3 +1,5 @@
+/* UserProfile page — theme-aware via App.css tokens */
+
 .userprofile-container {
   max-width: 900px;
   margin: 0 auto;
@@ -6,8 +8,8 @@
 
 .userprofile-back {
   background: transparent;
-  border: 1px solid var(--border-color, #e2e8f0);
-  color: var(--text-main, #1b263b);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
   padding: 8px 14px;
   border-radius: 8px;
   font-size: 14px;
@@ -18,7 +20,7 @@
 }
 
 .userprofile-back:hover {
-  background: var(--bg-item, #f1f5f9);
+  background: var(--bg-item);
 }
 
 .userprofile-card {
@@ -26,10 +28,10 @@
   align-items: center;
   gap: 20px;
   padding: 24px;
-  background: var(--bg-card, #ffffff);
+  background: var(--bg-card);
   border-radius: 16px;
-  box-shadow: var(--shadow-card, 0 4px 20px rgba(15, 23, 42, 0.03));
-  border: 1px solid var(--border-card, #e2e8f0);
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--border-color);
 }
 
 .userprofile-avatar {
@@ -38,7 +40,7 @@
   border-radius: 50%;
   overflow: hidden;
   flex-shrink: 0;
-  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-primary-2));
 }
 
 .userprofile-avatar img {
@@ -55,7 +57,7 @@
   justify-content: center;
   font-size: 32px;
   font-weight: 700;
-  color: white;
+  color: var(--text-on-accent);
 }
 
 .userprofile-info {
@@ -67,7 +69,7 @@
   margin: 0 0 8px;
   font-size: 24px;
   font-weight: 700;
-  color: var(--text-title, #0f172a);
+  color: var(--text-title);
   word-wrap: break-word;
 }
 
@@ -76,12 +78,12 @@
   flex-wrap: wrap;
   gap: 12px;
   font-size: 14px;
-  color: var(--text-muted, #64748b);
+  color: var(--text-muted);
 }
 
 .userprofile-badge {
   background: rgba(99, 102, 241, 0.12);
-  color: #4f46e5;
+  color: var(--accent-primary);
   padding: 2px 8px;
   border-radius: 6px;
   font-size: 12px;
@@ -96,41 +98,41 @@
 }
 
 .userprofile-stat {
-  background: var(--bg-card, #ffffff);
-  border: 1px solid var(--border-card, #e2e8f0);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 18px 16px;
   text-align: center;
-  box-shadow: var(--shadow-card, 0 4px 20px rgba(15, 23, 42, 0.03));
+  box-shadow: var(--shadow-card);
 }
 
 .userprofile-stat-value {
   font-size: 28px;
   font-weight: 800;
-  color: var(--text-title, #0f172a);
+  color: var(--text-title);
   line-height: 1.2;
 }
 
 .userprofile-stat-label {
   font-size: 13px;
-  color: var(--text-muted, #64748b);
+  color: var(--text-muted);
   margin-top: 4px;
 }
 
 .userprofile-status {
   text-align: center;
   padding: 40px;
-  color: var(--text-muted, #94a3b8);
+  color: var(--text-muted);
 }
 
 .userprofile-error {
-  color: #b91c1c;
+  color: var(--status-error-fg);
 }
 
 .userprofile-self-hint {
   margin-top: 16px;
   text-align: center;
-  color: var(--text-muted, #64748b);
+  color: var(--text-muted);
   font-size: 14px;
   font-style: italic;
 }
@@ -138,32 +140,33 @@
 /* Follow row inside the profile header — counts side-by-side with
    a dot separator. Kept compact so the name + meta block stays
    the visual focus. */
+
 .userprofile-follow-row {
   margin-top: 10px;
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 14px;
-  color: var(--text-muted, #64748b);
+  color: var(--text-muted);
   flex-wrap: wrap;
 }
 
 .userprofile-follow-count strong {
-  color: var(--text-title, #0f172a);
+  color: var(--text-title);
   font-weight: 700;
 }
 
 .userprofile-follow-dot {
-  color: var(--text-muted, #94a3b8);
+  color: var(--text-muted);
 }
 
 .userprofile-follow-btn {
   flex-shrink: 0;
   padding: 10px 18px;
   border-radius: 999px;
-  border: 1px solid var(--border-color, #e2e8f0);
-  background: #6366f1;
-  color: white;
+  border: 1px solid var(--border-color);
+  background: var(--accent-primary);
+  color: var(--text-on-accent);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -171,7 +174,7 @@
 }
 
 .userprofile-follow-btn:hover {
-  background: #4f46e5;
+  background: var(--accent-primary-2);
 }
 
 .userprofile-follow-btn:disabled {
@@ -181,29 +184,31 @@
 
 /* "Following" state — outline button so the active edge reads as a
    toggled-off affordance. */
+
 .userprofile-follow-btn.following {
   background: transparent;
-  color: var(--text-title, #0f172a);
-  border-color: var(--border-color, #cbd5e1);
+  color: var(--text-main);
+  border-color: var(--border-color);
 }
 
 .userprofile-follow-btn.following:hover {
-  background: var(--bg-item, #f1f5f9);
+  background: var(--bg-item);
 }
 
 /* Network section: tabs + list of followers / following. */
+
 .userprofile-network {
   margin-top: 20px;
-  background: var(--bg-card, #ffffff);
-  border: 1px solid var(--border-card, #e2e8f0);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: var(--shadow-card, 0 4px 20px rgba(15, 23, 42, 0.03));
+  box-shadow: var(--shadow-card);
 }
 
 .userprofile-network-tabs {
   display: flex;
-  border-bottom: 1px solid var(--border-color, #e2e8f0);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .userprofile-network-tab {
@@ -213,20 +218,20 @@
   border: none;
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-muted, #64748b);
+  color: var(--text-muted);
   cursor: pointer;
   border-bottom: 2px solid transparent;
   transition: all 0.15s ease;
 }
 
 .userprofile-network-tab:hover {
-  background: var(--bg-item, #f1f5f9);
-  color: var(--text-title, #0f172a);
+  background: var(--bg-item);
+  color: var(--text-title);
 }
 
 .userprofile-network-tab.active {
-  color: #4f46e5;
-  border-bottom-color: #6366f1;
+  color: var(--accent-primary);
+  border-bottom-color: var(--accent-primary);
 }
 
 .userprofile-network-list {
@@ -242,7 +247,7 @@
 .userprofile-network-item {
   padding: 12px 18px;
   cursor: pointer;
-  border-bottom: 1px solid var(--border-color, #f1f5f9);
+  border-bottom: 1px solid var(--border-color);
   transition: background 0.15s ease;
 }
 
@@ -251,48 +256,20 @@
 }
 
 .userprofile-network-item:hover {
-  background: var(--bg-item, #f1f5f9);
+  background: var(--bg-item);
 }
 
 .userprofile-network-name {
   font-weight: 600;
-  color: var(--text-title, #0f172a);
+  color: var(--text-title);
   font-size: 14px;
 }
 
 .userprofile-network-meta {
   margin-top: 2px;
   font-size: 12px;
-  color: var(--text-muted, #64748b);
+  color: var(--text-muted);
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
-}
-
-.dark-theme .userprofile-follow-btn.following {
-  color: #f1f5f9;
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
-.dark-theme .userprofile-follow-count strong {
-  color: #f1f5f9;
-}
-
-.dark-theme .userprofile-network-tab.active {
-  color: #a5b4fc;
-}
-
-.dark-theme .userprofile-network-name {
-  color: #f1f5f9;
-}
-
-/* Dark-theme overlay — page background is inherited from
-   .App.dark-theme, but the avatar fallback gradient stays the same
-   so the profile card doesn't blend in. */
-.dark-theme .userprofile-name {
-  color: #f1f5f9;
-}
-
-.dark-theme .userprofile-stat-value {
-  color: #f1f5f9;
 }

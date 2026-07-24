@@ -1,6 +1,8 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 export default function Sidebar({ selectedLibrary, onSelectLibrary, stats, categories = [] }) {
+  const { t } = useTranslation();
   const getCategoryEmoji = (cat) => {
     const emojis = {
       'Puzzle': '🧩',
@@ -15,14 +17,14 @@ export default function Sidebar({ selectedLibrary, onSelectLibrary, stats, categ
   return (
     <div className="games-sidebar">
       <div className="sidebar-header">
-        <h3>📰 CHỦ ĐỀ BLOG</h3>
+        <h3>📰 {t('games.blogTopics')}</h3>
       </div>
       <nav className="sidebar-menu">
         <button
           className={`menu-item ${selectedLibrary === 'all' ? 'active' : ''}`}
           onClick={() => onSelectLibrary('all')}
         >
-          📚 Tất Cả Bài Viết
+          📚 {t('games.allArticles')}
         </button>
         {categories.map(cat => (
           <button
@@ -37,8 +39,8 @@ export default function Sidebar({ selectedLibrary, onSelectLibrary, stats, categ
 
       <div className="sidebar-footer">
         <div className="stats">
-          <p>✍️ Thể loại bài viết: {stats?.totalCategories || 0}</p>
-          <p>📰 Tổng số bài viết: {stats?.totalPosts || 0}</p>
+          <p>✍️ {t('games.sidebarCategoryLabel')} {stats?.totalCategories || 0}</p>
+          <p>📰 {t('games.sidebarTotalLabel')} {stats?.totalPosts || 0}</p>
         </div>
       </div>
     </div>

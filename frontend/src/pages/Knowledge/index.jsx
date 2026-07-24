@@ -4,9 +4,22 @@ import * as api from '../../services/api';
 import CommentSection from '../../components/Comments/CommentSection';
 import AddToCollectionButton from '../Collections/AddToCollectionButton';
 import { useBookmarks } from '../../lib/BookmarksContext';
+import { useTranslation } from 'react-i18next';
 
 export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearchOpen, currentUser, onNavigate }) {
+  const { t } = useTranslation();
   const { isBookmarked: isBmKnowledge, toggle: toggleBm } = useBookmarks();
+
+  // Category labels come from the backend as raw Vietnamese strings
+  // (e.g. "Lập Trình"). To localize the filter buttons, map each
+  // known value to a translation key. Unknown categories fall back
+  // to the raw value so newly-added categories still render
+  // instead of disappearing.
+  const categoryLabel = (cat) => {
+    const key = `knowledge.categories.${cat}`;
+    const translated = t(key);
+    return translated === key ? cat : translated;
+  };
   // Multi-select category filter. Empty array = "All categories"
   // (no filter). Selecting multiple is an OR match — show articles
   // that belong to any of the selected categories. This lets a user
@@ -181,7 +194,7 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
       setAllArticles(response.data || []);
     } catch (err) {
       console.error('Error loading articles:', err);
-      setError('Failed to load articles');
+      setError(t('knowledge.err.load'));
     } finally {
       setLoading(false);
     }
@@ -229,7 +242,7 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
     e.preventDefault();
     if (createSubmitting) return;
     if (!createTitle.trim() || !createCategory.trim()) {
-      setCreateError('Tiêu đề và thể loại là bắt buộc.');
+      setCreateError(t('knowledge.err.titleRequired'));
       return;
     }
     setCreateSubmitting(true);
@@ -249,7 +262,7 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
       };
       if (createMode === 'scheduled') {
         if (!createScheduledAt) {
-          setCreateError('Vui lòng chọn thời điểm đăng.');
+          setCreateError(t('knowledge.err.scheduledRequired'));
           setCreateSubmitting(false);
           return;
         }
@@ -269,7 +282,7 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
       if (showMyArticles) loadMyArticles();
     } catch (err) {
       const detail = err?.response?.data?.detail;
-      setCreateError(detail || 'Không thể tạo bài viết.');
+      setCreateError(detail || t('knowledge.err.create'));
     } finally {
       setCreateSubmitting(false);
     }
@@ -303,20 +316,20 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
     <div className="knowledge-container">
       <div className="knowledge-header">
         <h1 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <img 
-            src="/knowledge-icon.png" 
-            alt="Knowledge Icon" 
-            style={{ width: '48px', height: '48px', marginRight: '15px', borderRadius: '8px' }} 
+          <img
+            src="/knowledge-icon.png"
+            alt={t('knowledge.altIcon')}
+            style={{ width: '48px', height: '48px', marginRight: '15px', borderRadius: '8px' }}
           />
-          Chia Sẻ Kiến Thức Học Tập & Làm Việc
+          {t('knowledge.heading')}
         </h1>
-        <p>Cộng đồng chia sẻ kiến thức, kỹ năng và kinh nghiệm</p>
+        <p>{t('knowledge.subtitle')}</p>
         <div className="knowledge-create-buttons">
-          <button className="create-btn" onClick={() => handleOpenCreate('published')}>✍️ Viết Bài Mới</button>
+          <button className="create-btn" onClick={() => handleOpenCreate('published')}>✍️ {t('knowledge.writeNew')}</button>
           {currentUser && (
             <>
-              <button className="create-btn create-btn-secondary" onClick={() => handleOpenCreate('draft')}>📝 Lưu nháp</button>
-              <button className="create-btn create-btn-secondary" onClick={() => handleOpenCreate('scheduled')}>⏰ Hẹn giờ</button>
+              <button className="create-btn create-btn-secondary" onClick={() => handleOpenCreate('draft')}>📝 {t('knowledge.saveDraft')}</button>
+              <button className="create-btn create-btn-secondary" onClick={() => handleOpenCreate('scheduled')}>⏰ {t('knowledge.schedule')}</button>
             </>
           )}
         </div>
@@ -329,14 +342,14 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
               className={`filter-btn ${!showMyArticles ? 'active' : ''}`}
               onClick={() => setShowMyArticles(false)}
             >
-              📚 Tất Cả Bài Viết
+              📚 {t('knowledge.allArticles')}
             </button>
             {currentUser && (
               <button
                 className={`filter-btn ${showMyArticles ? 'active' : ''}`}
                 onClick={() => setShowMyArticles(true)}
               >
-                👤 Bài viết của tôi
+                👤 {t('knowledge.myArticles')}
               </button>
             )}
             {categories.map((cat) => {
@@ -348,7 +361,7 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
                   onClick={() => toggleCategory(cat)}
                   aria-pressed={active}
                 >
-                  {cat}
+                  {categoryLabel(cat)}
                 </button>
               );
             })}
@@ -357,13 +370,13 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
                 className="filter-btn filter-btn-clear"
                 onClick={() => setSelectedCategories([])}
               >
-                Xóa lọc
+                {t('knowledge.clearFilter')}
               </button>
             )}
           </div>
           {tagSuggestions.length > 0 && (
             <div className="filter-buttons knowledge-tag-row">
-              <span className="knowledge-tag-label">🏷️ Tag:</span>
+              <span className="knowledge-tag-label">🏷️ {t('knowledge.tagLabel')}</span>
               {tagSuggestions.map((tag) => {
                 const active = selectedTags.includes(tag);
                 return (
@@ -382,7 +395,7 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
                   className="filter-btn filter-btn-clear"
                   onClick={() => setSelectedTags([])}
                 >
-                  Xóa tag
+                  {t('knowledge.clearTag')}
                 </button>
               )}
             </div>
@@ -390,9 +403,9 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
         </div>
 
         {loading ? (
-          <p style={{ textAlign: 'center', color: 'white' }}>Đang tải bài viết...</p>
+          <p style={{ textAlign: 'center', color: 'white' }}>{t('knowledge.loading')}</p>
         ) : error ? (
-          <p style={{ textAlign: 'center', color: '#ff6b6b' }}>{error}</p>
+          <p className="knowledge-error-text">{error}</p>
         ) : (
           <div className="knowledge-grid">
             {articles.length > 0 ? (
@@ -400,10 +413,10 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
                 <div key={article.id} className="knowledge-card">
                   <div className="card-header">
                     <div className="card-image">📝</div>
-                    <div className="card-badge">{article.category}</div>
+                    <div className="card-badge">{categoryLabel(article.category)}</div>
                     {article.status && article.status !== 'published' && (
                       <div className={`card-status card-status-${article.status}`}>
-                        {article.status === 'draft' ? '📝 Nháp' : '⏰ Đã hẹn giờ'}
+                        {article.status === 'draft' ? <>📝 {t('knowledge.draft')}</> : <>⏰ {t('knowledge.scheduled')}</>}
                       </div>
                     )}
                   </div>
@@ -422,7 +435,7 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
                               e.stopPropagation();
                               setSelectedTags((prev) => prev.includes(t.name) ? prev.filter((x) => x !== t.name) : [...prev, t.name]);
                             }}
-                            title={`Lọc theo #${t.name}`}
+                            title={t('knowledge.filterByTag', { tag: t.name })}
                             type="button"
                           >
                             #{t.name}
@@ -441,15 +454,15 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
                     </div>
 
                     <div className="card-actions">
-                      <button className="read-btn" onClick={() => handleOpenArticle(article)}>Đọc Thêm →</button>
-                      <button onClick={() => handleLikeArticle(article.id)} className="read-btn" style={{ marginLeft: '8px' }}>❤️ Thích</button>
+                      <button className="read-btn" onClick={() => handleOpenArticle(article)}>{t('knowledge.readMore')} →</button>
+                      <button onClick={() => handleLikeArticle(article.id)} className="read-btn" style={{ marginLeft: '8px' }}>❤️ {t('knowledge.like')}</button>
                     </div>
                   </div>
                 </div>
               ))
             ) : (
               <div className="no-content" style={{ gridColumn: '1 / -1' }}>
-                <p>Không có bài viết nào trong danh mục này</p>
+                <p>{t('knowledge.noArticles')}</p>
               </div>
             )}
           </div>
@@ -467,7 +480,7 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
           >
             <div className="article-modal-header">
               <div>
-                <span className="card-badge">{selectedArticle.category}</span>
+                <span className="card-badge">{categoryLabel(selectedArticle.category)}</span>
                 <h2>{selectedArticle.title}</h2>
                 <div className="article-modal-meta">
                   <span>👤 {selectedArticle.author}</span>
@@ -478,8 +491,8 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
               <button
                 className={`article-modal-bookmark ${isBmKnowledge('knowledge', selectedArticle.id) ? 'filled' : ''}`}
                 onClick={() => toggleBm('knowledge', selectedArticle.id)}
-                aria-label={isBmKnowledge('knowledge', selectedArticle.id) ? 'Bỏ lưu' : 'Lưu bài viết'}
-                title={isBmKnowledge('knowledge', selectedArticle.id) ? 'Bỏ lưu' : 'Lưu bài viết'}
+                aria-label={isBmKnowledge('knowledge', selectedArticle.id) ? t('knowledge.unbookmark') : t('knowledge.bookmark')}
+                title={isBmKnowledge('knowledge', selectedArticle.id) ? t('knowledge.unbookmark') : t('knowledge.bookmark')}
               >
                 {isBmKnowledge('knowledge', selectedArticle.id) ? '🔖' : '⚪'}
               </button>
@@ -487,7 +500,7 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
               <button
                 className="article-modal-close"
                 onClick={() => setSelectedArticle(null)}
-                aria-label="Đóng"
+                aria-label={t('knowledge.close')}
               >
                 ✕
               </button>
@@ -500,9 +513,9 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
               )}
 
               <div className="article-modal-videos">
-                <h3>📺 Video liên quan</h3>
+                <h3>📺 {t('knowledge.relatedVideos')}</h3>
                 {modalLoading ? (
-                  <p className="videos-status">Đang tìm video trên YouTube…</p>
+                  <p className="videos-status">{t('knowledge.loadingVideos')}</p>
                 ) : articleVideos.length > 0 ? (
                   <div className="video-grid">
                     {articleVideos.map((v) => (
@@ -521,9 +534,7 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
                     ))}
                   </div>
                 ) : (
-                  <p className="videos-status">
-                    Không tìm thấy video liên quan. (Có thể do chưa cấu hình YOUTUBE_API_KEY.)
-                  </p>
+                  <p className="videos-status">{t('knowledge.noVideos')}</p>
                 )}
               </div>
 
@@ -547,24 +558,24 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
           <div className="knowledge-create-modal" onClick={(e) => e.stopPropagation()}>
             <button className="knowledge-create-close" onClick={() => setShowCreateModal(false)} type="button">×</button>
             <h2>
-              {createMode === 'draft' ? '📝 Lưu bản nháp'
-                : createMode === 'scheduled' ? '⏰ Hẹn giờ đăng bài'
-                : '✍️ Đăng bài mới'}
+              {createMode === 'draft' ? <>📝 {t('knowledge.draftModal')}</>
+                : createMode === 'scheduled' ? <>⏰ {t('knowledge.scheduledModal')}</>
+                : <>✍️ {t('knowledge.newPostModal')}</>}
             </h2>
             <form onSubmit={handleSubmitCreate} className="knowledge-create-form">
               <label>
-                Tiêu đề *
+                {t('knowledge.titleLabel')} *
                 <input
                   type="text"
                   value={createTitle}
                   onChange={(e) => setCreateTitle(e.target.value)}
                   required
                   maxLength={255}
-                  placeholder="Ví dụ: Học React Hooks nâng cao"
+                  placeholder={t('knowledge.ph.title')}
                 />
               </label>
               <label>
-                Thể loại *
+                {t('knowledge.categoryLabel')} *
                 <input
                   type="text"
                   value={createCategory}
@@ -572,14 +583,14 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
                   required
                   maxLength={100}
                   list="knowledge-category-suggestions"
-                  placeholder="Ví dụ: Lập Trình"
+                  placeholder={t('knowledge.ph.category')}
                 />
                 <datalist id="knowledge-category-suggestions">
                   {categories.map((c) => <option key={c} value={c} />)}
                 </datalist>
               </label>
               <label>
-                Mô tả ngắn
+                {t('knowledge.shortDescLabel')}
                 <textarea
                   value={createDescription}
                   onChange={(e) => setCreateDescription(e.target.value)}
@@ -588,7 +599,7 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
                 />
               </label>
               <label>
-                Nội dung
+                {t('knowledge.contentLabel')}
                 <textarea
                   value={createContent}
                   onChange={(e) => setCreateContent(e.target.value)}
@@ -596,17 +607,17 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
                 />
               </label>
               <label>
-                Tags (phân cách bằng dấu phẩy)
+                {t('knowledge.tagsLabel')}
                 <input
                   type="text"
                   value={createTags}
                   onChange={(e) => setCreateTags(e.target.value)}
-                  placeholder="react, frontend, hooks"
+                  placeholder={t('knowledge.ph.tags')}
                 />
               </label>
               {createMode === 'scheduled' && (
                 <label>
-                  Thời điểm đăng *
+                  {t('knowledge.scheduledAtLabel')} *
                   <input
                     type="datetime-local"
                     value={createScheduledAt}
@@ -618,13 +629,13 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
               {createError && <div className="knowledge-create-error">{createError}</div>}
               <div className="knowledge-create-actions">
                 <button type="submit" className="knowledge-create-submit" disabled={createSubmitting}>
-                  {createSubmitting ? 'Đang lưu...'
-                    : createMode === 'draft' ? '📝 Lưu nháp'
-                    : createMode === 'scheduled' ? '⏰ Hẹn giờ'
-                    : '🚀 Đăng ngay'}
+                  {createSubmitting ? t('knowledge.saving')
+                    : createMode === 'draft' ? <>📝 {t('knowledge.draftBtn')}</>
+                    : createMode === 'scheduled' ? <>⏰ {t('knowledge.scheduleBtn')}</>
+                    : <>🚀 {t('knowledge.publishNow')}</>}
                 </button>
                 <button type="button" className="knowledge-create-cancel" onClick={() => setShowCreateModal(false)}>
-                  Huỷ
+                  {t('common.cancel')}
                 </button>
               </div>
             </form>
