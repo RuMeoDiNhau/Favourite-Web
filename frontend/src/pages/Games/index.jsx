@@ -3,8 +3,10 @@ import Sidebar from './Sidebar';
 import './Games.css';
 import * as api from '../../services/api';
 import { useBookmarks } from '../../lib/BookmarksContext';
+import { useTranslation } from 'react-i18next';
 
 export default function Games({ searchOpenGameId = null, onConsumeSearchOpen }) {
+  const { t } = useTranslation();
   const { isBookmarked: isBm, toggle: toggleBm } = useBookmarks();
   const [selectedLibrary, setSelectedLibrary] = useState('all');
   const [games, setGames] = useState([]);
@@ -63,7 +65,7 @@ export default function Games({ searchOpenGameId = null, onConsumeSearchOpen }) 
       setGames(response.data || []);
     } catch (err) {
       console.error('Error loading games:', err);
-      setError('Failed to load games');
+      setError(t('games.err.load'));
     } finally {
       setLoading(false);
     }
@@ -75,7 +77,7 @@ export default function Games({ searchOpenGameId = null, onConsumeSearchOpen }) 
       await api.viewGame(game.id);
       setSelectedGame(game);
       // Cập nhật lại số lượt xem trên UI bằng cách cộng thêm 1 hoặc load lại danh sách
-      setGames(prevGames => 
+      setGames(prevGames =>
         prevGames.map(g => g.id === game.id ? { ...g, views: g.views + 1 } : g)
       );
     } catch (err) {
@@ -112,34 +114,38 @@ export default function Games({ searchOpenGameId = null, onConsumeSearchOpen }) 
 
   return (
     <div className="games-container">
-      <Sidebar 
-        selectedLibrary={selectedLibrary} 
-        onSelectLibrary={setSelectedLibrary} 
-        stats={stats} 
-        categories={categories} 
+      <Sidebar
+        selectedLibrary={selectedLibrary}
+        onSelectLibrary={setSelectedLibrary}
+        stats={stats}
+        categories={categories}
       />
       <div className="games-main">
         <div className="games-header">
           <h1>
-            <img 
-              src="/game-icon.png" 
-              alt="Games Icon" 
-              style={{ width: '42px', height: '42px', display: 'inline-block', verticalAlign: 'middle', marginRight: '10px', borderRadius: '8px' }} 
+            <img
+              src="/game-icon.png"
+              alt={t('games.altIcon')}
+              style={{ width: '42px', height: '42px', display: 'inline-block', verticalAlign: 'middle', marginRight: '10px', borderRadius: '8px' }}
             />
-            Tin Tức & Blog Game
+            {t('games.heading')}
           </h1>
-          <p>Cập nhật những bài viết, hướng dẫn và mẹo chơi game mới nhất</p>
+          <p>{t('games.subtitle')}</p>
         </div>
 
         <div className="games-content">
           {loading ? (
-            <p style={{ textAlign: 'center', color: 'white' }}>Đang tải danh sách bài viết...</p>
+            <p style={{ textAlign: 'center', color: 'white' }}>{t('games.loading')}</p>
           ) : error ? (
-            <p style={{ textAlign: 'center', color: '#ff6b6b' }}>{error}</p>
+            <p className="games-error-text">{error}</p>
           ) : (
             <>
               <section className="games-section">
-                <h2>{selectedLibrary === 'all' ? '📰 Tất Cả Bài Viết' : `📁 Thể loại: ${selectedLibrary}`}</h2>
+                <h2>
+                  {selectedLibrary === 'all'
+                    ? <>📰 {t('games.allArticles')}</>
+                    : <>📁 {t('games.categoryPrefix')}{selectedLibrary}</>}
+                </h2>
                 <div className="games-grid">
                   {games.length > 0 ? (
                     games.map(game => (
@@ -148,17 +154,17 @@ export default function Games({ searchOpenGameId = null, onConsumeSearchOpen }) 
                         <h3>{game.title}</h3>
                         <p>{game.description}</p>
                         <div className="game-stats">
-                          <span>👁️ {game.views} lượt xem</span>
-                          <span>❤️ {game.likes} thích</span>
+                          <span>👁️ {game.views} {t('games.viewsLabel')}</span>
+                          <span>❤️ {game.likes} {t('games.likesShort')}</span>
                         </div>
                         <div className="game-actions" onClick={(e) => e.stopPropagation()}>
-                          <button onClick={() => handleViewGame(game)} className="action-btn">📖 Đọc bài</button>
-                          <button onClick={() => handleLikeGame(game.id)} className="action-btn">❤️ Thích</button>
+                          <button onClick={() => handleViewGame(game)} className="action-btn">📖 {t('games.read')}</button>
+                          <button onClick={() => handleLikeGame(game.id)} className="action-btn">❤️ {t('games.like')}</button>
                           <button
                             onClick={() => toggleBm('game', game.id)}
                             className={`action-btn ${isBm('game', game.id) ? 'bookmark-active' : ''}`}
-                            title={isBm('game', game.id) ? 'Bỏ lưu' : 'Lưu bài viết'}
-                            aria-label={isBm('game', game.id) ? 'Bỏ lưu' : 'Lưu bài viết'}
+                            title={isBm('game', game.id) ? t('games.unbookmark') : t('games.bookmark')}
+                            aria-label={isBm('game', game.id) ? t('games.unbookmark') : t('games.bookmark')}
                           >
                             {isBm('game', game.id) ? '🔖' : '⚪'}
                           </button>
@@ -166,9 +172,7 @@ export default function Games({ searchOpenGameId = null, onConsumeSearchOpen }) 
                       </div>
                     ))
                   ) : (
-                    <p style={{ gridColumn: '1 / -1', textAlign: 'center', color: 'rgba(255,255,255,0.7)' }}>
-                      Không có bài viết nào
-                    </p>
+                    <p className="games-empty-text">{t('games.noPosts')}</p>
                   )}
                 </div>
               </section>
@@ -185,9 +189,9 @@ export default function Games({ searchOpenGameId = null, onConsumeSearchOpen }) 
             <div className="modal-header-detail">
               <h2>{selectedGame.title}</h2>
               <div className="modal-meta">
-                <span>📁 Thể loại: <strong>{selectedGame.category}</strong></span>
-                <span>👁️ {selectedGame.views + 1} lượt xem</span>
-                <span>❤️ {selectedGame.likes} lượt thích</span>
+                <span>📁 {t('games.categoryLabel')} <strong>{selectedGame.category}</strong></span>
+                <span>👁️ {selectedGame.views + 1} {t('games.viewsLabel')}</span>
+                <span>❤️ {selectedGame.likes} {t('games.likesLabel')}</span>
               </div>
             </div>
             <div className="modal-body">
@@ -196,21 +200,20 @@ export default function Games({ searchOpenGameId = null, onConsumeSearchOpen }) 
             <div className="modal-footer">
               <button
                 onClick={() => handleLikeGame(selectedGame.id)}
-                className="action-btn"
-                style={{ maxWidth: '120px', background: 'rgba(255, 107, 107, 0.3)', borderColor: '#ff6b6b' }}
+                className="action-btn games-action-btn-danger"
               >
-                ❤️ Thích bài viết
+                ❤️ {t('games.likeArticle')}
               </button>
               <button
                 onClick={() => toggleBm('game', selectedGame.id)}
                 className={`action-btn ${isBm('game', selectedGame.id) ? 'bookmark-active' : ''}`}
                 style={{ maxWidth: '120px' }}
-                title={isBm('game', selectedGame.id) ? 'Bỏ lưu' : 'Lưu bài viết'}
+                title={isBm('game', selectedGame.id) ? t('games.unbookmark') : t('games.bookmark')}
               >
-                {isBm('game', selectedGame.id) ? '🔖 Đã lưu' : '⚪ Lưu bài viết'}
+                {isBm('game', selectedGame.id) ? <>🔖 {t('common.saved')}</> : <>⚪ {t('games.bookmark')}</>}
               </button>
               <button onClick={handleCloseModal} className="action-btn" style={{ maxWidth: '100px' }}>
-                Đóng
+                {t('games.close')}
               </button>
             </div>
           </div>

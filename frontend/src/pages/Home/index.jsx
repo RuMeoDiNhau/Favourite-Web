@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend,
 } from 'recharts';
+import { useTranslation } from 'react-i18next';
 import * as api from '../../services/api';
 import './Home.css';
 
@@ -22,20 +23,28 @@ const EMOJI_FOR_TYPE = {
   post: '📝',
 };
 
-const TYPE_LABEL = {
-  knowledge: 'bài viết',
-  music: 'bài hát',
-  game: 'trò chơi',
-  post: 'bài đăng',
+// Translation keys for the small label that appears when a recent
+// activity item has no `title` field (e.g. a removed article). Used
+// as the fallback so we never render a raw `content_type` enum.
+const TYPE_LABEL_KEY = {
+  knowledge: 'home.typeLabel.knowledge',
+  music: 'home.typeLabel.music',
+  game: 'home.typeLabel.game',
+  post: 'home.typeLabel.post',
 };
 
-const EVENT_LABEL = {
-  view: 'đã đọc',
-  play: 'đã nghe',
-  like: 'đã thích',
+// Translation keys for the "Bạn X · time ago" small line under each
+// recent activity entry. Using dedicated keys (instead of the <T>
+// hash-of-template approach) because the {time} placeholder is
+// resolved per event_type at render time.
+const EVENT_KEY = {
+  view: 'home.event.view',
+  play: 'home.event.play',
+  like: 'home.event.like',
 };
 
 function Home({ onNavigate }) {
+  const { t } = useTranslation();
   const [days, setDays] = useState(7);
   const [insights, setInsights] = useState({
     totals: EMPTY_TOTALS,
@@ -48,6 +57,11 @@ function Home({ onNavigate }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [exporting, setExporting] = useState(false);
+
+  // Stash the load function in a ref so the focus/visibility listener
+  // can call the latest version (with current `days`) without needing
+  // to be re-bound each render.
+  const loadRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -67,14 +81,39 @@ function Home({ onNavigate }) {
       } catch (err) {
         if (cancelled) return;
         console.error('Error loading dashboard:', err);
-        setError('Không tải được dữ liệu. Vui lòng thử lại.');
+        setError(t('home.loadFail'));
       } finally {
         if (!cancelled) setLoading(false);
       }
     };
+    loadRef.current = load;
     load();
     return () => { cancelled = true; };
-  }, [days]);
+  }, [days, t]);
+
+  // Re-fetch when the user comes back to this tab after reacting
+  // or commenting in another (Knowledge/Feed) tab. Without this, the
+  // stat cards and "Bạn đã đọc gần đây" list stay stale until the
+  // user manually switches the days-toggle. We listen on:
+  //   - window 'focus'  → tab switch back
+  //   - document 'visibilitychange' → unmounted tab coming back
+  //     (Safari fires this rather than focus)
+  //   - 'pageshow' with persisted=true → bfcache restore
+  // The fetch is best-effort; failures fall through silently and the
+  // existing state stays visible.
+  useEffect(() => {
+    const refetch = () => {
+      loadRef.current?.();
+    };
+    window.addEventListener('focus', refetch);
+    document.addEventListener('visibilitychange', refetch);
+    window.addEventListener('pageshow', refetch);
+    return () => {
+      window.removeEventListener('focus', refetch);
+      document.removeEventListener('visibilitychange', refetch);
+      window.removeEventListener('pageshow', refetch);
+    };
+  }, []);
 
   // Trigger a file download for the user's insights in `fmt`
   // ('csv' or 'json'). We disable both export buttons while in
@@ -114,13 +153,17 @@ function Home({ onNavigate }) {
     <div className="home-page">
       <header className="home-header">
         <div>
-          <h1 className="home-title">🏠 Trang chủ</h1>
+          <h1 className="home-title">🏠 {t('home.title')}</h1>
           <p className="home-subtitle">
-            {loading
-              ? 'Đang tải...'
-              : hasActivity
-                ? `Bạn đang có chuỗi ${insights.streak_days} ngày liên tiếp! Hãy tiếp tục nhé.`
-                : 'Khám phá nội dung để bắt đầu ghi dấu hoạt động của bạn.'}
+            {loading ? (
+              t('common.loading')
+            ) : hasActivity ? (
+              <span>
+                {t('home.streak', { n: insights.streak_days })}
+              </span>
+            ) : (
+              t('home.noActivity')
+            )}
           </p>
         </div>
         <div className="home-days-toggle" role="tablist">
@@ -132,7 +175,7 @@ function Home({ onNavigate }) {
               className={days === d ? 'active' : ''}
               onClick={() => setDays(d)}
             >
-              {d} ngày
+              {d} {t('home.daysLabel')}
             </button>
           ))}
         </div>
@@ -142,7 +185,7 @@ function Home({ onNavigate }) {
             className="home-export-btn"
             onClick={() => onExport('csv')}
             disabled={exporting}
-            title="Tải file CSV"
+            title={t('home.exportCsv')}
           >
             ⬇️ CSV
           </button>
@@ -151,7 +194,7 @@ function Home({ onNavigate }) {
             className="home-export-btn"
             onClick={() => onExport('json')}
             disabled={exporting}
-            title="Tải file JSON"
+            title={t('home.exportJson')}
           >
             ⬇️ JSON
           </button>
@@ -163,40 +206,20 @@ function Home({ onNavigate }) {
       {/* 4 stat cards. Skeleton placeholders during initial load so
           the layout doesn't jump when data arrives. */}
       <section className="home-stats">
-        <StatCard
-          icon="📚"
-          label="Bài viết đã đọc"
-          value={insights.totals.knowledge_views}
-          loading={loading}
-        />
-        <StatCard
-          icon="🎵"
-          label="Bài hát đã nghe"
-          value={insights.totals.music_plays}
-          loading={loading}
-        />
-        <StatCard
-          icon="🎮"
-          label="Trò chơi đã xem"
-          value={insights.totals.game_views}
-          loading={loading}
-        />
-        <StatCard
-          icon="❤️"
-          label="Bài đăng đã thích"
-          value={insights.totals.posts_liked}
-          loading={loading}
-        />
+        <StatCard icon="📚" label={t('home.statArticles')} value={insights.totals.knowledge_views} loading={loading} />
+        <StatCard icon="🎵" label={t('home.statSongs')} value={insights.totals.music_plays} loading={loading} />
+        <StatCard icon="🎮" label={t('home.statGames')} value={insights.totals.game_views} loading={loading} />
+        <StatCard icon="❤️" label={t('home.statPosts')} value={insights.totals.posts_liked} loading={loading} />
       </section>
 
       {/* Line chart of activity over the period. Render the chart
           container unconditionally so Recharts has a stable parent
           to measure — we just feed it empty data when loading. */}
       <section className="home-chart-card">
-        <h2>Hoạt động {days} ngày gần nhất</h2>
+        <h2>{t('home.daysActivity', { days })}</h2>
         <div className="home-chart-wrapper">
           {chartData.length === 0 ? (
-            <div className="home-chart-empty">Chưa có dữ liệu</div>
+            <div className="home-chart-empty">{t('home.chartEmpty')}</div>
           ) : (
             <ResponsiveContainer width="100%" height={260}>
               <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -213,30 +236,9 @@ function Home({ onNavigate }) {
                   labelStyle={{ color: '#f8fafc' }}
                 />
                 <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
-                <Line
-                  type="monotone"
-                  dataKey="knowledge"
-                  name="Bài viết"
-                  stroke="#6366f1"
-                  strokeWidth={2}
-                  dot={{ r: 3 }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="music"
-                  name="Nhạc"
-                  stroke="#ec4899"
-                  strokeWidth={2}
-                  dot={{ r: 3 }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="game"
-                  name="Game"
-                  stroke="#10b981"
-                  strokeWidth={2}
-                  dot={{ r: 3 }}
-                />
+                <Line type="monotone" dataKey="knowledge" name={t('home.legend.knowledge')} stroke="#6366f1" strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="music" name={t('home.legend.music')} stroke="#ec4899" strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="game" name={t('home.legend.game')} stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />
               </LineChart>
             </ResponsiveContainer>
           )}
@@ -246,12 +248,14 @@ function Home({ onNavigate }) {
       <section className="home-bottom-grid">
         {/* Left: recent articles the user has touched */}
         <div className="home-card">
-          <h2>Bạn đã đọc gần đây</h2>
+          <h2>{t('home.recentlyRead')}</h2>
           {loading ? (
             <Skeleton lines={3} />
           ) : insights.recent_articles.length === 0 ? (
             <p className="home-empty-text">
-              Chưa có bài viết nào. Hãy mở <a href="#" onClick={(e) => { e.preventDefault(); onNavigate?.('knowledge'); }}>Knowledge</a> để bắt đầu.
+              {t('home.noRecentArticles')}
+              <a href="#" onClick={(e) => { e.preventDefault(); onNavigate?.('knowledge'); }}>{t('nav.knowledge')}</a>
+              {t('home.noRecentArticlesAfter')}
             </p>
           ) : (
             <ul className="home-recent-list">
@@ -270,21 +274,22 @@ function Home({ onNavigate }) {
 
         {/* Right: recent raw activity events (mixed types) */}
         <div className="home-card">
-          <h2>Hoạt động gần đây</h2>
+          <h2>{t('home.recentActivity')}</h2>
           {loading ? (
             <Skeleton lines={4} />
           ) : recent.length === 0 ? (
-            <p className="home-empty-text">Chưa có hoạt động nào.</p>
+            <p className="home-empty-text">{t('home.noActivity')}</p>
           ) : (
             <ul className="home-recent-list">
               {recent.map((r) => (
                 <li key={r.id}>
                   <span className="home-recent-icon">{EMOJI_FOR_TYPE[r.content_type] || '•'}</span>
                   <div className="home-recent-meta">
-                    <strong>{r.title || TYPE_LABEL[r.content_type] || r.content_type}</strong>
+                    <strong>{r.title || (TYPE_LABEL_KEY[r.content_type] ? t(TYPE_LABEL_KEY[r.content_type]) : r.content_type)}</strong>
                     <small>
-                      Bạn {EVENT_LABEL[r.event_type] || r.event_type}{' '}
-                      · {formatRelative(r.created_at)}
+                      {t(EVENT_KEY[r.event_type] || 'home.event.unknown', {
+                        time: formatRelative(r.created_at, t),
+                      })}
                     </small>
                   </div>
                 </li>
@@ -298,7 +303,7 @@ function Home({ onNavigate }) {
           users don't need a "no categories" section cluttering the UI. */}
       {!loading && insights.top_categories.length > 0 && (
         <section className="home-card home-top-cats">
-          <h2>Chủ đề bạn quan tâm</h2>
+          <h2>{t('home.topCategories')}</h2>
           <div className="home-cat-chips">
             {insights.top_categories.map(([cat, count]) => (
               <span key={cat} className="home-chip">
@@ -314,12 +319,12 @@ function Home({ onNavigate }) {
           guide the populated case. */}
       {!loading && !hasActivity && (
         <section className="home-quick-links">
-          <h2>Bắt đầu từ đâu?</h2>
+          <h2>{t('home.whereToStart')}</h2>
           <div className="home-quick-grid">
-            <button onClick={() => onNavigate?.('knowledge')}>📚 Đọc bài</button>
-            <button onClick={() => onNavigate?.('music')}>🎵 Nghe nhạc</button>
-            <button onClick={() => onNavigate?.('games')}>🎮 Chơi game</button>
-            <button onClick={() => onNavigate?.('feed')}>📰 Xem bảng tin</button>
+            <button onClick={() => onNavigate?.('knowledge')}>📚 {t('home.quickRead')}</button>
+            <button onClick={() => onNavigate?.('music')}>🎵 {t('home.quickListen')}</button>
+            <button onClick={() => onNavigate?.('games')}>🎮 {t('home.quickPlay')}</button>
+            <button onClick={() => onNavigate?.('feed')}>📰 {t('home.quickFeed')}</button>
           </div>
         </section>
       )}
@@ -353,19 +358,18 @@ function Skeleton({ lines }) {
   );
 }
 
-function formatRelative(iso) {
-  // Best-effort relative time in Vietnamese. The server gives us
-  // ISO with no Z; we treat it as local-naive (the rest of the app
-  // also writes datetime.utcnow without TZ). For an MVP this is
-  // good enough — production should switch to timezone-aware
-  // datetimes server-side.
+function formatRelative(iso, t) {
+  // Best-effort relative time. The server gives us ISO with no Z;
+  // we treat it as local-naive (the rest of the app also writes
+  // datetime.utcnow without TZ). For an MVP this is good enough —
+  // production should switch to timezone-aware datetimes server-side.
   try {
-    const t = new Date(iso + (iso.endsWith('Z') ? '' : 'Z'));
-    const diff = Math.floor((Date.now() - t.getTime()) / 1000);
-    if (diff < 60) return 'vừa xong';
-    if (diff < 3600) return `${Math.floor(diff / 60)} phút trước`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)} giờ trước`;
-    return `${Math.floor(diff / 86400)} ngày trước`;
+    const d = new Date(iso + (iso.endsWith('Z') ? '' : 'Z'));
+    const diff = Math.floor((Date.now() - d.getTime()) / 1000);
+    if (diff < 60) return t('time.justNow');
+    if (diff < 3600) return t('time.minutesAgo', { n: Math.floor(diff / 60) });
+    if (diff < 86400) return t('time.hoursAgo', { n: Math.floor(diff / 3600) });
+    return t('time.daysAgo', { n: Math.floor(diff / 86400) });
   } catch {
     return iso;
   }

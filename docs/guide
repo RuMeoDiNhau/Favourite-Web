@@ -118,8 +118,38 @@ docker run -d \
 #có thể dùng lệnh sau để kiểm tra backend-service đang RUNNING không
 docker ps
 
-curl http://localhost
+# Kiểm tra health endpoint của backend
+ curl -i http://localhost/
 # Phải trả về: {"message": "Backend is running"}
+
+# Xem log container nếu backend không khởi động hoặc auth lỗi
+sudo docker logs -f backend-service --tail 100
+
+# Kiểm tra port 80/8000 có đang lắng nghe không
+sudo ss -tulpn | grep -E ':(80|8000)'
+
+# Nếu cần kiểm tra auth cookie / CORS trên server, có thể thử gọi endpoint auth
+curl -i -X POST http://localhost/api/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username_or_email":"admin","password":"123456"}'
+
+# Nếu API trả về 200 và có Set-Cookie -> auth đang hoạt động
+# Nếu không thấy Set-Cookie thì kiểm tra lại:
+# - COOKIE_SECURE trong .env
+# - FRONTEND_URL trong .env
+# - CORS origin trên backend
+
+# Nếu muốn xóa toàn bộ database trên EC2 và bắt đầu lại từ đầu:
+# (sẽ xóa toàn bộ user/post/log/game/music/... và tạo lại DB mới)
+cd ~/Favourite-Web
+rm -f ~/Favourite-Web/database/app.db
+sudo docker restart backend-service
+
+# Sau khi restart, đăng ký tài khoản mới trên AWS để tạo tài khoản đầu tiên.
+# Trong production, backend sẽ không tự seed tài khoản admin mặc định, nên
+# tài khoản đầu tiên đăng ký sẽ trở thành admin.
+# Nếu bạn cần tài khoản admin mặc định trong môi trường dev, bật biến môi trường:
+# SEED_DEFAULT_ADMIN=true
 
 
 #Nếu thay đổi code ở Frontend thì sau đó đồng bộ code frontend local lên aws s3 bằng cách:

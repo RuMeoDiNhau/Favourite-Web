@@ -1,0 +1,172 @@
+\documentclass[12pt,a4paper]{report}
+\usepackage[utf8]{inputenc}
+\usepackage[vietnamese]{babel}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{fancyhdr}
+\usepackage{geometry}
+
+\geometry{
+    a4paper,
+    total={170mm,257mm},
+    left=30mm,
+    right=20mm,
+    top=20mm,
+    bottom=20mm
+}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=cyan,
+    pdftitle={Bao Cao Thuc Tap Tot Nghiep - Chu De 3},
+    pdfpagemode=FullScreen,
+}
+
+% Định nghĩa màu sắc cho code block
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+\lstset{style=mystyle}
+
+\begin{document}
+
+% ==================== TRANG BÌA (COVER PAGE) ====================
+\begin{titlepage}
+    \begin{center}
+        \large TRƯỜNG ĐẠI HỌC BÁCH KHOA - ĐHQG TP.HCM \\
+        \large KHOA KHOA HỌC \& KỸ THUẬT MÁY TÍNH \\
+        ------------------- * ------------------- \\
+        \vfill
+        \vfill
+        
+        \includegraphics[width=0.3\textwidth]{logo_bach_khoa} % Thay ảnh logo nếu cần
+        \vfill
+        
+        \huge \textbf{BÁO CÁO THỰC TẬP TỐT NGHIỆP} \\
+        \vfill
+        
+        \large \textbf{CHỦ ĐỀ 3: APPLICATION DEVELOPMENT ON AWS} \\
+        \Large \textbf{DỰ ÁN: FAV WEB PORTAL} \\
+        \vfill
+        
+        \textbf{Chương trình đào tạo:} AWS First Cloud AI Journey (FCAJ) \\
+        \textbf{Học kỳ:} Kỳ 3/2025-2026 (HK253) \\
+        \vfill
+    \end{center}
+    
+    \begin{flushleft}
+        \large
+        \textbf{Giáo viên hướng dẫn:} Lữ Hoàn Thiện \\
+        \textbf{Thành viên nhóm thực hiện (5 người):} \\
+        \begin{tabular}{lll}
+            1. Nguyễn Văn A & MSSV: 2012XXX & (Leader - DevOps) \\
+            2. Trần Thị B & MSSV: 2012XXX & (AI Developer) \\
+            3. Lê Văn C & MSSV: 2012XXX & (Backend Developer) \\
+            4. Phạm Văn D & MSSV: 2012XXX & (Frontend Developer) \\
+            5. Đỗ Thị E & MSSV: 2012XXX & (QA/Tester \& Writer) \\
+        \end{tabular}
+    \end{flushleft}
+    \vfill
+    
+    \begin{center}
+        TP. HỒ CHÍ MINH, THÁNG 07 NĂM 2026
+    \end{center}
+\end{titlepage}
+
+% ==================== MỤC LỤC (TOC) ====================
+\tableofcontents
+\newpage
+
+% ==================== CHƯƠNG 1 ====================
+\chapter{GIỚI THIỆU TỔNG QUAN}
+\section{Giới thiệu Chương trình AWS First Cloud AI Journey (FCAJ)}
+Giới thiệu sơ lược về chương trình đào tạo điện toán đám mây và AI của AWS Việt Nam kết hợp với Đại học Bách khoa TP.HCM.
+
+\section{Mục tiêu Đề tài}
+Mục tiêu xây dựng một ứng dụng Web có kiến trúc hiện đại, khả năng chịu tải tốt và tích hợp các công nghệ đám mây cốt lõi của AWS (EC2, S3, RDS, CloudWatch).
+
+\section{Tổng quan Dự án "Fav Web Portal"}
+Mô tả các tính năng chính của hệ thống: Đăng nhập nhận dạng khuôn mặt (Face ID), bảng tin đa phương tiện, kho nhạc phát trực tuyến, blog tin tức game và thư viện chia sẻ kiến thức.
+
+% ==================== CHƯƠNG 2 ====================
+\chapter{KIẾN TRÚC HỆ THỐNG \& THIẾT KẾ CƠ SỞ DỮ LIỆU}
+\section{Kiến trúc Hệ thống trên AWS Cloud}
+Mô tả cách bố trí các thành phần trên AWS đám mây:
+\begin{itemize}
+    \item \textbf{Frontend:} Host trên AWS S3 Static Website Hosting.
+    \item \textbf{Backend:} Chạy Docker container trên AWS EC2.
+    \item \textbf{Database:} Kết nối và lưu trữ trên AWS RDS (PostgreSQL).
+    \item \textbf{Media Storage:} Lưu trữ nhạc, ảnh gốc, và tệp vector khuôn mặt trên AWS S3.
+    \item \textbf{Monitoring:} Giám sát nhật ký lỗi qua AWS CloudWatch Logs.
+\end{itemize}
+
+\section{Thiết kế Cơ sở dữ liệu (Database Schema)}
+Mô tả các bảng dữ liệu trong cơ sở dữ liệu: `users`, `logs`, `music`, `playlists`, `games`, `knowledge`, `posts`.
+
+% ==================== CHƯƠNG 3 ====================
+\chapter{QUÁ TRÌNH TRIỂN KHAI \& TÍCH HỢP HẠ TẦNG CLOUD}
+\section{Triển khai Frontend tĩnh trên AWS S3}
+Các bước đóng gói mã nguồn React/Vite bằng lệnh `npm run build` và tải lên S3 bucket phục vụ Static Web Hosting.
+
+\section{Đóng gói Docker \& Triển khai Backend trên AWS EC2}
+Cách viết Dockerfile cho FastAPI, tối ưu hóa cài đặt PyTorch và chạy container trên EC2 cổng 80 với cơ chế gắn ổ đĩa (`-v`) để tránh mất dữ liệu.
+
+\section{Tích hợp Database AWS RDS (PostgreSQL)}
+Quy trình cấu hình cổng bảo mật 5432 (Security Group) chỉ cho phép EC2 truy cập vào RDS. Cơ chế tự động khởi tạo dữ liệu (`init_db`) khi khởi động backend.
+
+\section{Tích hợp Giám sát & Ghi log trực tuyến với AWS CloudWatch Logs}
+Cài đặt thư viện `watchtower` kết nối trực tiếp Python logging của backend với CloudWatch Logs. Ghi lại lịch sử đăng ký, đăng nhập và các cảnh báo bảo mật.
+
+% ==================== CHƯƠNG 4 ====================
+\chapter{TỐI ƯU HÓA HỆ THỐNG \& PHÁT TRIỂN NÂNG CAO}
+\section{Tối ưu hiệu năng nhận dạng Face ID (RAM Caching)}
+Mô tả vấn đề nghẽn I/O khi đọc đĩa cứng tìm kiếm khuôn mặt. Giải pháp cấu hình bộ nhớ đệm RAM cache nạp toàn bộ vector `.npy` khi ứng dụng khởi động và đồng bộ thời gian thực để tăng tốc độ so khớp.
+
+\section{Bảo mật API bằng CORS chặn nguồn độc hại}
+Thiết lập CORS của FastAPI chỉ chấp nhận nguồn kết nối hợp lệ từ tên miền chính thức của S3 Frontend, đảm bảo bảo mật và chống giả mạo API.
+
+% ==================== CHƯƠNG 5 ====================
+\chapter{KIỂM THỬ HỆ THỐNG \& ĐÁNH GIÁ HIỆU NĂNG}
+\section{Kiểm thử các Chức năng nghiệp vụ}
+Kết quả kiểm thử tính năng đăng ký, đăng nhập thường, check-in Face ID, chơi game HTML5, và phát nhạc trực tuyến.
+
+\section{Đo lường Hiệu năng & Khả năng chịu lỗi (Failover)}
+Đánh giá thời gian phản hồi của Face ID sau khi tối ưu RAM Cache. Kết quả giả lập ngắt điện/lỗi dịch vụ để kiểm chứng khả năng khôi phục và ghi log lỗi.
+
+% ==================== CHƯƠNG 6 ====================
+\chapter{TỔNG KẾT \& HƯỚNG PHÁT TRIỂN}
+\section{Kết quả đạt được}
+Tóm tắt các thành tựu của dự án, mức độ hoàn thành tiến độ 8 tuần theo yêu cầu của chương trình thực tập.
+
+\section{Hướng phát triển tương lai}
+Tích hợp dịch vụ AWS Secrets Manager, xây dựng thêm Chatbot cá nhân hóa, hoặc tích hợp mạng phân phối nội dung AWS CloudFront.
+
+\end{document}

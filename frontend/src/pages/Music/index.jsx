@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Sidebar from './Sidebar';
 import './Music.css';
+import { resolveBackendOrigin } from '../../lib/apiBase';
 import * as api from '../../services/api';
 import { readJson } from '../../lib/safeStorage';
 import { getLikedSongIds, toggleLikedSong, isLikedSong } from '../../lib/likedSongs';
 import { useBookmarks } from '../../lib/BookmarksContext';
+import { useTranslation } from 'react-i18next';
 
 export default function Music() {
+  const { t } = useTranslation();
   const user = readJson('user');
   const { isBookmarked: isBm, toggle: toggleBm } = useBookmarks();
 
@@ -82,7 +85,7 @@ export default function Music() {
       ]);
       const allSongs = songsRes.data || [];
       const allPlaylists = playlistsRes.data || [];
-      
+
       let totalSeconds = 0;
       allSongs.forEach(song => {
         if (song.duration) {
@@ -94,11 +97,11 @@ export default function Music() {
           }
         }
       });
-      
+
       const hours = Math.floor(totalSeconds / 3600);
       const minutes = Math.floor((totalSeconds % 3600) / 60);
       const durationStr = `${hours}h ${minutes}m`;
-      
+
       setMusicStats({
         totalSongs: allSongs.length,
         totalPlaylists: allPlaylists.length,
@@ -113,12 +116,12 @@ export default function Music() {
     try {
       setLoading(true);
       setError(null);
-      
+
       if (selectedCategory === 'all' || selectedCategory === 'playlist') {
         const playlistResponse = await api.fetchPlaylists();
         setPlaylists(playlistResponse.data || []);
       }
-      
+
       let songsResponse;
       if (selectedPlaylist) {
         songsResponse = await api.fetchSongsByPlaylist(selectedPlaylist.id);
@@ -131,7 +134,7 @@ export default function Music() {
         // the full music list. Backend endpoint `/users/me/liked-songs` is
         // planned; until then this is the source of truth client-side.
         const allSongsRes = await api.fetchAllMusic();
-        const likedIds = getLikedSongIds();
+        const likedIds = GetLikedSongIds();
         songsResponse = {
           data: (allSongsRes.data || []).filter((s) => likedIds.has(s.id)),
         };
@@ -145,7 +148,7 @@ export default function Music() {
       setSongs(songsResponse.data || []);
     } catch (err) {
       console.error('Error loading music:', err);
-      setError('Failed to load music data');
+      setError(t('music.err.load'));
     } finally {
       setLoading(false);
     }
@@ -155,9 +158,7 @@ export default function Music() {
     if (!url) return '';
     if (url.startsWith('http://') || url.startsWith('https://')) return url;
     // Lấy domain của backend từ env hoặc mặc định localhost
-    const base = import.meta.env.VITE_API_URL 
-      ? import.meta.env.VITE_API_URL.replace('/api/v1', '') 
-      : 'http://localhost:8000';
+    const base = resolveBackendOrigin(import.meta.env.VITE_API_URL);
     return `${base}${url}`;
   };
 
@@ -230,7 +231,7 @@ export default function Music() {
   };
 
   const handleDeleteSong = async (songId) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa bài hát này khỏi thư viện?')) {
+    if (window.confirm(t('music.confirm.deleteSong'))) {
       try {
         await api.deleteSong(songId);
         loadMusicData();
@@ -244,13 +245,13 @@ export default function Music() {
         }
       } catch (err) {
         console.error('Error deleting song:', err);
-        alert(err.response?.data?.detail || 'Không thể xóa bài hát');
+        alert(err.response?.data?.detail || t('music.err.deleteSong'));
       }
     }
   };
 
   const handleDeletePlaylist = async (playlistId) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa danh sách phát này?')) {
+    if (window.confirm(t('music.confirm.deletePlaylist'))) {
       try {
         await api.deletePlaylist(playlistId);
         if (selectedPlaylist && selectedPlaylist.id === playlistId) {
@@ -258,10 +259,10 @@ export default function Music() {
         }
         loadMusicData();
         loadMusicStats();
-        alert('Đã xóa danh sách phát thành công!');
+        alert(t('music.ok.deletePlaylist'));
       } catch (err) {
         console.error('Error deleting playlist:', err);
-        alert(err.response?.data?.detail || 'Không thể xóa danh sách phát');
+        alert(err.response?.data?.detail || t('music.err.deletePlaylist'));
       }
     }
   };
@@ -269,7 +270,7 @@ export default function Music() {
   const handleCreatePlaylistSubmit = async (e) => {
     e.preventDefault();
     if (!newPlaylistForm.name.trim()) {
-      alert('Vui lòng nhập tên danh sách phát!');
+      alert(t('music.err.playlistNameRequired'));
       return;
     }
     try {
@@ -282,10 +283,10 @@ export default function Music() {
       setNewPlaylistForm({ name: '', description: '', image_url: '🎵' });
       loadMusicData();
       loadMusicStats();
-      alert('Đã tạo danh sách phát thành công!');
+      alert(t('music.ok.createPlaylist'));
     } catch (err) {
       console.error('Error creating playlist:', err);
-      alert(err.response?.data?.detail || 'Không thể tạo danh sách phát');
+      alert(err.response?.data?.detail || t('music.err.createPlaylist'));
     }
   };
 
@@ -295,23 +296,23 @@ export default function Music() {
       setActivePopoverSongId(null);
       loadMusicData();
       loadMusicStats();
-      alert('Đã thêm bài hát vào danh sách phát!');
+      alert(t('music.ok.addSongToPlaylist'));
     } catch (err) {
       console.error('Error adding song to playlist:', err);
-      alert(err.response?.data?.detail || 'Không thể thêm bài hát vào danh sách phát');
+      alert(err.response?.data?.detail || t('music.err.addSongToPlaylist'));
     }
   };
 
   const handleRemoveSongFromPlaylist = async (songId) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa bài hát này khỏi danh sách phát?')) {
+    if (window.confirm(t('music.confirm.removeSongFromPlaylist'))) {
       try {
         await api.removeSongFromPlaylist(songId);
         loadMusicData();
         loadMusicStats();
-        alert('Đã xóa bài hát khỏi danh sách phát thành công!');
+        alert(t('music.ok.removeSongFromPlaylist'));
       } catch (err) {
         console.error('Error removing song from playlist:', err);
-        alert(err.response?.data?.detail || 'Không thể xóa bài hát khỏi danh sách phát');
+        alert(err.response?.data?.detail || t('music.err.removeSongFromPlaylist'));
       }
     }
   };
@@ -335,18 +336,18 @@ export default function Music() {
   };
 
   // Probe audio element used to extract the duration of a user-selected file.
-// Holds the in-flight blob URL so we can revoke it exactly once on metadata
-// load, on error, or on modal unmount.
-const probeAudioRef = useRef(null);
+  // Holds the in-flight blob URL so we can revoke it exactly once on metadata
+  // load, on error, or on modal unmount.
+  const probeAudioRef = useRef(null);
 
-useEffect(() => () => {
-  if (probeAudioRef.current && probeAudioRef.current.src) {
-    URL.revokeObjectURL(probeAudioRef.current.src);
-    probeAudioRef.current = null;
-  }
-}, []);
+  useEffect(() => () => {
+    if (probeAudioRef.current && probeAudioRef.current.src) {
+      URL.revokeObjectURL(probeAudioRef.current.src);
+      probeAudioRef.current = null;
+    }
+  }, []);
 
-const handleFileChange = (e) => {
+  const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
     setMusicFile(file);
@@ -384,11 +385,11 @@ const handleFileChange = (e) => {
   const handleUploadSubmit = async (e) => {
     e.preventDefault();
     if (!musicFile) {
-      alert('Vui lòng chọn tệp nhạc!');
+      alert(t('music.err.fileRequired'));
       return;
     }
     if (!uploadForm.title) {
-      alert('Vui lòng điền tên bài hát!');
+      alert(t('music.err.titleRequired'));
       return;
     }
 
@@ -403,7 +404,7 @@ const handleFileChange = (e) => {
 
       const mediaUrl = uploadRes.data.media_url;
       if (!mediaUrl) {
-        throw new Error('Không nhận được URL tệp tin sau khi upload');
+        throw new Error(t('music.err.noUrl'));
       }
 
       // Step 2: Create song metadata in library
@@ -416,7 +417,7 @@ const handleFileChange = (e) => {
         playlist_id: null
       });
 
-      alert('Đã thêm bài hát vào thư viện thành công!');
+      alert(t('music.ok.upload'));
       setShowUploadModal(false);
       setUploadForm({
         title: '',
@@ -430,7 +431,7 @@ const handleFileChange = (e) => {
       loadMusicStats();
     } catch (err) {
       console.error('Error uploading/creating music:', err);
-      alert(err.response?.data?.detail || 'Quá trình upload hoặc thêm nhạc thất bại');
+      alert(err.response?.data?.detail || t('music.err.upload'));
     } finally {
       setIsUploading(false);
     }
@@ -493,42 +494,42 @@ const handleFileChange = (e) => {
 
   return (
     <div className="music-container" style={{ paddingBottom: currentSong ? '80px' : '0' }}>
-      <Sidebar 
-        selectedCategory={selectedCategory} 
+      <Sidebar
+        selectedCategory={selectedCategory}
         onSelectCategory={(cat) => {
           setSelectedPlaylist(null);
           setSelectedCategory(cat);
-        }} 
+        }}
         stats={musicStats}
       />
       <div className="music-main">
         <div className="music-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px', textAlign: 'left' }}>
           <div>
             <h1 style={{ margin: 0, fontSize: '48px', fontWeight: '700', display: 'flex', alignItems: 'center' }}>
-              <img 
-                src="/music-icon.png" 
-                alt="Music Icon" 
-                style={{ width: '48px', height: '48px', marginRight: '15px', borderRadius: '8px' }} 
+              <img
+                src="/music-icon.png"
+                alt={t('music.altIcon')}
+                style={{ width: '48px', height: '48px', marginRight: '15px', borderRadius: '8px' }}
               />
-              Âm Nhạc Trực Tuyến
+              {t('music.heading')}
             </h1>
-            <p style={{ margin: '5px 0 0 0', fontSize: '18px', color: 'rgba(255, 255, 255, 0.8)' }}>Thưởng thức và thư giãn cùng các bài hát bản quyền đỉnh cao</p>
+            <p className="music-header-subtitle">{t('music.subtitle')}</p>
           </div>
           <div style={{ display: 'flex', gap: '15px' }}>
             {selectedCategory === 'playlist' && !selectedPlaylist && user && (
-              <button 
+              <button
                 className="create-playlist-btn"
                 onClick={() => setShowCreatePlaylistModal(true)}
               >
-                ➕ Tạo Playlist
+                ➕ {t('music.createPlaylist')}
               </button>
             )}
             {user && user.role === 'admin' && (
-              <button 
+              <button
                 className="upload-music-btn"
                 onClick={() => setShowUploadModal(true)}
               >
-                ➕ Thêm Nhạc
+                ➕ {t('music.addMusic')}
               </button>
             )}
           </div>
@@ -536,30 +537,30 @@ const handleFileChange = (e) => {
 
         <div className="music-content">
           {loading ? (
-            <p style={{ textAlign: 'center', color: 'white' }}>Đang tải âm nhạc...</p>
+            <p style={{ textAlign: 'center', color: 'white' }}>{t('music.loading')}</p>
           ) : error ? (
-            <p style={{ textAlign: 'center', color: '#ff6b6b' }}>{error}</p>
+            <p className="music-error-text">{error}</p>
           ) : selectedPlaylist ? (
             /* Chi tiết Playlist */
             <div className="playlist-detail-view">
               <button className="playlist-back-btn" onClick={() => setSelectedPlaylist(null)}>
-                ⬅️ Quay lại danh sách phát
+                ⬅️ {t('music.backToPlaylists')}
               </button>
-              
+
               <div className="playlist-detail-header">
                 <div className="playlist-detail-art">{selectedPlaylist.image_url || '🎵'}</div>
                 <div className="playlist-detail-info">
-                  <span className="playlist-badge">DANH SÁCH PHÁT</span>
+                  <span className="playlist-badge">{t('music.playlistBadge')}</span>
                   <h1>{selectedPlaylist.name}</h1>
                   {selectedPlaylist.description && <p className="playlist-description">{selectedPlaylist.description}</p>}
                   <div className="playlist-meta">
-                    <span>{songs.length} bài hát</span>
+                    <span>{songs.length} {t('music.songLabel')}</span>
                     {user && user.role === 'admin' && (
-                      <button 
+                      <button
                         className="playlist-detail-delete-btn"
                         onClick={() => handleDeletePlaylist(selectedPlaylist.id)}
                       >
-                        🗑️ Xóa Playlist
+                        🗑️ {t('music.deletePlaylist')}
                       </button>
                     )}
                   </div>
@@ -567,66 +568,67 @@ const handleFileChange = (e) => {
               </div>
 
               <div className="music-section">
-                <h2>Danh sách bài hát</h2>
+                <h2>{t('music.songList')}</h2>
                 {songs.length > 0 ? (
                   <div className="songs-list">
                     {songs.map(song => (
                       <div key={song.id} className={`song-item ${currentSong && currentSong.id === song.id ? 'active' : ''}`}>
                         <div className="song-info">
                           <h4>{song.title}</h4>
-                          <p>{song.artist} • <span style={{ opacity: 0.8 }}>🎧 {song.plays} lượt nghe</span></p>
+                          <p>{song.artist} • <span style={{ opacity: 0.8 }}>🎧 {song.plays} {t('music.playsLabel')}</span></p>
                         </div>
                         <div className="song-duration">{song.duration}</div>
-                        <button 
-                          onClick={() => handlePlaySong(song)} 
+                        <button
+                          onClick={() => handlePlaySong(song)}
                           className="play-btn"
                           style={{ background: currentSong && currentSong.id === song.id && isPlaying ? 'rgba(255,255,255,0.4)' : '' }}
+                          aria-label={t('music.play')}
                         >
                           {currentSong && currentSong.id === song.id && isPlaying ? (
                             '⏸️'
                           ) : (
-                            <img 
-                              src="/play-icon.png" 
-                              alt="Play" 
-                              style={{ width: '22px', height: '22px', verticalAlign: 'middle' }} 
+                            <img
+                              src="/play-icon.png"
+                              alt={t('music.play')}
+                              style={{ width: '22px', height: '22px', verticalAlign: 'middle' }}
                             />
                           )}
                         </button>
-                        <button onClick={() => handleLikeSong(song.id)} className="play-btn" style={{ marginLeft: '8px' }}>
+                        <button onClick={() => handleLikeSong(song.id)} className="play-btn" style={{ marginLeft: '8px' }} aria-label={t('music.like')}>
                           ❤️
                         </button>
                         <button
                           onClick={() => toggleBm('music', song.id)}
                           className={`play-btn ${isBm('music', song.id) ? 'bookmark-active' : ''}`}
                           style={{ marginLeft: '8px' }}
-                          title={isBm('music', song.id) ? 'Bỏ lưu' : 'Lưu bài hát'}
-                          aria-label={isBm('music', song.id) ? 'Bỏ lưu' : 'Lưu bài hát'}
+                          title={isBm('music', song.id) ? t('music.unbookmark') : t('music.bookmark')}
+                          aria-label={isBm('music', song.id) ? t('music.unbookmark') : t('music.bookmark')}
                         >
                           {isBm('music', song.id) ? '🔖' : '⚪'}
                         </button>
-                        
+
                         {user && (
-                          <button 
-                            onClick={() => handleRemoveSongFromPlaylist(song.id)} 
-                            className="play-btn remove-song-btn" 
+                          <button
+                            onClick={() => handleRemoveSongFromPlaylist(song.id)}
+                            className="play-btn remove-song-btn"
                             style={{ marginLeft: '8px', backgroundColor: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.35)' }}
-                            title="Xóa khỏi danh sách phát"
+                            title={t('music.removeFromPlaylist')}
                           >
                             ➖
                           </button>
                         )}
 
                         {user && user.role === 'admin' && (
-                          <button 
-                            onClick={() => handleDeleteSong(song.id)} 
-                            className="play-btn delete-song-btn" 
+                          <button
+                            onClick={() => handleDeleteSong(song.id)}
+                            className="play-btn delete-song-btn"
                             style={{ marginLeft: '8px', backgroundColor: 'rgba(239, 68, 68, 0.2)', border: '1px solid rgba(239, 68, 68, 0.4)' }}
-                            title="Xóa bài hát"
+                            title={t('music.deleteSong')}
                           >
-                            <img 
-                              src="/delete-song-icon.png" 
-                              alt="Delete" 
-                              style={{ width: '22px', height: '22px', verticalAlign: 'middle' }} 
+                            <img
+                              src="/delete-song-icon.png"
+                              alt={t('music.deleteSong')}
+                              style={{ width: '22px', height: '22px', verticalAlign: 'middle' }}
                             />
                           </button>
                         )}
@@ -634,9 +636,7 @@ const handleFileChange = (e) => {
                     ))}
                   </div>
                 ) : (
-                  <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontStyle: 'italic', marginTop: '20px' }}>
-                    Danh sách phát này trống. Quay lại tab "Tất Cả" để thêm bài hát.
-                  </p>
+                  <p className="music-empty-text">{t('music.playlistEmpty')}</p>
                 )}
               </div>
             </div>
@@ -645,18 +645,18 @@ const handleFileChange = (e) => {
             <>
               {selectedCategory === 'playlist' ? (
                 <section className="music-section">
-                  <h2>📻 Danh Sách Phát Của Tôi</h2>
+                  <h2>📻 {t('music.myPlaylists')}</h2>
                   {playlists.length > 0 ? (
                     <div className="playlist-grid">
                       {playlists.map(playlist => (
-                        <div 
-                          key={playlist.id} 
+                        <div
+                          key={playlist.id}
                           className="playlist-card"
                           onClick={() => setSelectedPlaylist(playlist)}
                         >
                           <div className="playlist-image">{playlist.image_url || '🎵'}</div>
                           <h3>{playlist.name}</h3>
-                          <p>{playlist.song_count} bài hát</p>
+                          <p>{playlist.song_count} {t('music.songLabel')}</p>
                           {user && user.role === 'admin' && (
                             <button
                               className="playlist-card-delete-btn"
@@ -664,7 +664,7 @@ const handleFileChange = (e) => {
                                 e.stopPropagation();
                                 handleDeletePlaylist(playlist.id);
                               }}
-                              title="Xóa danh sách phát"
+                              title={t('music.deletePlaylist')}
                             >
                               🗑️
                             </button>
@@ -673,8 +673,8 @@ const handleFileChange = (e) => {
                       ))}
                     </div>
                   ) : (
-                    <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.7)', marginTop: '20px' }}>
-                      Chưa có danh sách phát nào. {user ? 'Bấm "Tạo Playlist" để bắt đầu!' : 'Vui lòng đăng nhập để tạo mới.'}
+                    <p className="music-empty-text">
+                      {user ? t('music.emptyPlaylistsJoin', { empty: t('music.noPlaylists'), cta: t('music.noPlaylistsCTA') }) : t('music.noPlaylistsAnonymous')}
                     </p>
                   )}
                 </section>
@@ -685,19 +685,18 @@ const handleFileChange = (e) => {
                   {selectedCategory === 'all' && playlists.length > 0 && (
                     <section className="music-section">
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                        <h2 style={{ borderBottom: 'none', margin: 0 }}>📻 Danh Sách Phát Của Tôi</h2>
-                        <button 
+                        <h2 style={{ borderBottom: 'none', margin: 0 }}>📻 {t('music.myPlaylists')}</h2>
+                        <button
                           className="view-all-playlists-btn"
                           onClick={() => setSelectedCategory('playlist')}
-                          style={{ background: 'none', border: 'none', color: '#a78bfa', cursor: 'pointer', fontWeight: '600' }}
                         >
-                          Xem tất cả →
+                          {t('music.viewAll')} →
                         </button>
                       </div>
                       <div className="playlist-grid">
                         {playlists.slice(0, 4).map(playlist => (
-                          <div 
-                            key={playlist.id} 
+                          <div
+                            key={playlist.id}
                             className="playlist-card"
                             onClick={() => {
                               setSelectedCategory('playlist');
@@ -706,7 +705,7 @@ const handleFileChange = (e) => {
                           >
                             <div className="playlist-image">{playlist.image_url || '🎵'}</div>
                             <h3>{playlist.name}</h3>
-                            <p>{playlist.song_count} bài hát</p>
+                            <p>{playlist.song_count} {t('music.songLabel')}</p>
                             {user && user.role === 'admin' && (
                               <button
                                 className="playlist-card-delete-btn"
@@ -714,7 +713,7 @@ const handleFileChange = (e) => {
                                   e.stopPropagation();
                                   handleDeletePlaylist(playlist.id);
                                 }}
-                                title="Xóa danh sách phát"
+                                title={t('music.deletePlaylist')}
                               >
                                 🗑️
                               </button>
@@ -727,33 +726,54 @@ const handleFileChange = (e) => {
 
                   {songs.length > 0 && (
                     <section className="music-section">
-                      <h2>🎵 {selectedCategory === 'all' ? 'Nhạc Mới Phát Hành' : 'Bài Hát'}</h2>
+                      <h2>🎵 {selectedCategory === 'all' ? t('music.newReleases') : t('music.songs')}</h2>
                       <div className="songs-list">
                         {songs.map(song => (
                           <div key={song.id} className={`song-item ${currentSong && currentSong.id === song.id ? 'active' : ''}`}>
                             <div className="song-info">
                               <h4>{song.title}</h4>
-                              <p>{song.artist} • <span style={{ opacity: 0.8 }}>🎧 {song.plays} lượt nghe</span></p>
+                              <p>{song.artist} • <span style={{ opacity: 0.8 }}>🎧 {song.plays} {t('music.playsLabel')}</span></p>
                             </div>
                             <div className="song-duration">{song.duration}</div>
-                            <button 
-                              onClick={() => handlePlaySong(song)} 
+                            <button
+                              onClick={() => handlePlaySong(song)}
                               className="play-btn"
                               style={{ background: currentSong && currentSong.id === song.id && isPlaying ? 'rgba(255,255,255,0.4)' : '' }}
+                              aria-label={t('music.play')}
                             >
                               {currentSong && currentSong.id === song.id && isPlaying ? (
                                 '⏸️'
                               ) : (
-                                <img 
-                                  src="/play-icon.png" 
-                                  alt="Play" 
-                                  style={{ width: '22px', height: '22px', verticalAlign: 'middle' }} 
+                                <img
+                                  src="/play-icon.png"
+                                  alt={t('music.play')}
+                                  style={{ width: '22px', height: '22px', verticalAlign: 'middle' }}
                                 />
                               )}
                             </button>
-                            <button onClick={() => handleLikeSong(song.id)} className="play-btn" style={{ marginLeft: '8px' }}>
+                            <button onClick={() => handleLikeSong(song.id)} className="play-btn" style={{ marginLeft: '8px' }} aria-label={t('music.like')}>
                               ❤️
                             </button>
+
+                            {/* Bookmark — same pattern as the playlist
+                                detail view (line ~600). Tapping toggles
+                                the per-user bookmark via the shared
+                                BookmarksContext; the icon swaps between
+                                filled and outlined to reflect state.
+                                Bookmarks are per-user so this only shows
+                                to authenticated users. */}
+                            {user && (
+                              <button
+                                onClick={() => toggleBm('music', song.id)}
+                                className={`play-btn ${isBm('music', song.id) ? 'bookmark-active' : ''}`}
+                                style={{ marginLeft: '8px' }}
+                                title={isBm('music', song.id) ? t('music.unbookmark') : t('music.bookmark')}
+                                aria-label={isBm('music', song.id) ? t('music.unbookmark') : t('music.bookmark')}
+                                aria-pressed={isBm('music', song.id)}
+                              >
+                                {isBm('music', song.id) ? '🔖' : '⚪'}
+                              </button>
+                            )}
 
                             {/* Dropdown Popover để thêm vào Playlist */}
                             {user && (
@@ -764,17 +784,17 @@ const handleFileChange = (e) => {
                                     e.stopPropagation();
                                     setActivePopoverSongId(activePopoverSongId === song.id ? null : song.id);
                                   }}
-                                  title="Thêm vào danh sách phát"
+                                  title={t('music.addToPlaylist')}
                                 >
-                                  <img 
-                                    src="/add-to-playlist-icon.png" 
-                                    alt="Add to playlist" 
-                                    style={{ width: '22px', height: '22px', verticalAlign: 'middle' }} 
+                                  <img
+                                    src="/add-to-playlist-icon.png"
+                                    alt={t('music.addToPlaylist')}
+                                    style={{ width: '22px', height: '22px', verticalAlign: 'middle' }}
                                   />
                                 </button>
                                 {activePopoverSongId === song.id && (
                                   <div className="playlist-popover">
-                                    <div className="popover-header">Thêm vào playlist</div>
+                                    <div className="popover-header">{t('music.popoverTitle')}</div>
                                     <div className="popover-list">
                                       {playlists.length > 0 ? (
                                         playlists.map(playlist => (
@@ -788,7 +808,7 @@ const handleFileChange = (e) => {
                                           </button>
                                         ))
                                       ) : (
-                                        <div className="popover-empty">Chưa có playlist nào</div>
+                                        <div className="popover-empty">{t('music.popoverEmpty')}</div>
                                       )}
                                     </div>
                                   </div>
@@ -797,16 +817,16 @@ const handleFileChange = (e) => {
                             )}
 
                             {user && user.role === 'admin' && (
-                              <button 
-                                onClick={() => handleDeleteSong(song.id)} 
-                                className="play-btn delete-song-btn" 
+                              <button
+                                onClick={() => handleDeleteSong(song.id)}
+                                className="play-btn delete-song-btn"
                                 style={{ marginLeft: '8px', backgroundColor: 'rgba(239, 68, 68, 0.2)', border: '1px solid rgba(239, 68, 68, 0.4)' }}
-                                title="Xóa bài hát"
+                                title={t('music.deleteSong')}
                               >
-                                <img 
-                                  src="/delete-song-icon.png" 
-                                  alt="Delete" 
-                                  style={{ width: '22px', height: '22px', verticalAlign: 'middle' }} 
+                                <img
+                                  src="/delete-song-icon.png"
+                                  alt={t('music.deleteSong')}
+                                  style={{ width: '22px', height: '22px', verticalAlign: 'middle' }}
                                 />
                               </button>
                             )}
@@ -817,7 +837,7 @@ const handleFileChange = (e) => {
                   )}
 
                   {!loading && songs.length === 0 && (
-                    <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.7)', marginTop: '40px' }}>Không có dữ liệu bài hát</p>
+                    <p className="music-empty-text">{t('music.noSongData')}</p>
                   )}
                 </>
               )}
@@ -848,26 +868,26 @@ const handleFileChange = (e) => {
 
           <div className="player-controls">
             <div className="controls-buttons">
-              <button className="player-btn" onClick={handlePrevSong}>⏮️</button>
+              <button className="player-btn" onClick={handlePrevSong} aria-label={t('music.prev')}>⏮️</button>
               <button className="player-btn play-pause" onClick={togglePlayPause}>
                 {isPlaying ? (
                   '⏸️'
                 ) : (
-                  <img 
-                    src="/play-icon.png" 
-                    alt="Play" 
-                    style={{ width: '24px', height: '24px', verticalAlign: 'middle' }} 
+                  <img
+                    src="/play-icon.png"
+                    alt={t('music.play')}
+                    style={{ width: '24px', height: '24px', verticalAlign: 'middle' }}
                   />
                 )}
               </button>
-              <button className="player-btn" onClick={handleNextSong}>⏭️</button>
+              <button className="player-btn" onClick={handleNextSong} aria-label={t('music.next')}>⏭️</button>
             </div>
 
             <div className="progress-container">
               <span>{formatTime(currentTime)}</span>
               <div className="progress-bar" onClick={handleSeek}>
-                <div 
-                  className="progress-filled" 
+                <div
+                  className="progress-filled"
                   style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
                 />
               </div>
@@ -877,12 +897,12 @@ const handleFileChange = (e) => {
 
           <div className="player-volume">
             <span>🔊</span>
-            <input 
-              type="range" 
-              className="volume-slider" 
-              min="0" 
-              max="1" 
-              step="0.05" 
+            <input
+              type="range"
+              className="volume-slider"
+              min="0"
+              max="1"
+              step="0.05"
               value={volume}
               onChange={(e) => setVolume(parseFloat(e.target.value))}
             />
@@ -895,15 +915,15 @@ const handleFileChange = (e) => {
         <div className="music-modal-overlay">
           <div className="music-modal-content">
             <div className="music-modal-header">
-              <h2>Thêm Nhạc Vào Thư Viện</h2>
+              <h2>{t('music.uploadHeading')}</h2>
               <button className="music-close-btn" onClick={() => !isUploading && setShowUploadModal(false)}>×</button>
             </div>
             <form onSubmit={handleUploadSubmit} className="music-modal-body">
               <div className="music-form-group">
-                <label>Tên bài hát *</label>
-                <input 
-                  type="text" 
-                  placeholder="Nhập tên bài hát..." 
+                <label>{t('music.songTitleLabel')} *</label>
+                <input
+                  type="text"
+                  placeholder={t('music.ph.songTitle')}
                   value={uploadForm.title}
                   onChange={(e) => setUploadForm({ ...uploadForm, title: e.target.value })}
                   disabled={isUploading}
@@ -912,10 +932,10 @@ const handleFileChange = (e) => {
               </div>
 
               <div className="music-form-group">
-                <label>Ca sĩ (Tác giả)</label>
-                <input 
-                  type="text" 
-                  placeholder="Nhập tên ca sĩ (Mặc định: Update later)..." 
+                <label>{t('music.artistLabel')}</label>
+                <input
+                  type="text"
+                  placeholder={t('music.ph.artist')}
                   value={uploadForm.artist}
                   onChange={(e) => setUploadForm({ ...uploadForm, artist: e.target.value })}
                   disabled={isUploading}
@@ -923,13 +943,13 @@ const handleFileChange = (e) => {
               </div>
 
               <div className="music-form-group">
-                <label>Thể loại</label>
-                <select 
+                <label>{t('music.genreLabel')}</label>
+                <select
                   value={uploadForm.genre}
                   onChange={(e) => setUploadForm({ ...uploadForm, genre: e.target.value })}
                   disabled={isUploading}
                 >
-                  <option value="Update later">Chưa xác định (Update later)</option>
+                  <option value="Update later">{t('music.genreUnknown')}</option>
                   <option value="Pop">Pop</option>
                   <option value="Ballad">Ballad</option>
                   <option value="Rap">Rap / Hip-hop</option>
@@ -942,9 +962,9 @@ const handleFileChange = (e) => {
               </div>
 
               <div className="music-form-group">
-                <label>Thời lượng (Được tính tự động)</label>
-                <input 
-                  type="text" 
+                <label>{t('music.durationLabel')}</label>
+                <input
+                  type="text"
                   value={uploadForm.duration}
                   onChange={(e) => setUploadForm({ ...uploadForm, duration: e.target.value })}
                   disabled={isUploading}
@@ -953,10 +973,10 @@ const handleFileChange = (e) => {
               </div>
 
               <div className="music-form-group">
-                <label>Tệp âm thanh (.mp3, .wav) *</label>
-                <input 
-                  type="file" 
-                  accept="audio/*" 
+                <label>{t('music.fileLabel')} *</label>
+                <input
+                  type="file"
+                  accept="audio/*"
                   onChange={handleFileChange}
                   disabled={isUploading}
                   required
@@ -966,7 +986,7 @@ const handleFileChange = (e) => {
               {isUploading && (
                 <div className="music-progress-container">
                   <div className="music-progress-text">
-                    <span>Đang tải lên...</span>
+                    <span>{t('music.uploading')}</span>
                     <span>{uploadProgress}%</span>
                   </div>
                   <div className="music-progress-bar">
@@ -976,20 +996,20 @@ const handleFileChange = (e) => {
               )}
 
               <div className="music-modal-footer">
-                <button 
-                  type="button" 
-                  className="music-cancel-btn" 
+                <button
+                  type="button"
+                  className="music-cancel-btn"
                   onClick={() => setShowUploadModal(false)}
                   disabled={isUploading}
                 >
-                  Hủy
+                  {t('common.cancel')}
                 </button>
-                <button 
-                  type="submit" 
-                  className="music-submit-btn" 
+                <button
+                  type="submit"
+                  className="music-submit-btn"
                   disabled={isUploading}
                 >
-                  {isUploading ? 'Đang xử lý...' : 'Tải lên & Lưu'}
+                  {isUploading ? t('music.processing') : t('music.uploadAndSave')}
                 </button>
               </div>
             </form>
@@ -1002,15 +1022,15 @@ const handleFileChange = (e) => {
         <div className="music-modal-overlay">
           <div className="music-modal-content">
             <div className="music-modal-header">
-              <h2 style={{ color: '#8b5cf6' }}>Tạo Danh Sách Phát Mới</h2>
+              <h2 className="music-modal-title">{t('music.createPlaylistHeading')}</h2>
               <button className="music-close-btn" onClick={() => setShowCreatePlaylistModal(false)}>×</button>
             </div>
             <form onSubmit={handleCreatePlaylistSubmit} className="music-modal-body">
               <div className="music-form-group">
-                <label>Tên danh sách phát *</label>
-                <input 
-                  type="text" 
-                  placeholder="Ví dụ: Nhạc Học Tập, Chill Vibes..." 
+                <label>{t('music.playlistNameLabel')} *</label>
+                <input
+                  type="text"
+                  placeholder={t('music.ph.playlistName')}
                   value={newPlaylistForm.name}
                   onChange={(e) => setNewPlaylistForm({ ...newPlaylistForm, name: e.target.value })}
                   required
@@ -1018,17 +1038,17 @@ const handleFileChange = (e) => {
               </div>
 
               <div className="music-form-group">
-                <label>Mô tả</label>
-                <input 
-                  type="text" 
-                  placeholder="Mô tả ngắn gọn về danh sách phát..." 
+                <label>{t('music.playlistDescLabel')}</label>
+                <input
+                  type="text"
+                  placeholder={t('music.ph.playlistDesc')}
                   value={newPlaylistForm.description}
                   onChange={(e) => setNewPlaylistForm({ ...newPlaylistForm, description: e.target.value })}
                 />
               </div>
 
               <div className="music-form-group">
-                <label>Biểu tượng đại diện (Emoji) *</label>
+                <label>{t('music.playlistIconLabel')} *</label>
                 <div className="emoji-selector-panel">
                   {availableEmojis.map(emoji => (
                     <button
@@ -1044,19 +1064,19 @@ const handleFileChange = (e) => {
               </div>
 
               <div className="music-modal-footer">
-                <button 
-                  type="button" 
-                  className="music-cancel-btn" 
+                <button
+                  type="button"
+                  className="music-cancel-btn"
                   onClick={() => setShowCreatePlaylistModal(false)}
                 >
-                  Hủy
+                  {t('common.cancel')}
                 </button>
-                <button 
-                  type="submit" 
-                  className="music-submit-btn" 
+                <button
+                  type="submit"
+                  className="music-submit-btn"
                   style={{ backgroundColor: '#8b5cf6' }}
                 >
-                  Tạo mới
+                  {t('music.createNew')}
                 </button>
               </div>
             </form>

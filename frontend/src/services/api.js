@@ -1,11 +1,28 @@
 import axios from 'axios';
+import { resolveApiBaseUrl } from '../lib/apiBase';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1',
+  baseURL: resolveApiBaseUrl(import.meta.env.VITE_API_URL),
   timeout: 15000,
   // Send the fw_auth httpOnly cookie on every same-origin request.
   // Without this the browser drops the cookie on cross-origin XHR.
   withCredentials: true,
+});
+
+// Send the fw_auth httpOnly cookie on same-origin requests AND
+// attach Authorization: Bearer header from localStorage if present
+// for cross-domain requests (e.g. S3 static site -> EC2 backend) where
+// browsers block HTTP cookies.
+api.interceptors.request.use((config) => {
+  try {
+    const token = localStorage.getItem('token');
+    if (token && !config.headers.Authorization) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  } catch (err) {
+    // Ignore localStorage errors
+  }
+  return config;
 });
 
 // No more Authorization / X-Auth-Token injection from JS — the
@@ -31,7 +48,9 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     const status = error?.response?.status;
-    if (status === 401 && !handled401) {
+    const url = error?.config?.url || '';
+    const isAuthEndpoint = url.includes('/auth/login') || url.includes('/auth/login-face') || url.includes('/auth/me');
+    if (status === 401 && !handled401 && !isAuthEndpoint) {
       handled401 = true;
       try {
         localStorage.removeItem('token');
@@ -39,18 +58,11 @@ api.interceptors.response.use(
       } catch (err) {
         console.warn('[auth] Failed to clear localStorage on 401', err);
       }
-      // Tell the app shell that the session ended. App.jsx listens
-      // for this and calls setUser(null) + handleLogout, which
-      // re-renders the Login screen without a page reload.
       try {
         window.dispatchEvent(new CustomEvent('auth:session-expired'));
       } catch (err) {
         console.warn('[auth] Failed to dispatch session-expired event', err);
       }
-      // Reset the flag on the next tick so a future legitimate
-      // session-expiry 401 (after a real login) can still trigger
-      // cleanup. Without this the flag would stick for the life of
-      // the page and silently swallow real expiry events.
       setTimeout(() => { handled401 = false; }, 1000);
     }
     return Promise.reject(error);

@@ -458,15 +458,17 @@ def init_db():
             if 'updated_at' not in comments_cols:
                 conn.execute(text('ALTER TABLE comments ADD COLUMN updated_at DATETIME'))
 
-    # Seed default admin if no admin user exists. Idempotent: safe to run
-    # on every startup. Password hash is generated once and pinned here so
-    # the dev doesn't need to read a random password from logs.
+    # Seed a default admin only in development or when explicitly requested.
+    # In production we want the first registered user to become admin instead
+    # of blocking registration with a pre-seeded admin account.
     db = SessionLocal()
     try:
         has_admin = db.query(User).filter(User.role == 'admin').first()
         if not has_admin:
-            # Lazy import to avoid circular dependency at module load time.
-            from services.db_service import hash_password
+            try:
+                from backend.services.db_service import hash_password
+            except ImportError:
+                from services.db_service import hash_password
             admin = User(
                 user_id='admin',
                 name='Admin',

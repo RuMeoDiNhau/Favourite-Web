@@ -13,11 +13,14 @@ import PostModal from './pages/Feed/PostModal';
 import FaceSetupModal from './components/FaceSetupModal';
 import SearchBar from './components/SearchBar';
 import NotificationBell from './components/NotificationBell';
+import LanguageSwitcher from './components/LanguageSwitcher';
+import { useTranslation } from 'react-i18next';
 import Bookmarks from './pages/Bookmarks';
 import UserProfile from './pages/UserProfile';
 import Collections from './pages/Collections/Collections';
 import CollectionDetail from './pages/Collections/CollectionDetail';
 import { BookmarksProvider } from './lib/BookmarksContext';
+import { resolveBackendOrigin } from './lib/apiBase';
 import * as api from './services/api';
 
 // Map view name <-> URL path so the navbar becomes bookmarkable and
@@ -33,7 +36,7 @@ const VIEW_NAMES = ['home', 'feed', 'bookmarks', 'collections', 'dashboard', 'us
 // the detail id in the URL (not React state) means a profile link
 // can be shared / bookmarked.
 const DETAIL_PATTERN = /^\/users\/([A-Za-z0-9._-]+)$/;
-// Collection detail uses /collections/<id> — same pattern as the
+// Collection detail uses /collections/<id> â€” same pattern as the
 // user profile. The id is an integer; we capture it directly.
 const COLLECTION_DETAIL_PATTERN = /^\/collections\/(\d+)$/;
 
@@ -58,10 +61,11 @@ const viewToPath = (viewName, detail) => {
 };
 
 function App() {
+  const { t } = useTranslation();
   // `user` lives in React state only (not localStorage). The BE
   // sets the auth cookie; on page reload we rebuild this object
   // via /auth/me. The old localStorage pattern was a second
-  // XSS-stealable piece of data — now gone.
+  // XSS-stealable piece of data â€” now gone.
   const [user, setUser] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [view, setViewRaw] = useState(() => pathToView(window.location.pathname));
@@ -69,6 +73,7 @@ function App() {
   const [feedKey, setFeedKey] = useState(0);
   const [showFaceSetup, setShowFaceSetup] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   // IDs the search results want to deep-open into a modal on the
   // target page (knowledge article / game detail). Reset after the
   // target view consumes them so a later manual nav doesn't reopen.
@@ -95,7 +100,7 @@ function App() {
         const me = await api.fetchMe();
         if (!cancelled) setUser(me);
       } catch {
-        // 401 etc. — no session.
+        // 401 etc. â€” no session.
         if (!cancelled) setUser(null);
       } finally {
         if (!cancelled) setAuthChecked(true);
@@ -114,7 +119,7 @@ function App() {
     const onExpired = () => handleLogout();
     window.addEventListener('auth:session-expired', onExpired);
     return () => window.removeEventListener('auth:session-expired', onExpired);
-    // handleLogout is stable for this component's lifetime — listing
+    // handleLogout is stable for this component's lifetime â€” listing
     // it in deps would cause a re-bind on every render that closes
     // over a different `user`, which is the opposite of what we want.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -168,7 +173,7 @@ function App() {
     return () => window.removeEventListener('popstate', onPop);
   }, []);
 
-  // Khởi tạo trạng thái giao diện sáng/tối từ localStorage
+  // Khá»Ÿi táº¡o tráº¡ng thÃ¡i giao diá»‡n sÃ¡ng/tá»‘i tá»« localStorage
   const [isDarkMode, setIsDarkMode] = useState(() => {
     return localStorage.getItem('theme') === 'dark';
   });
@@ -184,15 +189,13 @@ function App() {
   const getFullAssetUrl = (url) => {
     if (!url) return '';
     if (url.startsWith('http://') || url.startsWith('https://')) return url;
-    const base = import.meta.env.VITE_API_URL 
-      ? import.meta.env.VITE_API_URL.replace('/api/v1', '') 
-      : 'http://localhost:8000';
+    const base = resolveBackendOrigin(import.meta.env.VITE_API_URL);
     return `${base}${url}`;
   };
 
   const handleLogout = async () => {
     // Tell the BE to clear the cookie. Even if the request fails
-    // (offline), we still drop the local user state — the cookie
+    // (offline), we still drop the local user state â€” the cookie
     // will expire on its own within 7 days.
     try {
       await api.logout();
@@ -209,7 +212,7 @@ function App() {
     setUser(null);
   };
 
-  // SearchBar click → navigate to the matching view and, when the
+  // SearchBar click â†’ navigate to the matching view and, when the
   // type has a detail modal (knowledge/game), request it to open
   // the right item. The per-view "consumed" callbacks clear the
   // pending id so navigation between manual tabs doesn't reopen.
@@ -236,9 +239,9 @@ function App() {
   const consumeSearchOpenKnowledge = useCallback(() => setSearchOpenKnowledgeId(null), []);
   const consumeSearchOpenGame = useCallback(() => setSearchOpenGameId(null), []);
 
-  // Notification click → navigate to the matching view. For Knowledge
+  // Notification click â†’ navigate to the matching view. For Knowledge
   // notifications we deep-open the article modal; for Post we open
-  // the Feed (no per-post modal exists today — Feed itself is the
+  // the Feed (no per-post modal exists today â€” Feed itself is the
   // destination). Unknown content types land on home.
   const handleNotificationSelect = useCallback((n) => {
     if (n.content_type === 'knowledge' && n.content_id) {
@@ -256,10 +259,10 @@ function App() {
     }
   }, []);
 
-  // Nếu chưa đăng nhập, chỉ hiển thị màn hình Login
+  // Náº¿u chÆ°a Ä‘Äƒng nháº­p, chá»‰ hiá»ƒn thá»‹ mÃ n hÃ¬nh Login
   if (!authChecked) {
     // Brief moment while /auth/me is in flight. Render nothing
-    // rather than flash the Login screen — that's a small UX win
+    // rather than flash the Login screen â€” that's a small UX win
     // for users on slow connections.
     return null;
   }
@@ -270,16 +273,16 @@ function App() {
   // Single source of truth for nav items so desktop <nav> and mobile drawer
   // can't drift. `adminOnly` is gated against the current user's role.
   const NAV_ITEMS = [
-    { name: 'home', label: '🏠 Trang chủ' },
-    { name: 'feed', label: '📰 Bảng tin' },
-    { name: 'bookmarks', label: '🔖 Đã lưu' },
-    { name: 'collections', label: '📂 Bộ sưu tập' },
-    { name: 'dashboard', label: '📷 Quét khuôn mặt' },
-    { name: 'users', label: '👥 Users', adminOnly: true },
-    { name: 'logs', label: '📋 Logs', adminOnly: true },
-    { name: 'games', label: '🎮 Games' },
-    { name: 'music', label: '🎵 Music' },
-    { name: 'knowledge', label: '📚 Knowledge' },
+    { name: 'home',        icon: '🏠', labelKey: 'nav.home' },
+    { name: 'feed',        icon: '📰', labelKey: 'nav.feed' },
+    { name: 'bookmarks',   icon: '🔖', labelKey: 'nav.bookmarks' },
+    { name: 'collections', icon: '📂', labelKey: 'nav.collections' },
+    { name: 'dashboard',   icon: '📷', labelKey: 'nav.dashboard' },
+    { name: 'users',       icon: '👥', labelKey: 'nav.users', adminOnly: true },
+    { name: 'logs',        icon: '📋', labelKey: 'nav.logs',  adminOnly: true },
+    { name: 'games',       icon: '🎮', labelKey: 'nav.games' },
+    { name: 'music',       icon: '🎵', labelKey: 'nav.music' },
+    { name: 'knowledge',   icon: '📚', labelKey: 'nav.knowledge' },
   ];
   const visibleNav = NAV_ITEMS.filter((it) => !it.adminOnly || user.role === 'admin');
 
@@ -289,198 +292,207 @@ function App() {
       className={view === item.name ? 'active' : ''}
       onClick={() => setView(item.name)}
     >
-      {item.label}
+      {t(item.labelKey)}
     </button>
   );
 
   return (
     <BookmarksProvider>
       <div className={`App ${isDarkMode ? 'dark-theme' : ''}`}>
-      <header className="main-navbar">
-        <div className="navbar-left">
-          <div className="navbar-logo">
-            <span className="logo-icon">🌐</span>
-            <span className="logo-text">Fav Web</span>
-          </div>
-          <SearchBar
-            onSelectItem={handleSearchSelect}
-            isAdmin={user.role === 'admin'}
-            userId={user.user_id}
-          />
-        </div>
+        <div className="app-shell">
 
-        <nav className="navbar-center">
-          {visibleNav.map(renderNavButton)}
-        </nav>
+          {/* â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â•
+              SIDEBAR (fixed left column)
+              ════════════════════════════════════════════════════════════════ */}
+          <aside className={`sidebar${sidebarOpen ? ' open' : ''}`}>
 
-        <div className="navbar-right">
-          <NotificationBell onSelectItem={handleNotificationSelect} />
-
-          {/* Nút bật/tắt chế độ sáng/tối */}
-          <button
-            className="theme-toggle-btn"
-            onClick={toggleTheme}
-            title={isDarkMode ? "Chuyển sang Chế độ sáng" : "Chuyển sang Chế độ tối"}
-          >
-            {isDarkMode ? '☀️ Sáng' : '🌙 Tối'}
-          </button>
-
-          <div className="user-profile-dropdown">
-            {user.avatar_url ? (
-              <img 
-                src={getFullAssetUrl(user.avatar_url)} 
-                alt="Avatar" 
-                className="avatar-circle" 
-                style={{ objectFit: 'cover', border: '2px solid var(--primary-color, #6366f1)' }} 
-              />
-            ) : (
-              <div className="avatar-circle">{user.name.substring(0, 2).toUpperCase()}</div>
-            )}
-            <span className="username-text">{user.name} ({user.role})</span>
-            <span className="chevron-icon">▼</span>
-          </div>
-          <button className="create-post-nav-btn" onClick={() => setShowPostModal(true)}>
-            <img 
-              src="/create-post-icon.png" 
-              alt="Create Post" 
-              style={{ width: '16px', height: '16px', display: 'inline-block', verticalAlign: 'middle', marginRight: '6px', filter: 'brightness(0) invert(1)' }} 
-            />
-            Đăng bài
-          </button>
-          <button className="logout-icon-btn" onClick={handleLogout} title="Đăng xuất">
-            <img
-              src="/logout-icon.png"
-              alt="Logout"
-              className="logout-btn-icon-img"
-              style={{ width: '16px', height: '16px', display: 'inline-block', verticalAlign: 'middle', marginRight: '6px' }}
-            />
-            Đăng xuất
-          </button>
-
-          {/* Hamburger toggle — only meaningful on mobile (CSS hides on desktop). */}
-          <button
-            className="mobile-menu-btn"
-            onClick={() => setMobileMenuOpen((v) => !v)}
-            aria-label="Toggle navigation menu"
-            aria-expanded={mobileMenuOpen}
-          >
-            {mobileMenuOpen ? '✕' : '☰'}
-          </button>
-        </div>
-
-        {/* Mobile drawer. CSS shows this only below 900px and hides the desktop
-            <nav> at the same breakpoint, so on desktop the drawer is invisible.
-            Click on the overlay closes it. */}
-        {mobileMenuOpen && (
-          <div className="mobile-menu-overlay" onClick={() => setMobileMenuOpen(false)} />
-        )}
-        <div className={`mobile-menu ${mobileMenuOpen ? 'open' : ''}`}>
-          <nav className="mobile-menu-nav">
-            {visibleNav.map(renderNavButton)}
-          </nav>
-        </div>
-      </header>
-
-      {/* Banner kích hoạt Face ID nếu user chưa đăng ký khuôn mặt */}
-      {(!user.registered_images || user.registered_images === 0) && (
-        <div style={{
-          background: 'linear-gradient(90deg, rgba(99,102,241,0.15) 0%, rgba(79,70,229,0.1) 100%)',
-          borderBottom: '1px solid rgba(99,102,241,0.25)',
-          padding: '10px 24px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '12px',
-          flexWrap: 'wrap',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '18px' }}>🔐</span>
-            <div>
-              <span style={{ fontWeight: 600, fontSize: '0.88rem', color: '#a5b4fc' }}>
-                Bạn chưa kích hoạt Face ID.
-              </span>
-              <span style={{ fontSize: '0.82rem', color: '#64748b', marginLeft: '8px' }}>
-                Đăng ký khuôn mặt để đăng nhập nhanh hơn bằng camera.
-              </span>
+            {/* Logo + Search */}
+            <div className="sidebar-header">
+              <div className="sidebar-logo" onClick={() => window.location.href = '/'}>
+                <span className="sidebar-logo-icon">🌐</span>
+                <span className="sidebar-logo-text">{t('auth.portalShort')}</span>
+              </div>
+              <div className="sidebar-search">
+                <SearchBar
+                  onSelectItem={handleSearchSelect}
+                  isAdmin={user.role === 'admin'}
+                  userId={user.user_id}
+                />
+              </div>
             </div>
+
+            {/* Navigation menu */}
+            <nav className="sidebar-nav">
+              {visibleNav.map((item) => (
+                <button
+                  key={item.name}
+                  className={`sidebar-nav-item${view === item.name ? ' active' : ''}`}
+                  onClick={() => { setView(item.name); setSidebarOpen(false); }}
+                >
+                  <span className="sidebar-nav-icon">{item.icon}</span>
+                  {t(item.labelKey)}
+                </button>
+              ))}
+            </nav>
+
+            {/* Bottom: Post button + User profile */}
+            <div className="sidebar-bottom">
+              <button
+                className="sidebar-post-btn"
+                onClick={() => setShowPostModal(true)}
+              >
+                ✏️ {t('nav.postNew')}
+              </button>
+
+              {/* Language pill — sits between the post button and the
+                  user chip so it's reachable without crowding either.
+                  Active state reads off i18next.language directly so the
+                  pill flips as soon as the user picks the other side. */}
+              <LanguageSwitcher />
+
+              <div className="sidebar-user">
+                {user.avatar_url ? (
+                  <img
+                    src={getFullAssetUrl(user.avatar_url)}
+                    alt="Avatar"
+                    className="sidebar-avatar"
+                  />
+                ) : (
+                  <div className="sidebar-avatar">
+                    {user.name.substring(0, 2).toUpperCase()}
+                  </div>
+                )}
+                <div className="sidebar-user-info">
+                  <div className="sidebar-username">{user.name}</div>
+                  <div className="sidebar-role">{user.role}</div>
+                </div>
+                <button
+                  className="sidebar-logout-btn"
+                  onClick={handleLogout}
+                  title={t('nav.signOut')}
+                >
+                  ⏻
+                </button>
+              </div>
+            </div>
+          </aside>
+
+          {/* Mobile sidebar overlay */}
+          {sidebarOpen && (
+            <div
+              className="mobile-overlay visible"
+              onClick={() => setSidebarOpen(false)}
+            />
+          )}
+
+          {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+              MAIN AREA (right of sidebar)
+              â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+          <div className="main-area">
+
+            {/* Slim top header */}
+            <header className="top-header">
+              <div className="top-header-left">
+                <button
+                  className="sidebar-collapse-btn"
+                  onClick={() => setSidebarOpen((v) => !v)}
+                  title="Toggle sidebar"
+                >
+                  ☰
+                </button>
+              </div>
+              <div className="top-header-right">
+                <NotificationBell onSelectItem={handleNotificationSelect} />
+                <button
+                  className="theme-toggle-btn"
+                  onClick={toggleTheme}
+                  title={isDarkMode ? t('nav.themeLight') : t('nav.themeDark')}
+                >
+                  {isDarkMode ? t('nav.lightShort') : t('nav.darkShort')}
+                </button>
+              </div>
+            </header>
+
+            {/* Face ID activation banner */}
+            {(!user.registered_images || user.registered_images === 0) && (
+              <div className="face-id-banner">
+                <div className="face-id-banner-inner">
+                  <span style={{ fontSize: '18px' }}>🔐</span>
+                  <div>
+                    <span style={{ fontWeight: 600, fontSize: '0.88rem', color: '#a5b4fc' }}>
+                      {t('dashboard.banner.inactive')}
+                    </span>
+                    <span style={{ fontSize: '0.82rem', color: '#64748b', marginLeft: '8px' }}>
+                      {t('dashboard.banner.cta')}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  className="face-id-activate-btn"
+                  onClick={() => setShowFaceSetup(true)}
+                >
+                  📷 {t('dashboard.banner.activate')}
+                </button>
+              </div>
+            )}
+
+            {/* Page content */}
+            <main>
+              {view === 'home' && <Home onNavigate={setView} />}
+              {view === 'feed' && <Feed key={feedKey} currentUser={user} onNavigate={setView} />}
+              {view === 'bookmarks' && <Bookmarks onNavigate={setView} />}
+              {view === 'collections' && <Collections onNavigate={setView} />}
+              {view === 'collectionDetail' && collectionId && (
+                <CollectionDetail collectionId={collectionId} onNavigate={setView} />
+              )}
+              {view === 'dashboard' && <Dashboard />}
+              {view === 'users' && user?.role === 'admin' && <Users />}
+              {view === 'logs' && user?.role === 'admin' && <Logs />}
+              {view === 'games' && (
+                <Games
+                  searchOpenGameId={searchOpenGameId}
+                  onConsumeSearchOpen={consumeSearchOpenGame}
+                />
+              )}
+              {view === 'music' && <Music />}
+              {view === 'knowledge' && (
+                <Knowledge
+                  searchOpenKnowledgeId={searchOpenKnowledgeId}
+                  onConsumeSearchOpen={consumeSearchOpenKnowledge}
+                  currentUser={user}
+                  onNavigate={setView}
+                />
+              )}
+              {view === 'userProfile' && profileUserId && (
+                <UserProfile
+                  userId={profileUserId}
+                  currentUser={user}
+                  onNavigate={setView}
+                />
+              )}
+            </main>
           </div>
-          <button
-            onClick={() => setShowFaceSetup(true)}
-            style={{
-              background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              padding: '8px 16px',
-              fontSize: '0.82rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              boxShadow: '0 2px 12px rgba(99,102,241,0.4)',
-              transition: 'all 0.2s',
-            }}
-            onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
-            onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-          >
-            📷 Kích hoạt Face ID ngay
-          </button>
         </div>
-      )}
 
-      <main>
-        {view === 'home' && <Home onNavigate={setView} />}
-        {view === 'feed' && <Feed key={feedKey} currentUser={user} onNavigate={setView} />}
-        {view === 'bookmarks' && <Bookmarks onNavigate={setView} />}
-        {view === 'collections' && <Collections onNavigate={setView} />}
-        {view === 'collectionDetail' && collectionId && (
-          <CollectionDetail collectionId={collectionId} onNavigate={setView} />
-        )}
-        {view === 'dashboard' && <Dashboard />}
-        {view === 'users' && user?.role === 'admin' && <Users />}
-        {view === 'logs' && user?.role === 'admin' && <Logs />}
-        {view === 'games' && (
-          <Games
-            searchOpenGameId={searchOpenGameId}
-            onConsumeSearchOpen={consumeSearchOpenGame}
+        {/* â”€â”€ Modals â”€â”€ */}
+        {showPostModal && (
+          <PostModal
+            onClose={() => setShowPostModal(false)}
+            onPostCreated={() => setFeedKey((prev) => prev + 1)}
           />
         )}
-        {view === 'music' && <Music />}
-        {view === 'knowledge' && (
-          <Knowledge
-            searchOpenKnowledgeId={searchOpenKnowledgeId}
-            onConsumeSearchOpen={consumeSearchOpenKnowledge}
-            currentUser={user}
-            onNavigate={setView}
+
+        {showFaceSetup && (
+          <FaceSetupModal
+            onClose={() => setShowFaceSetup(false)}
+            onSuccess={(data) => {
+              const updated = { ...user, registered_images: data.data?.total_registered_images || 1 };
+              localStorage.setItem('user', JSON.stringify(updated));
+              setUser(updated);
+              setShowFaceSetup(false);
+            }}
           />
         )}
-        {view === 'userProfile' && profileUserId && (
-          <UserProfile
-            userId={profileUserId}
-            currentUser={user}
-            onNavigate={setView}
-          />
-        )}
-      </main>
-
-      {showPostModal && (
-        <PostModal 
-          onClose={() => setShowPostModal(false)} 
-          onPostCreated={() => setFeedKey(prev => prev + 1)}
-        />
-      )}
-
-      {showFaceSetup && (
-        <FaceSetupModal
-          onClose={() => setShowFaceSetup(false)}
-          onSuccess={(data) => {
-            // Cập nhật user trong localStorage để không hiện banner nữa
-            const updated = { ...user, registered_images: data.data?.total_registered_images || 1 };
-            localStorage.setItem('user', JSON.stringify(updated));
-            setUser(updated);
-            setShowFaceSetup(false);
-          }}
-        />
-      )}
       </div>
     </BookmarksProvider>
   );

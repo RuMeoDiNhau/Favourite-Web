@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { registerFace } from '../../services/api';
 import './FaceSetupModal.css';
 
@@ -6,6 +7,7 @@ const TOTAL_SHOTS = 5;
 const SHOT_INTERVAL_MS = 1200;
 
 export default function FaceSetupModal({ onClose, onSuccess }) {
+  const { t } = useTranslation();
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const intervalRef = useRef(null);
@@ -27,7 +29,7 @@ export default function FaceSetupModal({ onClose, onSuccess }) {
           setStreaming(true);
         }
       } catch {
-        setCameraError('Không thể mở camera. Vui lòng kiểm tra quyền truy cập camera.');
+        setCameraError(t('faceSetup.camError'));
       }
     };
     startCamera();
@@ -49,28 +51,28 @@ export default function FaceSetupModal({ onClose, onSuccess }) {
 
   const submitFrames = useCallback(async (frames) => {
     setPhase('processing');
-    setStatusMsg('Đang lưu dữ liệu khuôn mặt...');
+    setStatusMsg(t('faceSetup.saving'));
     try {
       const res = await registerFace(frames);
       const data = res.data;
       setPhase('success');
       setStatusMsg(
         data.data?.new_faces > 0
-          ? `✅ Đã đăng ký ${data.data.new_faces} khuôn mặt thành công!`
-          : '✅ Ảnh đã lưu! (Không phát hiện khuôn mặt để tạo Face ID)'
+          ? t('faceSetup.savedSome', { n: data.data.new_faces })
+          : t('faceSetup.savedNone')
       );
       setTimeout(() => onSuccess && onSuccess(data), 1800);
     } catch (err) {
       setPhase('error');
-      setStatusMsg(err.response?.data?.detail || 'Lưu thất bại. Vui lòng thử lại.');
+      setStatusMsg(err.response?.data?.detail || t('faceSetup.fail'));
     }
-  }, [onSuccess]);
+  }, [onSuccess, t]);
 
   const startCapture = useCallback(() => {
     if (!streaming) return;
     setPhase('capturing');
     setCapturedCount(0);
-    setStatusMsg('Đang quét khuôn mặt...');
+    setStatusMsg(t('faceSetup.scanning'));
 
     const frames = [];
     let count = 0;
@@ -80,14 +82,14 @@ export default function FaceSetupModal({ onClose, onSuccess }) {
         frames.push(frame);
         count++;
         setCapturedCount(count);
-        setStatusMsg(`Đã chụp ${count}/${TOTAL_SHOTS} ảnh...`);
+        setStatusMsg(t('faceSetup.progress', { n: count, total: TOTAL_SHOTS }));
       }
       if (count >= TOTAL_SHOTS) {
         clearInterval(intervalRef.current);
         submitFrames(frames);
       }
     }, SHOT_INTERVAL_MS);
-  }, [streaming, captureFrame, submitFrames]);
+  }, [streaming, captureFrame, submitFrames, t]);
 
   const handleRetry = () => {
     setCapturedCount(0);
@@ -109,10 +111,10 @@ export default function FaceSetupModal({ onClose, onSuccess }) {
         <div className="fsm-header">
           <div className="fsm-header-icon">🔐</div>
           <div style={{ flex: 1 }}>
-            <h2 className="fsm-title">Kích hoạt Face ID</h2>
-            <p className="fsm-subtitle">Quét khuôn mặt để đăng nhập nhanh trong tương lai</p>
+            <h2 className="fsm-title">{t('faceSetup.title')}</h2>
+            <p className="fsm-subtitle">{t('faceSetup.subtitle')}</p>
           </div>
-          <button className="fsm-close-btn" onClick={onClose} disabled={!canClose} title="Đóng">✕</button>
+          <button className="fsm-close-btn" onClick={onClose} disabled={!canClose} title={t('faceSetup.close')}>✕</button>
         </div>
 
         <div className="fsm-camera-wrap">
@@ -166,30 +168,29 @@ export default function FaceSetupModal({ onClose, onSuccess }) {
 
         {phase === 'idle' && (
           <ul className="fsm-tips">
-            <li>📸 Hệ thống sẽ tự động chụp <strong>{TOTAL_SHOTS} ảnh</strong> liên tiếp</li>
-            <li>💡 Đảm bảo đủ ánh sáng, nhìn thẳng vào camera</li>
-            <li>🚫 Không che mặt hoặc đội mũ / kính quá dày</li>
+            <li>{t('faceSetup.tip1', { n: TOTAL_SHOTS })}</li>
+            <li>{t('faceSetup.tip2')}</li>
+            <li>{t('faceSetup.tip3')}</li>
           </ul>
         )}
 
         <div className="fsm-actions">
           {phase === 'idle' && (
             <button className="fsm-btn-primary" onClick={startCapture} disabled={!streaming || !!cameraError}>
-              📷 Bắt đầu quét khuôn mặt
+              {t('faceSetup.start')}
             </button>
           )}
           {phase === 'error' && (
-            <button className="fsm-btn-primary" onClick={handleRetry}>🔄 Thử lại</button>
+            <button className="fsm-btn-primary" onClick={handleRetry}>{t('faceSetup.retry')}</button>
           )}
           {(phase === 'idle' || phase === 'error') && (
-            <button className="fsm-btn-secondary" onClick={onClose}>Bỏ qua, làm sau</button>
+            <button className="fsm-btn-secondary" onClick={onClose}>{t('faceSetup.skip')}</button>
           )}
           {phase === 'success' && (
-            <button className="fsm-btn-primary" onClick={onClose}>Hoàn tất 🎉</button>
+            <button className="fsm-btn-primary" onClick={onClose}>{t('faceSetup.done')}</button>
           )}
         </div>
       </div>
     </div>
   );
 }
-

@@ -56,16 +56,16 @@
 }
 
 .menu-item.active {
-  background: #6366f1;
-  border-color: #6366f1;
-  color: white;
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: var(--text-on-accent);
   font-weight: 600;
 }
 
 .sidebar-footer {
   margin-top: 30px;
   padding-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  border-top: 1px solid var(--border-color);
 }
 
 .stats {
@@ -198,8 +198,8 @@
 
 .action-btn.bookmark-active {
   background: rgba(168, 85, 247, 0.18);
-  border-color: rgba(168, 85, 247, 0.55);
-  color: #6d28d9;
+  border-color: var(--accent-pink);
+  color: var(--accent-purple);
 }
 
 /* Scrollbar styling */
@@ -210,18 +210,18 @@
 
 .games-sidebar::-webkit-scrollbar-track,
 .games-main::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--bg-item);
 }
 
 .games-sidebar::-webkit-scrollbar-thumb,
 .games-main::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.3);
+  background: var(--border-color);
   border-radius: 3px;
 }
 
 .games-sidebar::-webkit-scrollbar-thumb:hover,
 .games-main::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.5);
+  background: var(--text-muted);
 }
 
 /* Modal styling for reading game posts */
@@ -241,15 +241,15 @@
 }
 
 .modal-container {
-  background: rgba(30, 30, 60, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-card-hover);
   border-radius: 16px;
   width: 90%;
   max-width: 650px;
   max-height: 80%;
   overflow-y: auto;
-  color: white;
+  color: var(--text-main);
   padding: 30px;
   position: relative;
   animation: slideUp 0.3s ease;
@@ -261,39 +261,39 @@
   right: 15px;
   background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--text-muted);
   font-size: 24px;
   cursor: pointer;
   transition: color 0.3s ease;
 }
 
 .modal-close-btn:hover {
-  color: white;
+  color: var(--text-title);
 }
 
 .modal-header-detail {
   margin-bottom: 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--border-color);
   padding-bottom: 15px;
 }
 
 .modal-header-detail h2 {
   margin: 0 0 10px 0;
   font-size: 24px;
-  color: #fff;
+  color: var(--text-title);
 }
 
 .modal-meta {
   display: flex;
   gap: 15px;
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--text-muted);
 }
 
 .modal-body {
   font-size: 16px;
   line-height: 1.6;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--text-main);
   margin-bottom: 25px;
 }
 
@@ -301,6 +301,29 @@
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+}
+
+.games-error-text {
+  text-align: center;
+  color: var(--status-error-fg);
+}
+
+.games-empty-text {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.games-action-btn-danger {
+  max-width: 120px;
+  background: var(--status-error-bg);
+  border-color: var(--accent-danger);
+  color: var(--accent-danger);
+}
+
+.games-action-btn-danger:hover {
+  background: var(--accent-danger);
+  color: var(--text-on-accent);
 }
 
 @keyframes fadeIn {

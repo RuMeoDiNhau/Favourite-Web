@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import './CameraBox.css';
 
 function CameraBox({ onCapture, captureTrigger, status = 'idle' }) {
+  const { t } = useTranslation();
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const [streaming, setStreaming] = useState(false);
@@ -33,7 +35,7 @@ function CameraBox({ onCapture, captureTrigger, status = 'idle' }) {
         }
       } catch (err) {
         if (!cancelled) {
-          setError('Không thể mở camera. Vui lòng kiểm tra quyền truy cập.');
+          setError(t('dashboard.cameraError'));
         }
       }
     };
@@ -84,46 +86,46 @@ function CameraBox({ onCapture, captureTrigger, status = 'idle' }) {
   };
 
   const getStatusText = () => {
-    if (status === 'loading' || status === 'scanning') return 'Scanning...';
-    if (status === 'success') return 'Verified';
-    if (status === 'error') return 'Access Denied';
-    return 'Sys Active';
+    if (status === 'loading' || status === 'scanning') return t('dashboard.hudScanning');
+    if (status === 'success') return t('dashboard.hudVerified');
+    if (status === 'error') return t('dashboard.hudDenied');
+    return t('dashboard.hudActive');
   };
 
   return (
     <div className="video-box">
-      <h3>Quét Khuôn Mặt</h3>
+      <h3>{t('dashboard.altFaceTitle')}</h3>
       {error ? (
         <p>{error}</p>
       ) : (
         <div className="camera-wrapper">
           <video ref={videoRef} autoPlay muted playsInline />
-          
+
           {/* Tech HUD overlay layout */}
           <div className={`hud-overlay ${getHudClass()}`}>
             <div className="hud-corners" />
-            
+
             <div className="hud-header">
-              <span>FACE_ID v2.0</span>
-              <span>LOCK: {status === 'success' ? 'OK' : 'SEARCHING'}</span>
+              <span>{t('dashboard.hudVersion')}</span>
+              <span>{t('dashboard.hudLock')} {status === 'success' ? t('dashboard.hudOK') : t('dashboard.hudSearching')}</span>
             </div>
-            
+
             {/* Pulsing reticle and scanning laser */}
             <div className="hud-face-reticle">
               <div className="hud-face-box" />
             </div>
             <div className="hud-scan-line" />
-            
+
             <div className="hud-footer">
               <span className="hud-status-badge">{getStatusText()}</span>
             </div>
-            
+
             <div className="hud-corners-bottom" />
           </div>
         </div>
       )}
       <button className="button" onClick={handleCapture} disabled={!streaming}>
-        Chụp & Nhận Diện
+        {t('dashboard.captureBtn')}
       </button>
     </div>
   );

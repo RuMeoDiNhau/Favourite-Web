@@ -48,10 +48,10 @@ DANH SÁCH CÔNG VIỆC CẦN LÀM (TODO LIST BY WEEKS)
     - [x] Cấu hình logging of FastAPI trong [backend/main.py](file:///d:/file_hoc_tap/Fav_Web/backend/main.py) để gửi các sự kiện quan trọng (nhận diện thành công, nhận diện thất bại, lỗi DB, lỗi hệ thống) trực tiếp lên AWS CloudWatch Logs.
     - [x] Cấu hình Metric Filters và Alarms trên AWS CloudWatch để theo dõi tài nguyên (CPU Utilization của EC2) hoặc cảnh báo lỗi hệ thống.
 
-[ ] TUẦN 6: PHÁT TRIỂN NÂNG CAO, TỐI ƯU HÓA CẤU TRÚC CODE & API
-    - [ ] Chuyển các thông tin cấu hình nhạy cảm (AWS Credentials, RDS Connection String) từ file `.env` sang quản lý tập trung bằng **AWS Systems Manager (SSM) Parameter Store** hoặc **AWS Secrets Manager**.
-    - [ ] Cập nhật cấu hình CORS trong [backend/main.py](file:///d:/file_hoc_tap/Fav_Web/backend/main.py) thay thế `*` bằng domain chính thức của Frontend chạy trên Cloud để đảm bảo bảo mật.
-    - [ ] Tối ưu hóa cấu trúc truy xuất API nhận diện: tải cache danh sách embeddings khuôn mặt vào RAM khi khởi động backend để tránh việc phải đọc đĩa nhiều lần khi có yêu cầu quét khuôn mặt.
+[x] TUẦN 6: PHÁT TRIỂN NÂNG CAO, TỐI ƯU HÓA CẤU TRÚC CODE & API
+    - [-] Chuyển các thông tin cấu hình nhạy cảm (AWS Credentials, RDS Connection String) từ file `.env` sang quản lý tập trung bằng **AWS Systems Manager (SSM) Parameter Store** hoặc **AWS Secrets Manager** (Không triển khai để tinh giản hạ tầng demo).
+    - [x] Cập nhật cấu hình CORS trong [backend/main.py](file:///d:/file_hoc_tap/Fav_Web/backend/main.py) thay thế `*` bằng domain chính thức của Frontend chạy trên Cloud để đảm bảo bảo mật.
+    - [x] Tối ưu hóa cấu trúc truy xuất API nhận diện: tải cache danh sách embeddings khuôn mặt vào RAM khi khởi động backend để tránh việc phải đọc đĩa nhiều lần khi có yêu cầu quét khuôn mặt.
 
 [ ] TUẦN 7: KIỂM THỬ HỆ THỐNG, TỐI ƯU HIỆU NĂNG & TRẢI NGHIỆM NGƯỜI DÙNG
     - [ ] Thực hiện kiểm thử toàn bộ ứng dụng từ frontend sang backend sau khi đã triển khai đầy đủ lên AWS.

@@ -47,23 +47,34 @@ AUTH_COOKIE_NAME = 'fw_auth'
 # otherwise). We detect "secure eligible" via APP_ENV=production so
 # local dev (http://localhost) doesn't lose its cookie.
 def _is_secure_cookie() -> bool:
-    return os.getenv('APP_ENV', 'development') == 'production'
+    # Only set Secure=True if explicitly enabled via COOKIE_SECURE=true (e.g. when HTTPS/SSL is enabled).
+    # For HTTP deployments (e.g. EC2 IP http://<IP>), setting Secure causes modern browsers to
+    # silently drop the auth cookie on login/register.
+    val = os.getenv('COOKIE_SECURE', '').lower()
+    return val in ('true', '1', 'yes')
+
+
+def _cookie_attributes() -> dict:
+    secure = _is_secure_cookie()
+    return {
+        'httponly': True,
+        'secure': secure,
+        'samesite': 'none' if secure else 'lax',
+        'path': '/',
+    }
 
 
 def _set_auth_cookie(response: Response, token: str) -> None:
     response.set_cookie(
         key=AUTH_COOKIE_NAME,
         value=token,
-        httponly=True,
-        secure=_is_secure_cookie(),
-        samesite='lax',
-        path='/',
         max_age=7 * 24 * 60 * 60,  # 7 days, matches token expiry
+        **_cookie_attributes(),
     )
 
 
 def _clear_auth_cookie(response: Response) -> None:
-    response.delete_cookie(key=AUTH_COOKIE_NAME, path='/')
+    response.delete_cookie(key=AUTH_COOKIE_NAME, **_cookie_attributes())
 
 def get_db():
     db = SessionLocal()
@@ -491,6 +502,7 @@ def login(request: LoginRequest, response: Response):
     logger.info(f"User logged in successfully via password: {user.user_id} (Role: {user.role})")
     return {
         'status': 'success',
+        'token': token,
         'user': {
             'user_id': user.user_id,
             'name': user.name,
@@ -514,6 +526,7 @@ def login_face(request: FaceLoginRequest, response: Response):
                 logger.info(f"User logged in successfully via Face ID: {user.user_id} (Confidence: {result['data'].get('confidence', 'N/A')})")
                 return {
                     'status': 'success',
+                    'token': token,
                     'user': {
                         'user_id': user.user_id,
                         'name': user.name,
