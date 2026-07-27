@@ -16,5 +16,7 @@ pyjwt
 psycopg2-binary
 pymysql
 watchtower
+mutagen
+
 
 

@@ -5,10 +5,10 @@ from backend.services.db_models import Music, Playlist
 
 # Sample music data
 SAMPLE_PLAYLISTS = [
-    {"name": "Nhạc Yêu Thích", "description": "Những bài hát yêu thích nhất", "song_count": 25, "image_url": "🎵"},
-    {"name": "Chill Vibes", "description": "Nhạc thư giãn", "song_count": 18, "image_url": "😌"},
-    {"name": "Workout Mix", "description": "Nhạc tập luyện", "song_count": 32, "image_url": "💪"},
-    {"name": "Sleep Well", "description": "Nhạc ngủ ngon", "song_count": 14, "image_url": "😴"},
+    {"name": "Nhạc Yêu Thích", "description": "Những bài hát yêu thích nhất", "song_count": 0, "image_url": "🎵"},
+    {"name": "Chill Vibes", "description": "Nhạc thư giãn", "song_count": 0, "image_url": "😌"},
+    {"name": "Workout Mix", "description": "Nhạc tập luyện", "song_count": 0, "image_url": "💪"},
+    {"name": "Sleep Well", "description": "Nhạc ngủ ngon", "song_count": 0, "image_url": "😴"},
 ]
 
 SAMPLE_SONGS = []
@@ -50,8 +50,14 @@ def init_playlists_and_music(db: Session):
 
 
 def get_all_playlists(db: Session):
-    """Get all playlists"""
-    return db.query(Playlist).all()
+    """Get all playlists with real song counts from Music table."""
+    playlists = db.query(Playlist).all()
+    for playlist in playlists:
+        real_count = db.query(Music).filter(Music.playlist_id == playlist.id).count()
+        if playlist.song_count != real_count:
+            playlist.song_count = real_count
+    db.commit()
+    return playlists
 
 
 def get_playlist_by_id(db: Session, playlist_id: int):

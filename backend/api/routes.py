@@ -784,6 +784,80 @@ def get_song(song_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail='Song not found')
     return song
 
+@router.post('/music/upload')
+async def upload_music_file(
+    file: UploadFile = File(...),
+    admin: dict = Depends(get_admin_user),
+):
+    """
+    Upload an audio file (Admin only).
+    Returns the stored file_url and the detected duration string (MM:SS).
+    Uses mutagen for reliable duration extraction on the server side.
+    """
+    import io, mutagen
+    from backend.services.posts_service import upload_media_file
+
+    allowed_exts = {'.mp3', '.wav', '.ogg', '.flac', '.m4a', '.aac'}
+    ext = os.path.splitext(file.filename or '')[1].lower()
+    if ext not in allowed_exts:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Định dạng không được hỗ trợ: {ext}. Chấp nhận: {', '.join(allowed_exts)}"
+        )
+
+    file_bytes = await file.read()
+
+    # Extract duration server-side.
+    # mutagen.File() auto-detects the format. For WAV we fall back to the
+    # stdlib wave module which is always available and doesn't need a temp file.
+    duration_str = '0:00'
+    try:
+        import io, mutagen, tempfile, wave as wave_mod
+
+        length_sec = None
+
+        # --- Try mutagen first (handles MP3, FLAC, OGG, M4A, AAC…) ---
+        try:
+            audio_meta = mutagen.File(io.BytesIO(file_bytes))
+            if audio_meta and hasattr(audio_meta, 'info') and hasattr(audio_meta.info, 'length'):
+                length_sec = audio_meta.info.length
+        except Exception:
+            pass
+
+        # --- Fallback: stdlib wave for PCM WAV files ---
+        if length_sec is None and ext == '.wav':
+            try:
+                with wave_mod.open(io.BytesIO(file_bytes)) as wf:
+                    length_sec = wf.getnframes() / wf.getframerate()
+            except Exception:
+                pass
+
+        # --- Last resort: write to temp file so mutagen can seek freely ---
+        if length_sec is None:
+            try:
+                with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
+                    tmp.write(file_bytes)
+                    tmp_path = tmp.name
+                audio_meta2 = mutagen.File(tmp_path)
+                if audio_meta2 and hasattr(audio_meta2, 'info') and hasattr(audio_meta2.info, 'length'):
+                    length_sec = audio_meta2.info.length
+                os.unlink(tmp_path)
+            except Exception:
+                pass
+
+        if length_sec is not None and length_sec > 0:
+            total_sec = int(length_sec)
+            duration_str = f"{total_sec // 60}:{total_sec % 60:02d}"
+
+    except Exception as dur_err:
+        logger.warning(f"Could not extract audio duration: {dur_err}")
+
+    # Save file (S3 if configured, else local /static/uploads/audio/)
+    file_url = upload_media_file(file_bytes, file.filename, 'audio')
+
+    return {'file_url': file_url, 'duration': duration_str}
+
+
 @router.post('/music', response_model=MusicResponse, status_code=201)
 def create_song(
     request: MusicCreateRequest,
