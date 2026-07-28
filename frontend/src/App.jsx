@@ -450,6 +450,7 @@ function App() {
               {view === 'logs' && user?.role === 'admin' && <Logs />}
               {view === 'games' && (
                 <Games
+                  key={feedKey}
                   searchOpenGameId={searchOpenGameId}
                   onConsumeSearchOpen={consumeSearchOpenGame}
                   currentUser={user}

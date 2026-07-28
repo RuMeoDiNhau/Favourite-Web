@@ -12,7 +12,7 @@ def init_games(db: Session):
 
 def get_all_games(db: Session, limit: int = 100):
     """Get all game posts"""
-    return db.query(Game).limit(limit).all()
+    return db.query(Game).order_by(Game.created_at.desc()).limit(limit).all()
 
 
 def get_games_by_category(db: Session, category: str):

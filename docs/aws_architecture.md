@@ -32,14 +32,14 @@ graph TB
     CloudWatch["AWS CloudWatch<br>(Log Group /fav-web/backend & CPU Alarm)"]
 
     %% Connections
-    User -->|1. HTTP Get Static Web| S3Frontend
-    User -->|2. REST API /api/v1 (JSON/Auth)| EC2
+    User -->|"1. HTTP Get Static Web"| S3Frontend
+    User -->|"2. REST API /api/v1 (JSON/Auth)"| EC2
     
-    EC2 -->|3. Query & Persist Data| RDS
-    EC2 -->|4. Upload/Download Media & Vectors| S3Storage
+    EC2 -->|"3. Query & Persist Data"| RDS
+    EC2 -->|"4. Upload/Download Media & Vectors"| S3Storage
     
-    EC2 -.->|SDK boto3 Permissions| IAM
-    EC2 -.->|Stream Logs via Watchtower| CloudWatch
+    EC2 -.->|"SDK boto3 Permissions"| IAM
+    EC2 -.->|"Stream Logs via Watchtower"| CloudWatch
 
     %% Styling
     style User fill:#f9f,stroke:#333,stroke-width:2px
@@ -96,14 +96,14 @@ graph TB
     S3Storage["S3 Bucket (Media Storage)"]
     CloudWatch["AWS CloudWatch"]
 
-    User -->|DNS Lookup| Route53
-    User -->|HTTPS Requests| CloudFront
-    CloudFront -->|Origin Static| S3Frontend
-    CloudFront -->|Origin API /api/v1| ALB
-    ALB -->|Auto-Scale Traffic| ECS
-    ECS -->|Query DB| RDS
-    ECS -->|Store Media| S3Storage
-    ECS -.->|Logs & Metrics| CloudWatch
+    User -->|"DNS Lookup"| Route53
+    User -->|"HTTPS Requests"| CloudFront
+    CloudFront -->|"Origin Static"| S3Frontend
+    CloudFront -->|"Origin API /api/v1"| ALB
+    ALB -->|"Auto-Scale Traffic"| ECS
+    ECS -->|"Query DB"| RDS
+    ECS -->|"Store Media"| S3Storage
+    ECS -.->|"Logs & Metrics"| CloudWatch
 ```
 
 ---

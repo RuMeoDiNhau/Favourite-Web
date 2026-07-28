@@ -163,6 +163,8 @@ const vi = {
     noGames: 'Không có bài viết game.',
     noFriends: 'Bạn chưa theo dõi ai, hoặc bạn bè chưa có hoạt động nào gần đây.',
     playOnline: 'Chơi trực tuyến',
+    delete: 'Xóa',
+    deletePost: 'Xóa bài đăng',
     comment: 'Bình luận',
     unsave: 'Bỏ lưu',
     savePost: 'Lưu bài đăng',

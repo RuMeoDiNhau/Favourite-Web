@@ -448,19 +448,7 @@ export default function Feed({ currentUser, onNavigate }) {
                       </div>
                     )}
 
-                    {/* Game Preview */}
-                    {post.post_type === 'game' && (
-                      <div className="dash-media-preview game-type">
-                        <button className="dash-game-play-btn" onClick={() => setActiveGameUrl({ url: post.media_url, title: post.title })}>
-                          <img
-                            src="/game-icon.png"
-                            alt="Game Icon"
-                            style={{ width: '16px', height: '16px', display: 'inline-block', verticalAlign: 'middle', marginRight: '6px', borderRadius: '3px' }}
-                          />
-                          {t('feed.playOnline')}: {post.title}
-                        </button>
-                      </div>
-                    )}
+
                   </div>
 
                   {/* Reactions row + comment trigger. Counts only render

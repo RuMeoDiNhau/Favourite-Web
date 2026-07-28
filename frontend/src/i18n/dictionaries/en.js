@@ -157,6 +157,8 @@ const en = {
     noGames: 'No game posts.',
     noFriends: "You don't follow anyone, or your friends haven't been active recently.",
     playOnline: 'Play online',
+    delete: 'Delete',
+    deletePost: 'Delete post',
     comment: 'Comment',
     unsave: 'Unsave',
     savePost: 'Save post',

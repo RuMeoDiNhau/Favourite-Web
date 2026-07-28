@@ -14,90 +14,12 @@ YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 YOUTUBE_SEARCH_URL = "https://www.googleapis.com/youtube/v3/search"
 
 # Sample knowledge articles
-SAMPLE_ARTICLES = [
-    {
-        "title": "Học Lập Trình Web",
-        "category": "Lập Trình",
-        "description": "Hướng dẫn chi tiết về HTML, CSS, JavaScript",
-        "content": "Bắt đầu từ HTML, CSS, sau đó JavaScript. Học về DOM, Events, Async/Await...",
-        "author": "Nguyễn Văn A",
-        "views": 1250,
-        "likes": 45
-    },
-    {
-        "title": "Mẹo Quản Lý Thời Gian",
-        "category": "Kỹ Năng",
-        "description": "Các phương pháp hiệu quả để quản lý công việc",
-        "content": "Sử dụng Pomodoro Technique, To-do list, Priority Matrix...",
-        "author": "Trần Thị B",
-        "views": 890,
-        "likes": 32
-    },
-    {
-        "title": "Thiết Kế UI/UX Cơ Bản",
-        "category": "Thiết Kế",
-        "description": "Nguyên tắc và kỹ thuật thiết kế giao diện",
-        "content": "Điều hòa màu sắc, Typography, Spacing, Accessibility...",
-        "author": "Lê Văn C",
-        "views": 2100,
-        "likes": 67
-    },
-    {
-        "title": "Kinh Doanh Online Hiệu Quả",
-        "category": "Kinh Doanh",
-        "description": "Chiến lược bán hàng online thành công",
-        "content": "Xây dựng brand, Marketing strategy, Customer service...",
-        "author": "Phạm Văn D",
-        "views": 1540,
-        "likes": 52
-    },
-    {
-        "title": "Phát Triển Cá Nhân",
-        "category": "Phát Triển",
-        "description": "Hành trình phát triển bản thân và sự nghiệp",
-        "content": "Đặt mục tiêu, Tự học, Networking, Building portfolio...",
-        "author": "Hoàng Thị E",
-        "views": 3200,
-        "likes": 89
-    },
-    {
-        "title": "Lập Kế Hoạch Tài Chính",
-        "category": "Tài Chính",
-        "description": "Quản lý tiền bạc và lập kế hoạch chi tiêu",
-        "content": "Budget planning, Saving, Investment, Risk management...",
-        "author": "Đỗ Văn F",
-        "views": 956,
-        "likes": 38
-    },
-    {
-        "title": "Cách Viết Content Hiệu Quả",
-        "category": "Lập Trình",
-        "description": "Hướng dẫn viết content thu hút người dùng",
-        "content": "SEO optimization, Storytelling, Call to action...",
-        "author": "Võ Văn G",
-        "views": 1850,
-        "likes": 74
-    },
-    {
-        "title": "Machine Learning Cơ Bản",
-        "category": "Lập Trình",
-        "description": "Giới thiệu về Machine Learning và ứng dụng",
-        "content": "Supervised learning, Unsupervised learning, Deep learning...",
-        "author": "Bùi Văn H",
-        "views": 2450,
-        "likes": 105
-    },
-]
+SAMPLE_ARTICLES = []
 
 
 def init_articles(db: Session):
     """Initialize sample articles if database is empty"""
-    existing_articles = db.query(Knowledge).count()
-    if existing_articles == 0:
-        for article_data in SAMPLE_ARTICLES:
-            article = Knowledge(**article_data)
-            db.add(article)
-        db.commit()
+    pass
 
 
 def get_all_articles(db: Session, limit: int = 100):
