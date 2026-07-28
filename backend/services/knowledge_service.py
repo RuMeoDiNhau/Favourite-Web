@@ -291,3 +291,17 @@ def search_youtube_videos(article, max_results: int = 3) -> list[VideoItem]:
             channel=snippet.get("channelTitle", ""),
         ))
     return results
+
+
+def delete_article(db: Session, article_id: int, user_id: str = None, is_admin: bool = False) -> bool:
+    """Delete a Knowledge article by ID. Author or Admin can delete it."""
+    article = db.query(Knowledge).filter(Knowledge.id == article_id).first()
+    if not article:
+        return False
+    if article.author_user_id and str(article.author_user_id) != str(user_id) and not is_admin:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403, detail="Bạn không có quyền xóa bài viết này.")
+    db.delete(article)
+    db.commit()
+    return True
+

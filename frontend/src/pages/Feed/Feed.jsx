@@ -255,6 +255,19 @@ export default function Feed({ currentUser, onNavigate }) {
     }
   };
 
+  const handleDeleteKnowledge = async (articleId) => {
+    if (!window.confirm(t('feed.confirmDeleteKnowledge') || 'Bạn có chắc chắn muốn xóa bài viết kiến thức này không?')) {
+      return;
+    }
+    try {
+      await api.deleteKnowledge(articleId);
+      setArticles(prev => prev.filter(a => a.id !== articleId));
+    } catch (err) {
+      console.error('Lỗi khi xóa bài viết kiến thức:', err);
+      alert(api.formatErrorMessage(err.response?.data?.detail, 'Không thể xóa bài viết.'));
+    }
+  };
+
 
 
   // Face scanning capture callback
@@ -524,6 +537,15 @@ export default function Feed({ currentUser, onNavigate }) {
                   <div className="article-actions" onClick={(e) => e.stopPropagation()}>
                     <button className="article-read-btn" onClick={() => setSelectedArticle(article)}>{t('feed.readMore')}</button>
                     <button className="article-like-btn" onClick={() => handleLikeKnowledge(article.id)}>{t('feed.like')}</button>
+                    {(currentUser?.user_id === article.author_user_id || currentUser?.role === 'admin') && (
+                      <button
+                        className="article-like-btn"
+                        onClick={() => handleDeleteKnowledge(article.id)}
+                        style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444' }}
+                      >
+                        🗑️ Xóa
+                      </button>
+                    )}
                   </div>
                 </div>
               ))

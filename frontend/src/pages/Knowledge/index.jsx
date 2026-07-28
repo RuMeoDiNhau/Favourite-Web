@@ -225,6 +225,21 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
     }
   };
 
+  const handleDeleteArticle = async (articleId) => {
+    if (!window.confirm(t('knowledge.confirmDelete') || 'Bạn có chắc chắn muốn xóa bài viết kiến thức này không?')) {
+      return;
+    }
+    try {
+      await api.deleteKnowledge(articleId);
+      setAllArticles(prev => prev.filter(a => a.id !== articleId));
+      setMyArticles(prev => prev.filter(a => a.id !== articleId));
+      if (selectedArticle?.id === articleId) setSelectedArticle(null);
+    } catch (err) {
+      console.error('Lỗi khi xóa bài viết:', err);
+      alert(api.formatErrorMessage(err.response?.data?.detail, 'Không thể xóa bài viết.'));
+    }
+  };
+
   useEffect(() => {
     if (showMyArticles && currentUser) {
       loadMyArticles();
@@ -464,6 +479,15 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
                     <div className="card-actions">
                       <button className="read-btn" onClick={() => handleOpenArticle(article)}>{t('knowledge.readMore')} →</button>
                       <button onClick={() => handleLikeArticle(article.id)} className="read-btn" style={{ marginLeft: '8px' }}>❤️ {t('knowledge.like')}</button>
+                      {(currentUser?.user_id === article.author_user_id || currentUser?.role === 'admin') && (
+                        <button
+                          onClick={() => handleDeleteArticle(article.id)}
+                          className="read-btn"
+                          style={{ marginLeft: '8px', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444' }}
+                        >
+                          🗑️ {t('knowledge.delete') || 'Xóa'}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

@@ -310,29 +310,25 @@ export default function SearchBar({ onSelectItem, isAdmin = false, userId = null
               )}
               {!loading && totalCount > 0 && (
                 <>
-                  {TYPE_ORDER.map((t) => {
-                    const arr = results.results?.[t];
+                  {TYPE_ORDER.map((typeKey) => {
+                    const arr = results.results?.[typeKey];
                     if (!arr || arr.length === 0) return null;
                     return (
-                      <div key={t} className="searchbar-group">
+                      <div key={typeKey} className="searchbar-group">
                         <div className="searchbar-group-header">
-                          {TYPE_ICONS[t]} {t(TYPE_LABEL_KEY[t])}
+                          {TYPE_ICONS[typeKey]} {t(TYPE_LABEL_KEY[typeKey])}
                         </div>
                         {arr.map((item, idx) => {
-                          const key = `${t}-${item.id ?? item.user_id ?? idx}`;
+                          const key = `${typeKey}-${item.id ?? item.user_id ?? idx}`;
                           const title =
                             item.title || item.name || item.user_id || `#${item.id ?? idx}`;
                           const sub = item.snippet || item.artist || item.department || item.category || '';
-                          // Look up the row's position in the merged
-                          // list (which is what ↑↓ walks). mergedItems
-                          // is built in TYPE_ORDER so the running
-                          // globalIdx counter here mirrors it.
                           let globalIdx = -1;
                           let running = 0;
                           for (const tt of TYPE_ORDER) {
                             const a = results.results?.[tt];
                             if (!a) continue;
-                            if (tt === t) {
+                            if (tt === typeKey) {
                               globalIdx = running + idx;
                               break;
                             }
@@ -344,7 +340,7 @@ export default function SearchBar({ onSelectItem, isAdmin = false, userId = null
                               key={key}
                               id={`searchbar-row-${globalIdx}`}
                               className={`searchbar-row${isFocused ? ' is-focused' : ''}`}
-                              onClick={() => handleSelect(t, item)}
+                              onClick={() => handleSelect(typeKey, item)}
                               onMouseEnter={() => setActiveIndex(globalIdx)}
                               type="button"
                               role="option"

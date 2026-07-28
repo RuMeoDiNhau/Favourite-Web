@@ -1067,6 +1067,21 @@ def get_article(
         raise HTTPException(status_code=404, detail='Article not found')
     return _enrich_knowledge(article, db)
 
+
+@router.delete('/knowledge/{article_id}', status_code=200)
+def delete_article(
+    article_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete a Knowledge article by ID. Author or Admin can delete it."""
+    is_admin = current_user.get('role') == 'admin'
+    success = knowledge_service.delete_article(db, article_id, current_user.get('user_id'), is_admin)
+    if not success:
+        raise HTTPException(status_code=404, detail="Bài viết kiến thức không tồn tại.")
+    return {'message': 'Đã xóa bài viết kiến thức thành công.'}
+
+
 @router.post('/knowledge', response_model=None, status_code=201)
 def create_article(
     request: KnowledgeCreateRequest,
