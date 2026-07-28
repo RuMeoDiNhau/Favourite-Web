@@ -223,7 +223,7 @@ export default function PostModal({ onClose, onPostCreated }) {
                 alt="Game"
                 style={{ width: '16px', height: '16px', display: 'inline-block', verticalAlign: 'middle', marginRight: '6px', borderRadius: '3px' }}
               />
-              🎮 Game Blog
+              🎮 Game
             </button>
           </div>
 

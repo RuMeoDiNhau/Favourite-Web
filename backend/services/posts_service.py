@@ -38,6 +38,17 @@ def create_post(db: Session, post_data: PostCreateRequest, user_id: str) -> Post
     db.commit()
     db.refresh(post)
 
+    if post.post_type == 'game':
+        from backend.services import games_service
+        games_service.create_game(
+            db,
+            title=post.title,
+            category='Action',
+            description=post.description or '',
+            content=post.description or '',
+            image_url=post.media_url or '🎮'
+        )
+
     # Check if this is a game zip that needs extraction
     if post.post_type == 'game' and post.media_url and post.media_url.startswith('/static/uploads/game/') and post.media_url.endswith('.zip'):
         # Local relative path of zip file
