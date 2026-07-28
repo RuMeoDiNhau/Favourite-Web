@@ -1174,6 +1174,21 @@ def delete_post_file(
     return {'deleted': deleted}
 
 
+@router.delete('/posts/{post_id}', status_code=200)
+def delete_post(
+    post_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete a post by ID. Owner of the post or admin can delete it."""
+    is_admin = current_user.get('role') == 'admin'
+    success = posts_service.delete_post(db, post_id, current_user.get('user_id'), is_admin)
+    if not success:
+        raise HTTPException(status_code=404, detail="Bài viết không tồn tại.")
+    return {'message': 'Đã xóa bài đăng thành công.'}
+
+
+
 @router.post('/posts', response_model=None, status_code=201)
 def create_post(
     request: PostCreateRequest,

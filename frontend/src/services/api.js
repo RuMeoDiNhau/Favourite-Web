@@ -444,6 +444,9 @@ export const fetchBookmarks = (contentType = null, limit = 100) =>
 export const fetchBookmarkIds = (contentType = null) =>
   api.get('/bookmarks/ids', { params: { content_type: contentType } }).then((r) => r.data?.items ?? []);
 
+export const deletePost = (postId) =>
+  api.delete(`/posts/${postId}`).then((r) => r.data);
+
 export const formatErrorMessage = (detail, fallback = 'Có lỗi xảy ra, vui lòng thử lại.') => {
   if (!detail) return fallback;
   if (typeof detail === 'string') return detail;

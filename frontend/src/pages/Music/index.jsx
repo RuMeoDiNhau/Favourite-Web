@@ -41,6 +41,8 @@ export default function Music({ currentUser }) {
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [volume, setVolume] = useState(0.8);
+  const [isShuffle, setIsShuffle] = useState(false);
+  const [repeatMode, setRepeatMode] = useState('off'); // 'off' | 'all' | 'one'
 
   // Trạng thái quản lý danh sách phát
   const [selectedPlaylist, setSelectedPlaylist] = useState(null);
@@ -352,22 +354,52 @@ export default function Music({ currentUser }) {
     }
   };
 
+  const getRandomSong = () => {
+    if (!songs || songs.length === 0) return null;
+    if (songs.length === 1) return songs[0];
+    const available = songs.filter(s => s.id !== currentSong?.id);
+    const randomIndex = Math.floor(Math.random() * available.length);
+    return available[randomIndex];
+  };
+
   const handleNextSong = () => {
-    if (songs && songs.length > 0 && currentSong) {
-      const currentIndex = songs.findIndex(s => s.id === currentSong.id);
-      if (currentIndex !== -1 && currentIndex < songs.length - 1) {
+    if (!songs || songs.length === 0 || !currentSong) return;
+    if (isShuffle) {
+      const nextSong = getRandomSong();
+      if (nextSong) handlePlaySong(nextSong);
+      return;
+    }
+    const currentIndex = songs.findIndex(s => s.id === currentSong.id);
+    if (currentIndex !== -1) {
+      if (currentIndex < songs.length - 1) {
         handlePlaySong(songs[currentIndex + 1]);
+      } else if (repeatMode === 'all') {
+        handlePlaySong(songs[0]);
       }
     }
   };
 
   const handlePrevSong = () => {
-    if (songs && songs.length > 0 && currentSong) {
-      const currentIndex = songs.findIndex(s => s.id === currentSong.id);
-      if (currentIndex > 0) {
-        handlePlaySong(songs[currentIndex - 1]);
-      }
+    if (!songs || songs.length === 0 || !currentSong) return;
+    if (isShuffle) {
+      const prevSong = getRandomSong();
+      if (prevSong) handlePlaySong(prevSong);
+      return;
     }
+    const currentIndex = songs.findIndex(s => s.id === currentSong.id);
+    if (currentIndex > 0) {
+      handlePlaySong(songs[currentIndex - 1]);
+    } else if (repeatMode === 'all') {
+      handlePlaySong(songs[songs.length - 1]);
+    }
+  };
+
+  const toggleRepeatMode = () => {
+    setRepeatMode(prev => {
+      if (prev === 'off') return 'all';
+      if (prev === 'all') return 'one';
+      return 'off';
+    });
   };
 
   // Probe audio element used to extract the duration of a user-selected file.
@@ -517,15 +549,39 @@ export default function Music({ currentUser }) {
   };
 
   const onAudioEnded = () => {
-    if (songs && songs.length > 0 && currentSong) {
-      const currentIndex = songs.findIndex(s => s.id === currentSong.id);
-      if (currentIndex !== -1 && currentIndex < songs.length - 1) {
+    if (!songs || songs.length === 0 || !currentSong) {
+      setIsPlaying(false);
+      setCurrentTime(0);
+      return;
+    }
+
+    if (repeatMode === 'one') {
+      if (audioRef.current) {
+        audioRef.current.currentTime = 0;
+        audioRef.current.play()
+          .then(() => setIsPlaying(true))
+          .catch((err) => console.warn('Repeat one audio play error:', err));
+      }
+      return;
+    }
+
+    if (isShuffle) {
+      const nextSong = getRandomSong();
+      if (nextSong) handlePlaySong(nextSong);
+      return;
+    }
+
+    const currentIndex = songs.findIndex(s => s.id === currentSong.id);
+    if (currentIndex !== -1) {
+      if (currentIndex < songs.length - 1) {
         handlePlaySong(songs[currentIndex + 1]);
-        return;
+      } else if (repeatMode === 'all') {
+        handlePlaySong(songs[0]);
+      } else {
+        setIsPlaying(false);
+        setCurrentTime(0);
       }
     }
-    setIsPlaying(false);
-    setCurrentTime(0);
   };
 
   const handleSeek = (e) => {
@@ -952,6 +1008,28 @@ export default function Music({ currentUser }) {
 
           <div className="player-controls">
             <div className="controls-buttons">
+              <button
+                className={`player-btn ${isShuffle ? 'active-mode' : ''}`}
+                onClick={() => setIsShuffle(prev => !prev)}
+                title={isShuffle ? 'Phát ngẫu nhiên: ĐANG BẬT (ON)' : 'Phát ngẫu nhiên: ĐANG TẮT (OFF)'}
+                aria-label="Phát ngẫu nhiên"
+                style={{
+                  opacity: isShuffle ? 1 : 0.4,
+                  transform: isShuffle ? 'scale(1.1)' : 'scale(1)',
+                  transition: 'all 0.2s',
+                  background: isShuffle ? 'rgba(139, 92, 246, 0.3)' : 'transparent',
+                  border: isShuffle ? '1px solid rgba(139, 92, 246, 0.6)' : '1px solid transparent',
+                  borderRadius: '50%',
+                  width: '36px',
+                  height: '36px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer'
+                }}
+              >
+                🔀
+              </button>
               <button className="player-btn" onClick={handlePrevSong} aria-label={t('music.prev')}>⏮️</button>
               <button className="player-btn play-pause" onClick={togglePlayPause}>
                 {isPlaying ? (
@@ -965,6 +1043,32 @@ export default function Music({ currentUser }) {
                 )}
               </button>
               <button className="player-btn" onClick={handleNextSong} aria-label={t('music.next')}>⏭️</button>
+              <button
+                className={`player-btn ${repeatMode !== 'off' ? 'active-mode' : ''}`}
+                onClick={toggleRepeatMode}
+                title={
+                  repeatMode === 'one' ? 'Lặp lại 1 bài (Repeat 1)' :
+                  repeatMode === 'all' ? 'Lặp lại toàn bộ (Repeat All)' :
+                  'Lặp lại: ĐANG TẮT (OFF)'
+                }
+                aria-label="Chế độ lặp lại"
+                style={{
+                  opacity: repeatMode !== 'off' ? 1 : 0.4,
+                  transform: repeatMode !== 'off' ? 'scale(1.1)' : 'scale(1)',
+                  transition: 'all 0.2s',
+                  background: repeatMode !== 'off' ? 'rgba(139, 92, 246, 0.3)' : 'transparent',
+                  border: repeatMode !== 'off' ? '1px solid rgba(139, 92, 246, 0.6)' : '1px solid transparent',
+                  borderRadius: '50%',
+                  width: '36px',
+                  height: '36px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer'
+                }}
+              >
+                {repeatMode === 'one' ? '🔂' : '🔁'}
+              </button>
             </div>
 
             <div className="progress-container">

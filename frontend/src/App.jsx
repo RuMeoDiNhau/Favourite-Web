@@ -454,7 +454,9 @@ function App() {
                   onConsumeSearchOpen={consumeSearchOpenGame}
                 />
               )}
-              {view === 'music' && <Music currentUser={user} />}
+              <div style={{ display: view === 'music' ? 'block' : 'none' }}>
+                <Music currentUser={user} />
+              </div>
               {view === 'knowledge' && (
                 <Knowledge
                   searchOpenKnowledgeId={searchOpenKnowledgeId}

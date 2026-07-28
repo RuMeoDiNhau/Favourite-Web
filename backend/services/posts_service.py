@@ -208,3 +208,27 @@ def delete_uploaded_file(media_url: str) -> bool:
     except Exception as remove_err:
         print(f"[delete_uploaded_file] os.remove failed for {abs_resolved}: {remove_err}")
         return False
+
+
+def delete_post(db: Session, post_id: int, user_id: str, is_admin: bool = False) -> bool:
+    """
+    Delete a post by ID.
+    Only the creator of the post or an admin user can delete it.
+    Also cleans up associated uploaded media files best-effort.
+    """
+    post = db.query(Post).filter(Post.id == post_id).first()
+    if not post:
+        return False
+
+    if str(post.user_id) != str(user_id) and not is_admin:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403, detail="Bạn không có quyền xóa bài viết này.")
+
+    # Clean up media file if present
+    if post.media_url:
+        delete_uploaded_file(post.media_url)
+
+    db.delete(post)
+    db.commit()
+    return True
+

@@ -242,6 +242,19 @@ export default function Feed({ currentUser, onNavigate }) {
     }
   };
 
+  const handleDeletePost = async (postId) => {
+    if (!window.confirm(t('feed.confirmDeletePost') || 'Bạn có chắc chắn muốn xóa bài đăng này không?')) {
+      return;
+    }
+    try {
+      await api.deletePost(postId);
+      setPosts(prev => prev.filter(p => p.id !== postId));
+    } catch (err) {
+      console.error('Lỗi khi xóa bài đăng:', err);
+      alert(api.formatErrorMessage(err.response?.data?.detail, 'Không thể xóa bài đăng.'));
+    }
+  };
+
 
 
   // Face scanning capture callback
@@ -456,6 +469,26 @@ export default function Feed({ currentUser, onNavigate }) {
                       >
                         {isBmPost('post', post.id) ? '🔖' : t('feed.save')}
                       </button>
+                      {(currentUser?.user_id === post.user_id || currentUser?.role === 'admin') && (
+                        <button
+                          type="button"
+                          className="post-delete-btn"
+                          onClick={() => handleDeletePost(post.id)}
+                          title={t('feed.deletePost') || 'Xóa bài đăng'}
+                          style={{
+                            background: 'rgba(239, 68, 68, 0.15)',
+                            border: '1px solid rgba(239, 68, 68, 0.3)',
+                            color: '#ef4444',
+                            padding: '4px 10px',
+                            borderRadius: '6px',
+                            fontSize: '0.82rem',
+                            cursor: 'pointer',
+                            marginLeft: 'auto'
+                          }}
+                        >
+                          🗑️ {t('feed.delete') || 'Xóa'}
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
