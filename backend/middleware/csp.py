@@ -20,6 +20,7 @@ from fastapi import Request
 # baseline fallback; everything else inherits unless overridden.
 CSP_VALUE = (
     "default-src 'self'; "
+    "media-src 'self' blob: data: http: https:; "
     "frame-src http: https:; "
     "frame-ancestors 'none'; "
     "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "

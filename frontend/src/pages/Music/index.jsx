@@ -13,6 +13,7 @@ export default function Music({ currentUser }) {
   // localStorage.user was removed from the codebase, so readJson('user') returns null.
   const user = currentUser;
   const isAdmin = Boolean(user && user.role === 'admin');
+  const { t } = useTranslation();
   const { isBookmarked: isBm, toggle: toggleBm } = useBookmarks();
 
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -164,37 +165,69 @@ export default function Music({ currentUser }) {
     return `${base}${url}`;
   };
 
-  const handlePlaySong = async (song) => {
+  const handlePlaySong = (song) => {
     try {
-      // 1. Nếu bấm vào bài đang phát -> Tạm dừng
+      const audio = audioRef.current;
+      const fullUrl = getFullAudioUrl(song.file_url);
+
+      // 1. Bấm vào bài đang phát -> Tạm dừng / Phát tiếp
       if (currentSong && currentSong.id === song.id) {
         if (isPlaying) {
-          audioRef.current.pause();
+          if (audio) audio.pause();
           setIsPlaying(false);
         } else {
-          audioRef.current.play()
-            .then(() => setIsPlaying(true))
-            .catch((err) => console.warn('Audio play() rejected', err));
+          if (audio) {
+            audio.play()
+              .then(() => setIsPlaying(true))
+              .catch((err) => console.warn('Audio play() rejected:', err));
+          }
         }
         return;
       }
 
-      // 2. Nếu bấm vào bài hát mới
+      // 2. Bấm vào bài hát mới -> Phát ngay lập tức trong luồng click của user
       setCurrentSong(song);
-      setIsPlaying(true);
       setCurrentTime(0);
+      setIsPlaying(true);
 
-      // Gọi API tăng lượt nghe
-      await api.playSong(song.id);
+      if (song.duration) {
+        const parts = song.duration.split(':');
+        if (parts.length === 2) {
+          const sec = (parseInt(parts[0], 10) || 0) * 60 + (parseInt(parts[1], 10) || 0);
+          if (sec > 0) setDuration(sec);
+        }
+      }
 
-      // Dashboard event: same play counter, parallel per-user log.
-      // Best-effort — a failure here doesn't affect playback.
+      if (audio) {
+        audio.src = fullUrl;
+        audio.load();
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => setIsPlaying(true))
+            .catch((err) => {
+              console.warn('Audio play() initial call deferred:', err);
+              const playOnCanPlay = () => {
+                audio.play()
+                  .then(() => setIsPlaying(true))
+                  .catch((e) => {
+                    console.warn('Retry audio.play() failed:', e);
+                    setIsPlaying(false);
+                  });
+              };
+              audio.addEventListener('canplay', playOnCanPlay, { once: true });
+            });
+        }
+      }
+
+      // Gọi API tăng lượt nghe (chạy ngầm không làm đơ UI)
+      api.playSong(song.id).catch(() => {});
       api.trackActivity({
         content_type: 'music', content_id: song.id, event_type: 'play',
-      }).catch(() => { /* dashboard is best-effort */ });
+      }).catch(() => {});
 
       // Đồng bộ lượt nghe trên UI
-      setSongs(prev => prev.map(s => s.id === song.id ? { ...s, plays: s.plays + 1 } : s));
+      setSongs(prev => prev.map(s => s.id === song.id ? { ...s, plays: (s.plays || 0) + 1 } : s));
     } catch (err) {
       console.error('Error playing song:', err);
     }
@@ -399,22 +432,28 @@ export default function Music({ currentUser }) {
       setIsUploading(true);
       setUploadProgress(0);
 
-      // Step 1: Upload music file
-      const uploadRes = await api.uploadPostFile(musicFile, 'audio', (progress) => {
+      // Upload file → backend extracts duration via mutagen, saves to S3/local.
+      const uploadRes = await api.uploadMusicFile(musicFile, (progress) => {
         setUploadProgress(progress);
       });
 
-      const mediaUrl = uploadRes.data.media_url;
+      const { file_url: mediaUrl, duration: detectedDuration } = uploadRes.data;
       if (!mediaUrl) {
         throw new Error(t('music.err.noUrl'));
       }
 
-      // Step 2: Create song metadata in library
+      // Create song metadata — use server-detected duration when frontend
+      // couldn't auto-detect it (stays '00:00').
+      const finalDuration =
+        uploadForm.duration && uploadForm.duration !== '00:00'
+          ? uploadForm.duration
+          : detectedDuration;
+
       await api.createSong({
         title: uploadForm.title,
         artist: uploadForm.artist.trim() || 'Update later',
         genre: uploadForm.genre || 'Update later',
-        duration: uploadForm.duration,
+        duration: finalDuration,
         file_url: mediaUrl,
         playlist_id: null
       });
@@ -438,6 +477,31 @@ export default function Music({ currentUser }) {
       setIsUploading(false);
     }
   };
+
+  // When the active song changes, the <audio> src changes but autoPlay
+  // is a one-time HTML attribute that only fires on mount. We must call
+  // play() explicitly whenever the song id changes so every song plays.
+  useEffect(() => {
+    if (!currentSong || !audioRef.current) return;
+    const audio = audioRef.current;
+    const tryPlay = () => {
+      audio.play()
+        .then(() => setIsPlaying(true))
+        .catch((err) => {
+          console.warn('Autoplay blocked by browser:', err);
+          setIsPlaying(false);
+        });
+    };
+    // If the audio is already loadable, play right away.
+    // Otherwise wait for canplay so we don't get a NotAllowedError.
+    if (audio.readyState >= 2) {
+      tryPlay();
+    } else {
+      audio.addEventListener('canplay', tryPlay, { once: true });
+      return () => audio.removeEventListener('canplay', tryPlay);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentSong?.id]);
 
   // Trình phát nhạc tự động cập nhật tiến trình
   const onTimeUpdate = () => {
@@ -863,17 +927,20 @@ export default function Music({ currentUser }) {
         </div>
       </div>
 
-      {/* Thẻ audio ẩn điều khiển âm thanh */}
-      {currentSong && (
-        <audio
-          ref={audioRef}
-          src={getFullAudioUrl(currentSong.file_url)}
-          autoPlay={isPlaying}
-          onTimeUpdate={onTimeUpdate}
-          onLoadedMetadata={onLoadedMetadata}
-          onEnded={onAudioEnded}
-        />
-      )}
+      {/* Thẻ audio ẩn điều khiển âm thanh (luôn mount trong DOM để không bị trễ/lỗi Autoplay) */}
+      <audio
+        ref={audioRef}
+        src={currentSong ? getFullAudioUrl(currentSong.file_url) : undefined}
+        onTimeUpdate={onTimeUpdate}
+        onLoadedMetadata={onLoadedMetadata}
+        onEnded={onAudioEnded}
+        onError={(e) => {
+          if (currentSong) {
+            console.error('Audio playback error for URL:', currentSong.file_url, e);
+            setIsPlaying(false);
+          }
+        }}
+      />
 
       {/* Thanh phát nhạc nổi ở cuối trang */}
       {currentSong && (

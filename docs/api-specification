@@ -222,9 +222,29 @@ Lấy danh sách tất cả bài viết/blog về game.
 
 ---
 
-### `POST /api/v1/music` — Thêm bài hát mới
+### `POST /api/v1/music/upload` — Upload tệp âm thanh (Chỉ Admin)
 
-> ⚠️ Endpoint này **chỉ lưu metadata** (tên, nghệ sĩ, đường dẫn). Để phát được nhạc, cần **upload file nhạc trước** qua `POST /api/v1/posts/upload` (xem Mục 8), sau đó lấy `media_url` trả về điền vào `file_url` dưới đây.
+> 🔒 **Quyền truy cập:** Đăng nhập tài khoản Admin (`admin` role).
+
+Upload tệp âm thanh (`.mp3`, `.wav`, `.ogg`, `.flac`, `.m4a`, `.aac`). Server tự động tính thời lượng bài hát (`duration`) và lưu file vào S3 hoặc thư mục `/static/uploads/audio/`.
+
+**Request (multipart/form-data)**
+- `file`: Tệp âm thanh
+
+**Response 200**
+```json
+{
+  "file_url": "https://amzn-bucket-fav-web-....s3.amazonaws.com/uploads/audio/uuid.mp3",
+  "duration": "4:05"
+}
+```
+
+---
+
+### `POST /api/v1/music` — Thêm bài hát mới (Chỉ Admin)
+
+> 🔒 **Quyền truy cập:** Đăng nhập tài khoản Admin (`admin` role).  
+> 💡 Để đăng bài hát, Admin gọi `POST /api/v1/music/upload` trước để lấy `file_url` và `duration`, sau đó truyền vào request này. Bài hát sau khi tạo sẽ hiển thị công khai cho tất cả người dùng trong cộng đồng nghe.
 
 **Request Body (JSON)**
 ```json
@@ -233,12 +253,10 @@ Lấy danh sách tất cả bài viết/blog về game.
   "artist": "MCK ft. AAP Ướt Mi",
   "duration": "4:05",
   "genre": "Rap",
-  "file_url": "/static/music/NeNhuTaChangCon.mp3",
+  "file_url": "https://amzn-bucket-fav-web-....s3.amazonaws.com/uploads/audio/uuid.mp3",
   "playlist_id": null
 }
 ```
-
-> **Lưu ý:** Trường `duration` tối đa 10 ký tự. Dùng `"00:00"` nếu chưa biết thời lượng.
 
 **Response 201** — trả về đối tượng bài hát đầy đủ
 

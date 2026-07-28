@@ -2,7 +2,7 @@
 // canonical dict: en.js is hand-checked to match this shape.
 //
 // Notes on shape:
-//   - Every leaf is a plain string. i18next interpolates `{name}` in the
+//   - Every leaf is a plain string. i18next interpolates `{{name}}` in the
 //     resolved string at lookup time, so the leaves can carry placeholders
 //     freely.
 //   - Sections mirror the major UI areas (common, nav, auth, home, feed,
@@ -110,9 +110,9 @@ const vi = {
 
   home: {
     title: 'Trang chủ',
-    streak: 'Bạn đang có chuỗi {n} ngày liên tiếp! Hãy tiếp tục nhé.',
+    streak: 'Bạn đang có chuỗi {{n}} ngày liên tiếp! Hãy tiếp tục nhé.',
     daysLabel: 'ngày',
-    daysActivity: 'Hoạt động {days} ngày gần nhất',
+    daysActivity: 'Hoạt động {{days}} ngày gần nhất',
     statArticles: 'Bài viết đã đọc',
     statSongs: 'Bài hát đã nghe',
     statGames: 'Trò chơi đã xem',
@@ -133,10 +133,10 @@ const vi = {
     exportJson: 'Tải file JSON',
     loadFail: 'Không tải được dữ liệu. Vui lòng thử lại.',
     event: {
-      view: 'Bạn đã đọc · {time}',
-      play: 'Bạn đã nghe · {time}',
-      like: 'Bạn đã thích · {time}',
-      unknown: 'Bạn {action} · {time}',
+      view: 'Bạn đã đọc · {{time}}',
+      play: 'Bạn đã nghe · {{time}}',
+      like: 'Bạn đã thích · {{time}}',
+      unknown: 'Bạn {{action}} · {{time}}',
     },
     legend: {
       knowledge: 'Bài viết',
@@ -202,7 +202,7 @@ const vi = {
     scanLog: {
       ready: 'Thiết bị sẵn sàng',
       scanning: '⏳ Đang quét...',
-      success: '✅ Thành công: {name}',
+      success: '✅ Thành công: {{name}}',
       error: '❌ Không nhận diện được',
     },
     notRecognized: 'Không nhận diện được khuôn mặt.',
@@ -242,7 +242,7 @@ const vi = {
     draftBtn: '📝 Lưu nháp',
     scheduleBtn: '⏰ Hẹn giờ',
     publishNow: '🚀 Đăng ngay',
-    filterByTag: 'Lọc theo #{tag}',
+    filterByTag: 'Lọc theo #{{tag}}',
     altIcon: 'Knowledge Icon',
     draftCreated: 'Lưu nháp thành công',
     scheduledCreated: 'Đã hẹn giờ thành công',
@@ -286,7 +286,7 @@ const vi = {
     noPosts: 'Không có bài viết nào',
     viewsLabel: 'lượt xem',
     likesShort: 'thích',
-    read: '📖 Đ�ọc bài',
+    read: '📖 Đọc bài',
     like: '❤️ Thích',
     likeArticle: 'Thích bài viết',
     close: 'Đóng',
@@ -328,7 +328,7 @@ const vi = {
     songList: 'Danh sách bài hát',
     playsLabel: 'lượt nghe',
     playlistEmpty: 'Danh sách phát này trống. Quay lại tab "Tất Cả" để thêm bài hát.',
-    emptyPlaylistsJoin: '{empty} {cta}',
+    emptyPlaylistsJoin: '{{empty}} {{cta}}',
     myPlaylists: '📻 Danh Sách Phát Của Tôi',
     noPlaylists: 'Chưa có danh sách phát nào.',
     noPlaylistsCTA: 'Bấm "Tạo Playlist" để bắt tay!',
@@ -442,7 +442,7 @@ const vi = {
     delete: 'Xóa',
     ph: {
       write: 'Viết bình luận...',
-      reply: 'Trả lời @{name}...',
+      reply: 'Trả lời @{{name}}...',
     },
     cancelReply: 'Hủy trả lời',
     sending: 'Đang gửi...',
@@ -524,7 +524,7 @@ const vi = {
     pickEmpty: 'Bạn chưa có bộ sưu tập nào. Hãy vào "Bộ sưu tập của tôi" để tạo.',
     articleShort: 'Bài viết',
     emptyDetail: 'Bộ sưu tập trống',
-    emptyDetailHint: 'Mở bài viết Knowledge → nhấn "📂 Thêm vào bộ sưu tập" → chọn "{name}".',
+    emptyDetailHint: 'Mở bài viết Knowledge → nhấn "📂 Thêm vào bộ sưu tập" → chọn "{{name}}".',
     back: '← Quay lại',
     backToList: '← Về danh sách',
     err: {
@@ -613,18 +613,18 @@ const vi = {
     typeSong: 'Bài hát',
     typeGame: 'Trò chơi',
     typeUser: 'Người dùng',
-    minHint: 'Gõ ít nhất {n} ký tự để tìm kiếm.',
+    minHint: 'Gõ ít nhất {{n}} ký tự để tìm kiếm.',
     ph: {
       placeholder: 'Tìm kiếm bài viết, nhạc, game...',
     },
-    noResults: 'Không tìm thấy kết quả cho "{q}"',
+    noResults: 'Không tìm thấy kết quả cho "{{q}}"',
   },
 
   time: {
     justNow: 'vừa xong',
-    minutesAgo: '{n} phút trước',
-    hoursAgo: '{n} giờ trước',
-    daysAgo: '{n} ngày trước',
+    minutesAgo: '{{n}} phút trước',
+    hoursAgo: '{{n}} giờ trước',
+    daysAgo: '{{n}} ngày trước',
   },
 
   status: {
@@ -656,8 +656,8 @@ const vi = {
     fileAudio: 'Chọn tệp âm thanh (MP3, WAV) *',
     fileGame: 'Chọn tệp lưu trữ Game (.zip) *',
     fileDefault: 'Tệp đính kèm',
-    uploading: 'Đang tải tệp chính lên: {percent}%',
-    uploadingThumb: 'Đang tải ảnh bìa lên: {percent}%',
+    uploading: 'Đang tải tệp chính lên: {{percent}}%',
+    uploadingThumb: 'Đang tải ảnh bìa lên: {{percent}}%',
     submitting: 'Đang đồng bộ hóa dữ liệu & giải nén...',
     cancel: 'Hủy',
     submit: 'Đăng bài',
@@ -680,12 +680,12 @@ const vi = {
     close: 'Đóng',
     camError: 'Không thể mở camera. Vui lòng kiểm tra quyền truy cập camera.',
     saving: 'Đang lưu dữ liệu khuôn mặt...',
-    savedSome: '✅ Đã đăng ký {n} khuôn mặt thành công!',
+    savedSome: '✅ Đã đăng ký {{n}} khuôn mặt thành công!',
     savedNone: '✅ Ảnh đã lưu! (Không phát hiện khuôn mặt để tạo Face ID)',
     fail: 'Lưu thất bại. Vui lòng thử lại.',
     scanning: 'Đang quét khuôn mặt...',
-    progress: 'Đã chụp {n}/{total} ảnh...',
-    tip1: '📸 Hệ thống sẽ tự động chụp {n} ảnh liên tiếp',
+    progress: 'Đã chụp {{n}}/{{total}} ảnh...',
+    tip1: '📸 Hệ thống sẽ tự động chụp {{n}} ảnh liên tiếp',
     tip2: '💡 Đảm bảo đủ ánh sáng, nhìn thẳng vào camera',
     tip3: '🚫 Không che mặt hoặc đội mũ / kính quá dày',
     start: '📷 Bắt đầu quét khuôn mặt',

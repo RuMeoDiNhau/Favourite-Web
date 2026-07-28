@@ -233,6 +233,13 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
   }, [showMyArticles]);
 
   const handleOpenCreate = (mode) => {
+    if (!currentUser) {
+      alert(t('common.loginRequired') || 'Vui lòng đăng nhập để viết bài.');
+      if (typeof onNavigate === 'function') {
+        onNavigate('login');
+      }
+      return;
+    }
     setCreateMode(mode);
     setCreateError(null);
     setShowCreateModal(true);
@@ -257,6 +264,7 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
         category: createCategory.trim(),
         description: createDescription.trim(),
         content: createContent,
+        author: currentUser?.full_name || currentUser?.username || 'Admin',
         tags: tagNames,
         status: createMode,
       };
@@ -282,7 +290,7 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
       if (showMyArticles) loadMyArticles();
     } catch (err) {
       const detail = err?.response?.data?.detail;
-      setCreateError(detail || t('knowledge.err.create'));
+      setCreateError(api.formatErrorMessage(detail, t('knowledge.err.create')));
     } finally {
       setCreateSubmitting(false);
     }
@@ -405,7 +413,7 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
         {loading ? (
           <p style={{ textAlign: 'center', color: 'white' }}>{t('knowledge.loading')}</p>
         ) : error ? (
-          <p className="knowledge-error-text">{error}</p>
+          <p className="knowledge-error-text">{typeof error === 'string' ? error : api.formatErrorMessage(error)}</p>
         ) : (
           <div className="knowledge-grid">
             {articles.length > 0 ? (
@@ -427,25 +435,25 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
 
                     {article.tags && article.tags.length > 0 && (
                       <div className="card-tags">
-                        {article.tags.map((t) => (
+                        {article.tags.map((tagObj) => (
                           <button
-                            key={t.id || t.name}
-                            className={`card-tag ${selectedTags.includes(t.name) ? 'active' : ''}`}
+                            key={tagObj.id || tagObj.name}
+                            className={`card-tag ${selectedTags.includes(tagObj.name) ? 'active' : ''}`}
                             onClick={(e) => {
                               e.stopPropagation();
-                              setSelectedTags((prev) => prev.includes(t.name) ? prev.filter((x) => x !== t.name) : [...prev, t.name]);
+                              setSelectedTags((prev) => prev.includes(tagObj.name) ? prev.filter((x) => x !== tagObj.name) : [...prev, tagObj.name]);
                             }}
-                            title={t('knowledge.filterByTag', { tag: t.name })}
+                            title={t('knowledge.filterByTag', { tag: tagObj.name })}
                             type="button"
                           >
-                            #{t.name}
+                            #{tagObj.name}
                           </button>
                         ))}
                       </div>
                     )}
 
                     <div className="card-meta">
-                      <span className="author">👤 {article.author}</span>
+                      <span className="author">👤 {typeof article.author === 'string' ? article.author : String(article.author || 'Admin')}</span>
                     </div>
 
                     <div className="card-stats">
@@ -483,7 +491,7 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
                 <span className="card-badge">{categoryLabel(selectedArticle.category)}</span>
                 <h2>{selectedArticle.title}</h2>
                 <div className="article-modal-meta">
-                  <span>👤 {selectedArticle.author}</span>
+                  <span>👤 {typeof selectedArticle.author === 'string' ? selectedArticle.author : String(selectedArticle.author || 'Admin')}</span>
                   <span>👁️ {selectedArticle.views}</span>
                   <span>❤️ {selectedArticle.likes}</span>
                 </div>
@@ -558,9 +566,9 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
           <div className="knowledge-create-modal" onClick={(e) => e.stopPropagation()}>
             <button className="knowledge-create-close" onClick={() => setShowCreateModal(false)} type="button">×</button>
             <h2>
-              {createMode === 'draft' ? <>📝 {t('knowledge.draftModal')}</>
-                : createMode === 'scheduled' ? <>⏰ {t('knowledge.scheduledModal')}</>
-                : <>✍️ {t('knowledge.newPostModal')}</>}
+              {createMode === 'draft' ? t('knowledge.draftModal')
+                : createMode === 'scheduled' ? t('knowledge.scheduledModal')
+                : t('knowledge.newPostModal')}
             </h2>
             <form onSubmit={handleSubmitCreate} className="knowledge-create-form">
               <label>
@@ -626,7 +634,7 @@ export default function Knowledge({ searchOpenKnowledgeId = null, onConsumeSearc
                   />
                 </label>
               )}
-              {createError && <div className="knowledge-create-error">{createError}</div>}
+              {createError && <div className="knowledge-create-error">{typeof createError === 'string' ? createError : api.formatErrorMessage(createError)}</div>}
               <div className="knowledge-create-actions">
                 <button type="submit" className="knowledge-create-submit" disabled={createSubmitting}>
                   {createSubmitting ? t('knowledge.saving')

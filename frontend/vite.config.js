@@ -25,6 +25,8 @@ export default defineConfig({
 
   // Proxy API calls tới backend trong dev (tránh CORS khi dev local)
   server: {
+    port: 5173,
+    strictPort: true,
     proxy: {
       '/api': {
         target: 'http://localhost:8000',

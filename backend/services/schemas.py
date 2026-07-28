@@ -103,7 +103,7 @@ class KnowledgeCreateRequest(BaseModel):
     category: str
     description: str
     content: Optional[str] = None
-    author: str
+    author: Optional[str] = None
     # Tier 3 L: optional tags to attach on creation. Server normalizes
     # + dedupes; unknown names auto-create. Empty list / None = no
     # tags. We don't validate length here — the service rejects

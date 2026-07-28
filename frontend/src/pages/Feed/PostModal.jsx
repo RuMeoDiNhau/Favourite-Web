@@ -113,7 +113,7 @@ export default function PostModal({ onClose, onPostCreated }) {
 
     } catch (err) {
       console.error('Error creating post:', err);
-      setError(err.response?.data?.detail || t('post.err.generic'));
+      setError(api.formatErrorMessage(err.response?.data?.detail, t('post.err.generic')));
       // Best-effort orphan cleanup. Safe to await sequentially because we
       // are already on the failure path; user is shown the error message.
       if (uploadedUrls.length) {
@@ -259,6 +259,8 @@ export default function PostModal({ onClose, onPostCreated }) {
               {thumbnailFile && <span className="file-selected-name">🖼️ {thumbnailFile.name} ({(thumbnailFile.size / (1024 * 1024)).toFixed(2)} MB)</span>}
             </div>
           )}
+
+          {error && <div className="post-error-msg" style={{ color: '#ef4444', marginBottom: '15px', padding: '10px', backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: '6px' }}>{typeof error === 'string' ? error : api.formatErrorMessage(error)}</div>}
 
           {/* Loading and Progress Bar */}
           {loading && (

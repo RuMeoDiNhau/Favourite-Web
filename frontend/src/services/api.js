@@ -227,6 +227,26 @@ export const fetchNewSongs = () => api.get('/music/new/latest');
 
 export const deleteSong = (songId) => api.delete(`/music/${songId}`);
 
+/**
+ * Upload an audio file to the dedicated music upload endpoint.
+ * The server extracts duration via mutagen and saves the file to S3 or local storage.
+ * Returns { file_url, duration } (duration is a "M:SS" string).
+ */
+export const uploadMusicFile = (file, onProgress) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  return api.post('/music/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress: (progressEvent) => {
+      if (onProgress && progressEvent.total) {
+        const pct = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        onProgress(pct);
+      }
+    },
+  });
+};
+
+
 export const createPlaylist = (playlistData) => api.post('/playlists', playlistData);
 
 export const deletePlaylist = (playlistId) => api.delete(`/playlists/${playlistId}`);
@@ -424,8 +444,25 @@ export const fetchBookmarks = (contentType = null, limit = 100) =>
 export const fetchBookmarkIds = (contentType = null) =>
   api.get('/bookmarks/ids', { params: { content_type: contentType } }).then((r) => r.data?.items ?? []);
 
-export const removeBookmark = (contentType, contentId) =>
-  api.delete('/bookmarks', { params: { content_type: contentType, content_id: contentId } }).then((r) => r.data);
-
+export const formatErrorMessage = (detail, fallback = 'Có lỗi xảy ra, vui lòng thử lại.') => {
+  if (!detail) return fallback;
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) => {
+        if (typeof item === 'string') return item;
+        if (item && typeof item === 'object') {
+          return item.msg || item.message || JSON.stringify(item);
+        }
+        return String(item);
+      })
+      .filter(Boolean)
+      .join(', ');
+  }
+  if (typeof detail === 'object') {
+    return detail.msg || detail.message || detail.detail || JSON.stringify(detail);
+  }
+  return String(detail);
+};
 
 export default api;

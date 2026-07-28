@@ -27,18 +27,17 @@ i18n
     fallbackLng: 'vi',
     supportedLngs: ['vi', 'en'],
     debug: false,
-    // Default nsSeparator is ':'. We use dotted paths (`home.streak`),
-    // so leave it default — '.' is the keySeparator and works as-is.
+    // Force synchronous initialization so the app renders immediately.
+    // Without this, i18next may resolve asynchronously and React renders
+    // before translations are ready.
+    initImmediate: false,
     interpolation: {
-      // React already escapes interpolated values — turning this off
-      // avoids double-escaping things like {title} inside a JSX
-      // expression.
       escapeValue: false,
     },
+    react: {
+      useSuspense: false,
+    },
     detection: {
-      // localStorage key so reloads remember the user's choice. The
-      // cookie fallback is left in (some users have localStorage
-      // disabled); navigator is the last fallback.
       order: ['localStorage', 'navigator'],
       lookupLocalStorage: 'fav_lang',
       caches: ['localStorage'],
