@@ -452,6 +452,7 @@ function App() {
                 <Games
                   searchOpenGameId={searchOpenGameId}
                   onConsumeSearchOpen={consumeSearchOpenGame}
+                  currentUser={user}
                 />
               )}
               <div style={{ display: view === 'music' ? 'block' : 'none' }}>

@@ -12,6 +12,7 @@ export default function PostModal({ onClose, onPostCreated }) {
   // File states
   const [mainFile, setMainFile] = useState(null);
   const [thumbnailFile, setThumbnailFile] = useState(null);
+  const [imageFiles, setImageFiles] = useState([]);
 
   // Upload and loading states
   const [loading, setLoading] = useState(false);
@@ -24,6 +25,17 @@ export default function PostModal({ onClose, onPostCreated }) {
     if (e.target.files && e.target.files[0]) {
       setMainFile(e.target.files[0]);
     }
+  };
+
+  const handleMultipleImagesChange = (e) => {
+    if (e.target.files) {
+      const selected = Array.from(e.target.files);
+      setImageFiles(prev => [...prev, ...selected]);
+    }
+  };
+
+  const removeImageFile = (index) => {
+    setImageFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleThumbnailFileChange = (e) => {
@@ -40,8 +52,8 @@ export default function PostModal({ onClose, onPostCreated }) {
     }
 
     // Validation for files based on post type
-    if (postType === 'image' && !mainFile) {
-      setError(t('post.err.imageRequired'));
+    if (postType === 'image' && !mainFile && imageFiles.length === 0) {
+      setError(t('post.err.imageRequired') || 'Vui lòng chọn ít nhất một hình ảnh');
       return;
     }
     if (postType === 'video' && !mainFile) {
@@ -52,15 +64,7 @@ export default function PostModal({ onClose, onPostCreated }) {
       setError(t('post.err.audioRequired'));
       return;
     }
-    if (postType === 'game' && !mainFile) {
-      setError(t('post.err.gameRequired'));
-      return;
-    }
 
-    // Track every uploaded URL so we can best-effort delete them if the final
-    // createPost call fails. Without this, a 500 on createPost leaves the
-    // uploaded file as an orphan on the backend. Declared outside the try
-    // block so the catch handler can read it.
     const uploadedUrls = [];
     let mediaUrl = null;
     let thumbnailUrl = null;
@@ -71,10 +75,25 @@ export default function PostModal({ onClose, onPostCreated }) {
       setProgress(0);
       setSuccess(false);
 
-      // 1. Upload main media file
-      if (mainFile) {
+      // 1. Upload multiple image files if present
+      if (imageFiles.length > 0) {
         setUploadStage('main');
-        const resMain = await api.uploadPostFile(mainFile, postType, (percent) => {
+        const uploadedMediaUrls = [];
+        for (let i = 0; i < imageFiles.length; i++) {
+          const res = await api.uploadPostFile(imageFiles[i], 'image', (percent) => {
+            const overallPercent = Math.round(((i + percent / 100) / imageFiles.length) * 100);
+            setProgress(overallPercent);
+          });
+          if (res.data?.media_url) {
+            uploadedMediaUrls.push(res.data.media_url);
+            uploadedUrls.push(res.data.media_url);
+          }
+        }
+        mediaUrl = uploadedMediaUrls.join(',');
+      } else if (mainFile) {
+        setUploadStage('main');
+        const folderType = postType === 'text' ? 'image' : postType;
+        const resMain = await api.uploadPostFile(mainFile, folderType, (percent) => {
           setProgress(percent);
         });
         mediaUrl = resMain.data.media_url;
@@ -114,8 +133,6 @@ export default function PostModal({ onClose, onPostCreated }) {
     } catch (err) {
       console.error('Error creating post:', err);
       setError(api.formatErrorMessage(err.response?.data?.detail, t('post.err.generic')));
-      // Best-effort orphan cleanup. Safe to await sequentially because we
-      // are already on the failure path; user is shown the error message.
       if (uploadedUrls.length) {
         await Promise.all(uploadedUrls.map((u) => api.deleteUploadedFile(u)));
       }
@@ -198,7 +215,7 @@ export default function PostModal({ onClose, onPostCreated }) {
             <button
               type="button"
               className={postType === 'game' ? 'active' : ''}
-              onClick={() => { setPostType('game'); setMainFile(null); setThumbnailFile(null); setError(''); }}
+              onClick={() => { setPostType('game'); setMainFile(null); setThumbnailFile(null); setImageFiles([]); setError(''); }}
               disabled={loading}
             >
               <img
@@ -206,7 +223,7 @@ export default function PostModal({ onClose, onPostCreated }) {
                 alt="Game"
                 style={{ width: '16px', height: '16px', display: 'inline-block', verticalAlign: 'middle', marginRight: '6px', borderRadius: '3px' }}
               />
-              {t('post.typeGame')}
+              🎮 Game Blog
             </button>
           </div>
 
@@ -233,7 +250,64 @@ export default function PostModal({ onClose, onPostCreated }) {
             />
           </div>
 
-          {postType !== 'text' && (
+          {/* Multi-photo upload for Game blog, Image post, or Text post */}
+          {(postType === 'game' || postType === 'image' || postType === 'text') && (
+            <div className="form-group file-group">
+              <label>
+                {postType === 'game'
+                  ? '📸 ' + (t('post.gamePhotos') || 'Ảnh đính kèm cho bài Blog Game (Chọn nhiều ảnh như Facebook)')
+                  : postType === 'image'
+                  ? '📸 ' + (t('post.fileImage') || 'Chọn hình ảnh (Có thể chọn nhiều ảnh)')
+                  : '📸 ' + (t('post.optionalPhoto') || 'Hình ảnh đính kèm (Tùy chọn, chọn nhiều ảnh)')}
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleMultipleImagesChange}
+                disabled={loading}
+              />
+              {/* Photo preview gallery in modal */}
+              {imageFiles.length > 0 && (
+                <div className="modal-photo-preview-grid" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '10px' }}>
+                  {imageFiles.map((file, idx) => (
+                    <div key={idx} style={{ position: 'relative', width: '70px', height: '70px' }}>
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt={`preview ${idx}`}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '6px' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeImageFile(idx)}
+                        style={{
+                          position: 'absolute',
+                          top: '-4px',
+                          right: '-4px',
+                          background: '#ef4444',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: '50%',
+                          width: '18px',
+                          height: '18px',
+                          fontSize: '11px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Video or Audio single file input */}
+          {(postType === 'video' || postType === 'audio') && (
             <div className="form-group file-group">
               <label>{getMainFileInputLabel()}</label>
               <input

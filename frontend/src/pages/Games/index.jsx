@@ -5,7 +5,7 @@ import * as api from '../../services/api';
 import { useBookmarks } from '../../lib/BookmarksContext';
 import { useTranslation } from 'react-i18next';
 
-export default function Games({ searchOpenGameId = null, onConsumeSearchOpen }) {
+export default function Games({ searchOpenGameId = null, onConsumeSearchOpen, currentUser }) {
   const { t } = useTranslation();
   const { isBookmarked: isBm, toggle: toggleBm } = useBookmarks();
   const [selectedLibrary, setSelectedLibrary] = useState('all');
@@ -107,6 +107,20 @@ export default function Games({ searchOpenGameId = null, onConsumeSearchOpen }) 
     }
   };
 
+  const handleDeleteGame = async (gameId) => {
+    if (!window.confirm(t('games.confirmDelete') || 'Bạn có chắc chắn muốn xóa bài viết game này không?')) {
+      return;
+    }
+    try {
+      await api.deleteGame(gameId);
+      setGames(prev => prev.filter(g => g.id !== gameId));
+      if (selectedGame?.id === gameId) setSelectedGame(null);
+    } catch (err) {
+      console.error('Lỗi khi xóa bài viết game:', err);
+      alert(api.formatErrorMessage(err.response?.data?.detail, 'Không thể xóa bài viết game.'));
+    }
+  };
+
   const handleCloseModal = () => {
     setSelectedGame(null);
     loadGames(); // Load lại toàn bộ danh sách khi đóng modal để đồng bộ dữ liệu
@@ -168,6 +182,16 @@ export default function Games({ searchOpenGameId = null, onConsumeSearchOpen }) 
                           >
                             {isBm('game', game.id) ? '🔖' : '⚪'}
                           </button>
+                          {(currentUser?.user_id === game.author_user_id || currentUser?.role === 'admin' || currentUser?.username === 'admin') && (
+                            <button
+                              onClick={() => handleDeleteGame(game.id)}
+                              className="action-btn"
+                              style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444' }}
+                              title={t('games.delete') || 'Xóa bài viết'}
+                            >
+                              🗑️ Xóa
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))

@@ -122,3 +122,16 @@ def get_popular_games(db: Session, limit: int = 4):
 def get_new_games(db: Session, limit: int = 4):
     """Get newest game posts"""
     return db.query(Game).order_by(Game.created_at.desc()).limit(limit).all()
+
+
+def delete_game(db: Session, game_id: int, user_id: str = None, is_admin: bool = False) -> bool:
+    """Delete a game blog post by ID. Admin or Author can delete it."""
+    game = db.query(Game).filter(Game.id == game_id).first()
+    if not game:
+        return False
+    if hasattr(game, 'author_user_id') and game.author_user_id and str(game.author_user_id) != str(user_id) and not is_admin:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403, detail="Bạn không có quyền xóa bài viết game này.")
+    db.delete(game)
+    db.commit()
+    return True

@@ -403,10 +403,24 @@ export default function Feed({ currentUser, onNavigate }) {
                     <h4 className="post-title">{post.title}</h4>
                     {post.description && <p className="post-desc">{post.description}</p>}
 
-                    {/* Image Preview */}
-                    {post.post_type === 'image' && post.media_url && (
+                    {/* Image / Multi-Photo Gallery Preview */}
+                    {post.media_url && (post.post_type === 'image' || post.post_type === 'game' || post.media_url.includes('/image/') || post.media_url.match(/\.(jpg|jpeg|png|gif|webp)/i)) && (
                       <div className="dash-media-preview img-type">
-                        <img src={getFullAssetUrl(post.media_url)} alt={post.title} />
+                        {post.media_url.includes(',') ? (
+                          <div className="post-photo-gallery" style={{ display: 'grid', gridTemplateColumns: post.media_url.split(',').length === 2 ? '1fr 1fr' : 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px', marginTop: '10px' }}>
+                            {post.media_url.split(',').map((imgUrl, i) => (
+                              <img
+                                key={i}
+                                src={getFullAssetUrl(imgUrl.trim())}
+                                alt={`${post.title} ${i + 1}`}
+                                style={{ borderRadius: '8px', height: '220px', objectFit: 'cover', width: '100%', cursor: 'pointer' }}
+                                onClick={() => window.open(getFullAssetUrl(imgUrl.trim()), '_blank')}
+                              />
+                            ))}
+                          </div>
+                        ) : (
+                          <img src={getFullAssetUrl(post.media_url)} alt={post.title} style={{ borderRadius: '12px', maxHeight: '400px', objectFit: 'cover', width: '100%', marginTop: '10px' }} />
+                        )}
                       </div>
                     )}
 

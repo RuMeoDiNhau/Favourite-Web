@@ -693,6 +693,20 @@ def like_game(
     return {'message': 'Like count updated', 'likes': game.likes}
 
 
+@router.delete('/games/{game_id}', status_code=200)
+def delete_game(
+    game_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete a game blog post by ID."""
+    is_admin = current_user.get('role') == 'admin' or current_user.get('username') == 'admin'
+    success = games_service.delete_game(db, game_id, current_user.get('user_id'), is_admin)
+    if not success:
+        raise HTTPException(status_code=404, detail="Bài viết game không tồn tại.")
+    return {'message': 'Đã xóa bài viết game thành công.'}
+
+
 # ==================== Music Endpoints ====================
 
 @router.get('/playlists', response_model=list[PlaylistResponse])
@@ -1075,7 +1089,7 @@ def delete_article(
     current_user: dict = Depends(get_current_user)
 ):
     """Delete a Knowledge article by ID. Author or Admin can delete it."""
-    is_admin = current_user.get('role') == 'admin'
+    is_admin = current_user.get('role') == 'admin' or current_user.get('username') == 'admin'
     success = knowledge_service.delete_article(db, article_id, current_user.get('user_id'), is_admin)
     if not success:
         raise HTTPException(status_code=404, detail="Bài viết kiến thức không tồn tại.")

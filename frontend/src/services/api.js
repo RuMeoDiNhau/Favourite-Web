@@ -450,6 +450,9 @@ export const deletePost = (postId) =>
 export const deleteKnowledge = (articleId) =>
   api.delete(`/knowledge/${articleId}`).then((r) => r.data);
 
+export const deleteGame = (gameId) =>
+  api.delete(`/games/${gameId}`).then((r) => r.data);
+
 export const formatErrorMessage = (detail, fallback = 'Có lỗi xảy ra, vui lòng thử lại.') => {
   if (!detail) return fallback;
   if (typeof detail === 'string') return detail;
